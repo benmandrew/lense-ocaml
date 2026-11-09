@@ -23,6 +23,9 @@ type word =
       (** Always a pointer to a block. [tag] is [None] when it varies. *)
   | Any of string  (** Could be either; says why. *)
   | Double  (** An unboxed double inside a flat float block. *)
+  | Flat of { layout : string; bytes : int }
+      (** OxCaml: an unboxed value of a non-value layout, such as [float64],
+          with [bytes] of data. [bytes] is 0 when it is not one fixed size. *)
 
 type field_kind =
   | Label of string  (** A record or inline-record field. *)
@@ -37,6 +40,16 @@ type field = {
   word : word;
 }
 
+(* OxCaml: one element of a mixed block, in memory order. *)
+type mixed_slot = {
+  field : int;  (** The declared field it comes from, counting from 0. *)
+  part : string;  (** The path inside an unboxed product field, such as ".x", or "". *)
+  pty : string;  (** The type of that part, or "". *)
+  mword : word;
+  words : int;  (** Words it takes in native code. *)
+  data : int;  (** Bytes of data at the start of those words. *)
+}
+
 type shape =
   | Constant of int  (** An immediate with this value. *)
   | Block of { tag : int; fields : field list }
@@ -44,6 +57,24 @@ type shape =
   | Unboxed of field  (** No block: the value is this field. *)
   | Ext_slot  (** An Object_tag block holding the name and a unique id. *)
   | Rebind of string  (** The same value as another extension constructor. *)
+  | Product of field list
+      (** OxCaml: an unboxed record. No block: the fields are kept apart, in
+          registers or stored in place inside an enclosing block. *)
+  | Mixed of { tag : int; fields : field list; scanned : int; slots : mixed_slot list }
+      (** OxCaml: a block whose first [scanned] words are values and whose
+          other words are flat data. [fields] is in declaration order,
+          [slots] in memory order. *)
+
+let word_bytes = Sys.word_size / 8
+
+(* The byte offset of each slot, counting the header word. *)
+let mixed_offsets slots =
+  let _, offs =
+    List.fold_left (fun (o, acc) s -> (o + (s.words * word_bytes), o :: acc)) (word_bytes, []) slots
+  in
+  List.rev offs
+
+let mixed_size slots = List.fold_left (fun n s -> n + s.words) 0 slots
 
 type case = {
   name : string;  (** Constructor name, with a backquote for polymorphic tags. *)

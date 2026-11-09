@@ -47,6 +47,7 @@ let word = function
   | Pointer { tag; what } -> Obj [ ("kind", Str "pointer"); ("tag", opt (fun t -> Int t) tag); ("what", Str what) ]
   | Any why -> Obj [ ("kind", Str "any"); ("why", Str why) ]
   | Double -> Obj [ ("kind", Str "double") ]
+  | Flat { layout; bytes } -> Obj [ ("kind", Str "flat"); ("layout", Str layout); ("bytes", Int bytes) ]
 
 let field (f : field) =
   let kind =
@@ -69,6 +70,15 @@ let shape = function
   | Unboxed f -> Obj [ ("kind", Str "unboxed"); ("field", field f) ]
   | Ext_slot -> Obj [ ("kind", Str "block"); ("tag", Int object_tag); ("size", Int 2); ("extension_slot", Bool true) ]
   | Rebind p -> Obj [ ("kind", Str "rebind"); ("of", Str p) ]
+  | Product fs -> Obj [ ("kind", Str "unboxed_product"); ("fields", List (List.map field fs)) ]
+  | Mixed { tag; fields; scanned; slots } ->
+      let slot (s : mixed_slot) o =
+        Obj [ ("field", Int s.field); ("part", Str s.part); ("part_type", Str s.pty); ("word", word s.mword); ("words", Int s.words);
+              ("data_bytes", Int s.data); ("offset", Int o) ]
+      in
+      Obj
+        [ ("kind", Str "mixed"); ("tag", Int tag); ("size", Int (mixed_size slots)); ("scanned", Int scanned);
+          ("fields", List (List.map field fields)); ("slots", List (List.map2 slot slots (mixed_offsets slots))) ]
 
 let strs l = List (List.map (fun s -> Str s) l)
 

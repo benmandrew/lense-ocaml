@@ -1,0 +1,4 @@
+(library
+ (enabled_if (< %{ocaml_version} 5.5))
+ (name lense_core)
+ (libraries lense_model compiler-libs.common))

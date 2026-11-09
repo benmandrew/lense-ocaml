@@ -54,6 +54,14 @@ The tag numbers and representation rules in this note were first written from me
 
 **Not in the note.** Building the tool found six more rules. An empty float array `[||]` is a shared tag-0 *atom*, so a `float array` field has tag 254 only when the array is not empty. A lazy value built from a constant, or already forced, can be the value itself, so a `Lazy.t` field can be an immediate. A class in a structure takes one field, a tag-0 block of size 3. An `external` takes no field in its structure, and coercing it to a `val` wraps it in a new closure. The last two concern the tooling. Record field types in `compiler-libs` are wrapped in `Tpoly` nodes. Dune's `BUILD_PATH_PREFIX_MAP` rewrites the build directory that a `.cmt` file records, so the tool looks for that directory among the `.cmt` file's ancestors.
 
+## Stage 3 results
+
+The tool builds against OxCaml's `compiler-libs` from the same tree, checked on the 5.2.0+ox switch. `src/core` is the 5.5 library and `src/ox` is the OxCaml one. Both are named `lense_core`, and dune picks one by `%{ocaml_version}`. The 5.5 goldens are disabled on OxCaml, and `test/ox/mixed.t` holds the OxCaml goldens. The field order of a mixed block comes from the compiler's own `Mixed_block_shape` module (`lambda/mixed_block_shape.ml`, part of `compiler-libs`), and the tool does not derive it again.
+
+**Native code.** Values come first, then flat fields, each group in declaration order. Each flat scalar takes a whole word, even `int8#`, `int16#`, `int32#` and `float32#`; the compiler's comment says they "aren't packed tightly". An `int32#` is written with a 32-bit store, an `int16#` with a 16-bit store and an `int8#` with an 8-bit store, so the rest of the word is unused. A `vec128` takes two words. The header records the length of the scanned prefix, and `Obj.Uniform_or_mixed` reads it back. Unboxed products (unboxed records `#{...}` and unboxed tuples `#(...)`) inside a block are split. Their value parts join the scanned prefix and their flat parts join the flat suffix, and an unboxed record type has no block of its own. A record of only `float` and `float#` fields is stored entirely flat, and its `float` fields are boxed again when read. A record of only `float#` fields is a `Double_array_tag` block, like an all-`float` record. Extension constructors and exceptions cannot have unboxed fields, because the compiler rejects them.
+
+**Bytecode.** The compiler's own runtime header calls these *faux mixed blocks*. Bytecode keeps declaration order, with one scanned field per declared field. Flat fields are boxed: `float#` as a `Double_tag` block, `int32#`, `int64#` and `nativeint#` as custom blocks, `int8#`, `int16#` and `int#` as immediates, and unboxed products as tag-0 blocks. The block sizes differ between the backends whenever products are present. The fuzz oracle generates mixed records and constructors on OxCaml, with scalar flat fields of eight kinds, unboxed tuples and all-float records. It checks native code through `Obj.raw_field` bits and the scanned prefix length, and bytecode through the boxed values. A planted bug that reversed the slot order gave 7 mismatches in 6 rounds. `dune test --build-dir _build-ox` runs 20 rounds.
+
 ## Plan
 
 **Stage 0.** Done. Every rule in this note was checked against the pinned OCaml release, with the results above.
@@ -62,7 +70,7 @@ The tag numbers and representation rules in this note were first written from me
 
 **Stage 2.** Done. Module structures and signature coercions. A unit with an interface also shows its coercion to the `.mli`, computed with `Includemod.compunit` as the compiler does; `test/unit.t` compares it with `-dlambda`.
 
-**Stage 3.** Open. OxCaml mixed blocks and the byte map.
+**Stage 3.** Done. OxCaml mixed blocks and the byte map, built against OxCaml's own `compiler-libs` in `src/ox`. The fuzz oracle checks native code through `Obj.raw_field` and bytecode through the boxed values.
 
 **Stage 4.** Open. Closures, objects and lazy values, per compiler configuration.
 

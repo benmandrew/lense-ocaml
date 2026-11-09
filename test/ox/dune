@@ -1,0 +1,4 @@
+; OxCaml goldens. Run with the 5.2.0+ox switch active; see CLAUDE.md.
+(cram
+ (enabled_if (< %{ocaml_version} 5.5))
+ (deps %{bin:lense-ocaml} mixed.ml))

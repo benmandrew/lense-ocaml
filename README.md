@@ -22,6 +22,30 @@ dune test      # cram goldens, Stage 0 checks and a 20-round fuzz run
 
 It needs OCaml 5.5 with compiler-libs, and dune. There are no other dependencies. The tool is pinned to OCaml 5.5 because compiler-libs changes between releases.
 
+### OxCaml
+
+The tool also builds against OxCaml's `compiler-libs`. `src/core` is the 5.5 library and `src/ox` is the OxCaml one, and dune picks one by `%{ocaml_version}`.
+
+```sh
+eval $(opam env --switch=5.2.0+ox --set-switch)
+dune build --build-dir _build-ox
+dune test --build-dir _build-ox   # test/ox/mixed.t goldens and a 20-round fuzz run
+```
+
+The 5.5 goldens are disabled on OxCaml. For a *mixed block*, the output lists the scanned fields first and then the flat ones, with each flat field's byte range and the unused bytes in its word. The compiler's own `Mixed_block_shape` module supplies the order. This excerpt is for `type m = { a : int; b : float#; c : string; d : int32#; f : int8# }` from `test/ox/mixed.ml`.
+
+```
+type m  mixed block, tag 0, size 5: 2 scanned fields, then 3 flat
+       0-7    header
+    0  8-15   a : int     immediate (int)
+    1  16-23  c : string  pointer to string, String_tag 252
+    2  24-31  b : float#  unboxed float64, 8 bytes
+    3  32-35  d : int32#  unboxed bits32, 4 bytes, bytes 36-39 unused
+    4  40     f : int8#   unboxed bits8, 1 byte, bytes 41-47 unused
+    note: values first, then flat fields, each in declaration order
+    note: native code; bytecode stores one boxed field per declared field, in declaration order
+```
+
 ## Usage
 
 ```sh

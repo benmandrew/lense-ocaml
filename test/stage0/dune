@@ -1,4 +1,5 @@
 (executable
+ (enabled_if (>= %{ocaml_version} 5.5))
  (name runtime)
  (modules runtime)
  (ocamlopt_flags (:standard -w -a))

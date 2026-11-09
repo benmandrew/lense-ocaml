@@ -15,12 +15,16 @@ let tag_name t =
   else if t = forcing_tag then "Forcing_tag 244"
   else "tag " ^ string_of_int t
 
+let plural n one many = string_of_int n ^ " " ^ if n = 1 then one else many
+
 let word = function
   | Immediate why -> "immediate (" ^ why ^ ")"
   | Pointer { tag = Some t; what } -> "pointer to " ^ what ^ ", " ^ tag_name t
   | Pointer { tag = None; what } -> "pointer to " ^ what
   | Any why -> "immediate or pointer (" ^ why ^ ")"
   | Double -> "unboxed double"
+  | Flat { layout; bytes = 0 } -> "unboxed " ^ layout
+  | Flat { layout; bytes } -> Printf.sprintf "unboxed %s, %s" layout (plural bytes "byte" "bytes")
 
 let field_label f =
   match f.fkind with
@@ -32,7 +36,6 @@ let field_label f =
 let pad n s = s ^ String.make (max 0 (n - String.length s)) ' '
 let lpad n s = String.make (max 0 (n - String.length s)) ' ' ^ s
 
-let plural n one many = string_of_int n ^ " " ^ if n = 1 then one else many
 
 (* Rows of "index  label  word", aligned. [indent] is the left margin. *)
 let rows b ~indent ?(index = true) (fields : field list) =
@@ -54,10 +57,51 @@ let shape_summary = function
   | Unboxed _ -> "no block: [@@unboxed], the value is its field"
   | Ext_slot -> "extension slot: block, Object_tag 248, size 2 (name, unique id)"
   | Rebind p -> "the same value as " ^ p ^ " (rebinding)"
+  | Product _ -> "no block: unboxed record, its fields are kept apart or stored in place"
+  | Mixed { tag; scanned; slots; _ } ->
+      let size = mixed_size slots in
+      Printf.sprintf "mixed block, %s, size %d: %s, then %d flat" (tag_name tag) size
+        (plural scanned "scanned field" "scanned fields") (size - scanned)
+
+(* A mixed block: its slots in memory order, with the bytes each takes in
+   native code. *)
+let mixed b ~indent (fields : field list) (slots : mixed_slot list) =
+  let fields = Array.of_list fields in
+  let margin = String.make indent ' ' in
+  let label s =
+    let f = fields.(s.field) in
+    if s.part = "" then field_label f
+    else
+      (match f.fkind with Label l -> l ^ s.part | _ -> "arg " ^ string_of_int s.field ^ s.part)
+      ^ if s.pty = "" then "" else " : " ^ s.pty
+  in
+  let offs = mixed_offsets slots in
+  let range o n = if n = 1 then string_of_int o else Printf.sprintf "%d-%d" o (o + n - 1) in
+  let rows =
+    List.map2
+      (fun s o ->
+        let size = s.words * word_bytes in
+        let data = if s.data > 0 && s.data < size then s.data else size in
+        let unused = if data < size then Printf.sprintf ", bytes %s unused" (range (o + data) (size - data)) else "" in
+        (range o data, label s, word s.mword ^ unused))
+      slots offs
+  in
+  let rw = List.fold_left (fun w (r, _, _) -> max w (String.length r)) 3 rows in
+  let lw = List.fold_left (fun w (_, l, _) -> max w (String.length l)) 0 rows in
+  let iw = String.length (string_of_int (List.length slots - 1)) in
+  Printf.bprintf b "%s%s  %s  header\n" margin (String.make iw ' ') (pad rw (range 0 word_bytes));
+  List.iteri
+    (fun i (r, l, w) -> Printf.bprintf b "%s%s  %s  %s  %s\n" margin (lpad iw (string_of_int i)) (pad rw r) (pad lw l) w)
+    rows;
+  let reordered = List.exists (fun (i, s) -> s.field <> i || s.part <> "") (List.mapi (fun i s -> (i, s)) slots) in
+  if reordered then Printf.bprintf b "%snote: values first, then flat fields, each in declaration order\n" margin;
+  Printf.bprintf b "%snote: native code; bytecode stores one boxed field per declared field, in declaration order\n" margin
 
 let shape_rows b ~indent = function
   | Block { fields; _ } | Flat_float fields -> rows b ~indent fields
   | Unboxed f -> rows b ~indent ~index:false [ f ]
+  | Product fields -> rows b ~indent ~index:false fields
+  | Mixed { fields; slots; _ } -> mixed b ~indent fields slots
   | Constant _ | Ext_slot | Rebind _ -> ()
 
 let notes b ~indent ns = List.iter (fun n -> Printf.bprintf b "%snote: %s\n" (String.make indent ' ') n) ns
@@ -78,7 +122,7 @@ let range = function
 
 let variant_summary (cs : case list) =
   let consts = List.filter_map (fun c -> match c.shape with Constant n -> Some n | _ -> None) cs in
-  let tags = List.filter_map (fun c -> match c.shape with Block { tag; _ } -> Some tag | _ -> None) cs in
+  let tags = List.filter_map (fun c -> match c.shape with Block { tag; _ } | Mixed { tag; _ } -> Some tag | _ -> None) cs in
   let unboxed = List.exists (fun c -> match c.shape with Unboxed _ -> true | _ -> false) cs in
   if unboxed then "variant, unboxed"
   else if cs = [] then "variant with no constructors: it has no values"

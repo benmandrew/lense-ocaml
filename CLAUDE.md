@@ -10,11 +10,16 @@ dune build
 dune test            # cram goldens, Stage 0 checks, 20 fuzz rounds
 dune promote         # accept golden changes, after reading the diff
 dune exec test/fuzz/fuzz.exe -- -rounds 500 [-seed N] [-keep DIR]
+
+eval $(opam env --switch=5.2.0+ox --set-switch)  # OxCaml: separate build dir
+dune test --build-dir _build-ox                  # test/ox goldens, fuzz with mixed blocks
 ```
+
+Run the fuzz executable with the matching switch's `opam env` in the shell: it compiles its checkers with the `ocamlfind` on PATH.
 
 ## Constraints
 
-- Pinned to OCaml 5.5. compiler-libs changes every release; `dune-project` enforces the pin.
+- Pinned to OCaml 5.5, plus OxCaml 5.2.0+ox. compiler-libs changes every release. The OxCaml code is selected by `enabled_if` on `%{ocaml_version}`.
 - Read representations from the compiler's data: `record_representation`, `Datarepr` constructor tags, `Types.bound_value_identifiers` order, `Typedtree.module_coercion`. Never parse `-dlambda` text, but compare against it when in doubt.
 - `src/model` (Model, Text, Json) has no compiler-libs dependency, so a js_of_ocaml front end can reuse it. Everything touching compiler-libs lives in `src/core`.
 - Sizes are in words without the header, matching `Obj.size`.

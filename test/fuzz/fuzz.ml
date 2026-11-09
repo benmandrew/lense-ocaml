@@ -37,8 +37,38 @@ type value = { vexpr : string; vfields : string list; vmake : string list -> str
 let value make fields = { vexpr = make fields; vfields = fields; vmake = make }
 let constant e = value (fun _ -> e) []
 
+(* OxCaml: a field of a mixed block, as a leaf or an unboxed tuple of
+   leaves. [bits] is the native word expected for a flat leaf, compared
+   under [mask]; [boxed] is what bytecode stores instead. *)
+let ox = String.ends_with ~suffix:"+ox" Sys.ocaml_version
+
+type leaf = { lty : string; lexpr : string; bits : string option; mask : string; boxed : string }
+type ftree = Leaf of leaf | Prod of ftree list
+
+let flat_leaves =
+  [ { lty = "float#"; lexpr = "#2.5"; bits = Some "(Int64.to_nativeint (Int64.bits_of_float 2.5))"; mask = "(-1n)"; boxed = "2.5" };
+    { lty = "float32#"; lexpr = "#2.5s"; bits = Some "(Nativeint.of_int32 (Int32.bits_of_float 2.5))"; mask = "0xffffffffn"; boxed = "2.5s" };
+    { lty = "int32#"; lexpr = "(-#3l)"; bits = Some "(-3n)"; mask = "0xffffffffn"; boxed = "(-3l)" };
+    { lty = "int64#"; lexpr = "#4L"; bits = Some "4n"; mask = "(-1n)"; boxed = "4L" };
+    { lty = "nativeint#"; lexpr = "(-#5n)"; bits = Some "(-5n)"; mask = "(-1n)"; boxed = "(-5n)" };
+    { lty = "int8#"; lexpr = "(-#6s)"; bits = Some "(-6n)"; mask = "0xffn"; boxed = "(-6)" };
+    { lty = "int16#"; lexpr = "#300S"; bits = Some "300n"; mask = "0xffffn"; boxed = "300" };
+    { lty = "int#"; lexpr = "#9m"; bits = Some "9n"; mask = "(-1n)"; boxed = "9" } ]
+
+let float_leaf =
+  { lty = "float"; lexpr = "1.5"; bits = Some "(Int64.to_nativeint (Int64.bits_of_float 1.5))"; mask = "(-1n)"; boxed = "1.5" }
+
+let rec tree_ty = function
+  | Leaf l -> if l.bits = None then "(" ^ l.lty ^ ")" else l.lty
+  | Prod ts -> "#(" ^ String.concat " * " (List.map tree_ty ts) ^ ")"
+
+let rec tree_expr = function
+  | Leaf l -> l.lexpr
+  | Prod ts -> "#(" ^ String.concat ", " (List.map tree_expr ts) ^ ")"
+
 type state = {
   decls : Buffer.t;
+  trees : (string * string, ftree list) Hashtbl.t;  (** OxCaml: (type, case) -> fields *)
   mutable pool : sample list;
   values : (string * string, value) Hashtbl.t;  (** (type, case) -> value *)
   mutable modules : (string * string) list;  (** module, its module type *)
@@ -183,6 +213,65 @@ let gen_exn s =
 
 (* A module of random items, plus a coerced view of it with a random
    subset of its values in a random order. *)
+(* OxCaml: a record or variant whose fields mix values, flat scalars and
+   unboxed tuples. A record of only float and float# fields is all flat. *)
+let gen_mixed s =
+  let value_leaf () =
+    let x = pick (List.filter (fun x -> x.ty <> "float" && x.ty <> "fl") base) in
+    { lty = x.ty; lexpr = x.expr; bits = None; mask = "0n"; boxed = x.expr }
+  in
+  let floats_only = chance 0.2 in
+  let rec tree depth =
+    if floats_only then Leaf (if chance 0.5 then float_leaf else List.hd flat_leaves)
+    else
+      match rand 10 with
+      | 0 | 1 | 2 | 3 | 4 -> Leaf (pick flat_leaves)
+      | 5 when depth = 0 -> Prod (List.init (2 + rand 2) (fun _ -> tree 1))
+      | 6 -> Leaf float_leaf
+      | _ -> Leaf (value_leaf ())
+  in
+  let fields () = List.init (1 + rand 4) (fun _ -> tree 0) in
+  if chance 0.5 then (
+    let name = fresh s "mr" in
+    let fs = List.map (fun t -> (fresh s "m", chance 0.2, t)) (fields ()) in
+    Printf.bprintf s.decls "type %s = { %s }\n" name
+      (String.concat "; " (List.map (fun (l, m, t) -> (if m then "mutable " else "") ^ l ^ " : " ^ tree_ty t) fs));
+    let make es = "{ " ^ String.concat "; " (List.map2 (fun (l, _, _) e -> l ^ " = " ^ e) fs es) ^ " }" in
+    let v = { vexpr = make (List.map (fun (_, _, t) -> tree_expr t) fs);
+              vfields = List.map (fun (_, _, t) -> match t with Leaf l -> l.boxed | Prod _ -> "()") fs; vmake = make } in
+    add_value s name "" v;
+    Hashtbl.replace s.trees (name, "") (List.map (fun (_, _, t) -> t) fs))
+  else
+    let name = fresh s "mv" in
+    let cases =
+      List.init (1 + rand 4) (fun _ ->
+          let c = fresh s "K" in
+          if chance 0.2 then (c, `Const)
+          else if chance 0.3 then (c, `Inline (List.map (fun t -> (fresh s "k", t)) (fields ())))
+          else (c, `Tuple (fields ())))
+    in
+    Printf.bprintf s.decls "type %s =%s\n" name
+      (String.concat ""
+         (List.map
+            (fun (c, a) ->
+              match a with
+              | `Const -> " | " ^ c
+              | `Tuple ts -> " | " ^ c ^ " of " ^ String.concat " * " (List.map tree_ty ts)
+              | `Inline fs -> " | " ^ c ^ " of { " ^ String.concat "; " (List.map (fun (l, t) -> l ^ " : " ^ tree_ty t) fs) ^ " }")
+            cases));
+    List.iter
+      (fun (c, a) ->
+        match a with
+        | `Const -> add_value s name c (constant c)
+        | `Tuple ts ->
+            add_value s name c { (constant (c ^ " (" ^ String.concat ", " (List.map tree_expr ts) ^ ")")) with vfields = [] };
+            Hashtbl.replace s.trees (name, c) ts
+        | `Inline fs ->
+            add_value s name c
+              (constant (c ^ " { " ^ String.concat "; " (List.map (fun (l, t) -> l ^ " = " ^ tree_expr t) fs) ^ " }"));
+            Hashtbl.replace s.trees (name, c) (List.map snd fs))
+      cases
+
 let gen_module s =
   let m = fresh s "M" in
   let items =
@@ -219,9 +308,10 @@ let gen_module s =
   s.modules <- (c, c ^ "_S") :: s.modules
 
 let program () =
-  let s = { decls = Buffer.create 2048; pool = []; values = Hashtbl.create 32; modules = []; n = 0 } in
+  let s = { decls = Buffer.create 2048; trees = Hashtbl.create 8; pool = []; values = Hashtbl.create 32; modules = []; n = 0 } in
   for _ = 1 to 4 + rand 8 do
-    match rand 10 with
+    match rand (if ox then 13 else 10) with
+    | 10 | 11 | 12 -> gen_mixed s
     | 0 | 1 | 2 -> gen_variant s
     | 3 | 4 -> gen_record s
     | 5 -> gen_poly s
@@ -238,9 +328,50 @@ let word_check what r (w : M.word) =
   | Immediate _ -> Printf.sprintf "imm %S %s;" what r
   | Pointer { tag = Some t; _ } -> Printf.sprintf "ptr %S %s (Some %d);" what r t
   | Pointer { tag = None; _ } -> Printf.sprintf "ptr %S %s None;" what r
-  | Any _ | Double -> ""
+  | Any _ | Double | Flat _ -> ""
 
-let shape_checks b ~what ~v (shape : M.shape) =
+(* The leaf at a slot's part path, such as ".1". *)
+let rec leaf_at t path =
+  match (t, path) with
+  | Leaf l, [] -> Some l
+  | Prod ts, j :: rest -> ( match int_of_string_opt j with Some j when j < List.length ts -> leaf_at (List.nth ts j) rest | _ -> None)
+  | _ -> None
+
+let mixed_checks b ~what ~r ~trees ~tag ~(fields : M.field list) ~scanned ~(slots : M.mixed_slot list) =
+  let trees = Array.of_list trees in
+  Printf.bprintf b "  if native then begin\n    mixed %S %s %d %d %d;\n" what r tag (M.mixed_size slots) scanned;
+  let o = ref 0 in
+  List.iter
+    (fun (sl : M.mixed_slot) ->
+      let fr = Printf.sprintf "(Obj.field %s %d)" r !o in
+      let w = Printf.sprintf "%s slot %d (field %d%s)" what !o sl.field sl.part in
+      (match sl.mword with
+      | Flat _ -> (
+          let path = match String.split_on_char '.' sl.part with "" :: p -> p | p -> p in
+          match if sl.field < Array.length trees then leaf_at trees.(sl.field) path else None with
+          | Some { bits = Some bits; mask; _ } -> Printf.bprintf b "    flat %S %s %d %s %s;\n" w r !o bits mask
+          | _ -> ())
+      | word ->
+          let c = word_check w fr word in
+          if c <> "" then Printf.bprintf b "    %s\n" c);
+      o := !o + sl.words)
+    slots;
+  Printf.bprintf b "  end else begin\n    block %S %s %d %d;\n" what r tag (List.length fields);
+  List.iteri
+    (fun i (f : M.field) ->
+      let fr = Printf.sprintf "(Obj.field %s %d)" r i in
+      let w = Printf.sprintf "%s byte field %d (%s)" what i f.ty in
+      let tree = if i < Array.length trees then Some trees.(i) else None in
+      match tree with
+      | Some (Leaf l) when l.bits <> None -> Printf.bprintf b "    boxed %S %s (Obj.repr %s);\n" w fr l.boxed
+      | Some (Prod ts) -> Printf.bprintf b "    block %S %s 0 %d;\n" w fr (List.length ts)
+      | _ ->
+          let c = word_check w fr f.word in
+          if c <> "" then Printf.bprintf b "    %s\n" c)
+    fields;
+  Buffer.add_string b "  end;\n"
+
+let shape_checks ?(trees = []) b ~what ~v (shape : M.shape) =
   let r = "(Obj.repr (" ^ v.vexpr ^ "))" in
   match shape with
   | Constant n -> Printf.bprintf b "  const %S %s %d;\n" what r n
@@ -270,6 +401,8 @@ let shape_checks b ~what ~v (shape : M.shape) =
   | Ext_slot ->
       Printf.bprintf b "  block %S %s %d 2;\n  ptr %S (Obj.field %s 0) (Some %d);\n  imm %S (Obj.field %s 1);\n"
         what r M.object_tag (what ^ " name") r M.string_tag (what ^ " id") r
+  | Mixed { tag; fields; scanned; slots } -> mixed_checks b ~what ~r ~trees ~tag ~fields ~scanned ~slots
+  | Product _ -> ()
   | Rebind _ -> (
       (* A rebinding shares the original's extension slot. *)
       match v.vfields with
@@ -294,14 +427,32 @@ let ptr what r tag = if Obj.is_int r || (match tag with Some t -> Obj.tag r <> t
   fail what (Printf.sprintf "expected a pointer%s, got %s" (match tag with Some t -> " tag " ^ string_of_int t | None -> "") (desc r))
 let dbl what r i x = if Obj.is_int r || Obj.tag r <> Obj.double_array_tag || Obj.double_field r i <> x then fail what "expected a flat double"
 let same what a b = if a != b then fail what ("expected the value itself, got " ^ desc a)
-let () =
 |};
+  if ox then
+    Buffer.add_string b
+      {|let native = Sys.backend_type = Sys.Native
+let mixed what r tag size scanned =
+  block what r tag size;
+  match Obj.Uniform_or_mixed.repr (Obj.Uniform_or_mixed.of_block r) with
+  | Mixed { scannable_prefix_len = n } when n = scanned -> ()
+  | Uniform when scanned = size -> ()
+  | Mixed { scannable_prefix_len = n } -> fail what (Printf.sprintf "expected %d scanned fields, got %d" scanned n)
+  | Uniform -> fail what "expected a mixed block, got a uniform one"
+let flat what r i bits mask =
+  let got = Obj.raw_field r i in
+  if Nativeint.logand got mask <> Nativeint.logand bits mask then
+    fail what (Printf.sprintf "expected flat bits %nx, got %nx" bits got)
+let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed value, got " ^ desc f)
+|};
+  Buffer.add_string b "let () =\n";
   List.iter
     (fun (d : M.decl) ->
       let ty = d.name in
       let check case shape =
         match Hashtbl.find_opt s.values (ty, case) with
-        | Some v -> shape_checks b ~what:(ty ^ "." ^ case) ~v shape
+        | Some v ->
+            let trees = Option.value (Hashtbl.find_opt s.trees (ty, case)) ~default:[] in
+            shape_checks ~trees b ~what:(ty ^ "." ^ case) ~v shape
         | None -> ()
       in
       match d.kind with
