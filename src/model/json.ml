@@ -189,7 +189,7 @@ let render units =
   let b = Buffer.create 4096 in
   write b ~indent:0
     (Obj
-       [ ("word_size", Int Sys.word_size);
+       [ ("word_size", Int Model.word_size);
          ("units", List (List.map compunit units)); ("collisions", List collisions) ]);
   Buffer.add_char b '\n';
   Buffer.contents b

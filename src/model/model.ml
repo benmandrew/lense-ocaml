@@ -65,7 +65,10 @@ type shape =
           other words are flat data. [fields] is in declaration order,
           [slots] in memory order. *)
 
-let word_bytes = Sys.word_size / 8
+(* The native target. js_of_ocaml reports 32 bits, but the page describes
+   what ocamlopt and ocamlc do on a 64-bit machine. *)
+let word_size = match Sys.backend_type with Other "js_of_ocaml" -> 64 | _ -> Sys.word_size
+let word_bytes = word_size / 8
 
 (* The byte offset of each slot, counting the header word. *)
 let mixed_offsets slots =

@@ -68,7 +68,7 @@ let decl_view (_ : Env.t) (_ : Path.t) (_ : type_expr list) decl =
   | Type_abstract _ | Type_external _ -> (
       match decl.type_immediate with
       | Type_immediacy.Always -> Immediate "[@@immediate]"
-      | Always_on_64bits when Sys.word_size = 64 -> Immediate "[@@immediate64]"
+      | Always_on_64bits when Lense_model.Model.word_size = 64 -> Immediate "[@@immediate64]"
       | _ -> Abstract)
 
 (* The word of an abstract type declared in the file being read. *)
