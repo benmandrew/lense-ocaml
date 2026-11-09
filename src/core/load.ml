@@ -105,13 +105,49 @@ let read_cmt ~include_dirs file =
   in
   (cmt.cmt_modname, input, src)
 
+(* Coerce a unit's structure to its interface, as the compiler does at the
+   end of compiling an implementation that has an .mli. *)
+let coerce_to_interface ~impl_file ~intf_file intf_sg (input : Analyze.input) =
+  match input with
+  | Intf _ -> None
+  | Impl str -> (
+      try
+        let env = Compmisc.initial_env () in
+        let cc, _ = Includemod.compunit env ~mark:false impl_file str.str_type intf_file intf_sg Shape.dummy_mod in
+        Some (env, intf_file, intf_sg, cc)
+      with exn -> raise (report exn))
+
 let compunit ~include_dirs file : M.compunit =
   let ext = Filename.extension file in
   if ext = ".cmt" || ext = ".cmti" then
     let unit_name, input, src = read_cmt ~include_dirs file in
-    Analyze.analyze ~file ~unit_name ~src input
+    (* The interface the build compiled: a .cmti beside the .cmt marks one. *)
+    let base = Filename.remove_extension file in
+    let interface =
+      if ext = ".cmt" && Sys.file_exists (base ^ ".cmti") && Sys.file_exists (base ^ ".cmi") then
+        let sg =
+          try Env.read_signature (Unit_info.Artifact.from_filename (base ^ ".cmi"))
+          with exn -> raise (report exn)
+        in
+        let intf_file =
+          match (Cmt_format.read_cmt (base ^ ".cmti")).cmt_sourcefile with
+          | Some f -> f
+          | None | (exception _) -> base ^ ".cmi"
+        in
+        coerce_to_interface ~impl_file:file ~intf_file sg input
+      else None
+    in
+    Analyze.analyze ?interface ~file ~unit_name ~src input
   else
     let src = if file = "-" then read_stdin () else read_file file in
     let intf = ext = ".mli" in
     let unit_name, input = typecheck ~include_dirs ~file ~intf src in
-    Analyze.analyze ~file ~unit_name ~src:(Some src) input
+    let mli = Filename.remove_extension file ^ ".mli" in
+    let interface =
+      if intf || file = "-" || not (Sys.file_exists mli) then None
+      else
+        match typecheck ~include_dirs ~file:mli ~intf:true (read_file mli) with
+        | _, Intf tsg -> coerce_to_interface ~impl_file:file ~intf_file:mli tsg.sig_type input
+        | _, Impl _ -> None
+    in
+    Analyze.analyze ?interface ~file ~unit_name ~src:(Some src) input

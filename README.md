@@ -51,7 +51,7 @@ Several files can be given in one run, and hash collisions between polymorphic v
 
 **Exceptions and extensions.** A constant exception or extension constructor is an *extension slot*, an `Object_tag` (248) block of size 2 holding its name and a unique identifier. A non-constant one is a tag-0 block whose field 0 points to that slot, followed by its arguments. A rebinding such as `exception Again = Empty` is the same value as the original.
 
-**Modules and coercions.** A structure is a tag-0 block of its value-bearing items in order. Types, module types and `external` declarations take no field. When a signature ascription inserts a coercion, the output shows which fields are copied into the new block, and from where. This excerpt is from `test/cases/modules.ml`.
+**Modules and coercions.** A structure is a tag-0 block of its value-bearing items in order. Types, module types and `external` declarations take no field. When a signature ascription inserts a coercion, the output shows which fields are copied into the new block, and from where. A `.ml` file with an `.mli` beside it, or a `.cmt` file with a `.cmti` beside it, also shows the coercion to that interface, which builds the block other units see. This excerpt is from `test/cases/modules.ml`.
 
 ```
 module Reordered : S  copies 2 of 3 fields into a new block, size 2

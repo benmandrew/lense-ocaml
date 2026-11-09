@@ -402,13 +402,23 @@ let labels ~file iter_with =
 
 type input = Impl of T.structure | Intf of T.signature
 
-let analyze ~file ~unit_name ~src input : M.compunit =
+(* The coercion that turns a unit's own structure into the block its
+   interface describes: [interface] is (env, interface file, its signature,
+   the coercion Includemod.compunit computed). *)
+let unit_coercion acc ~unit_name (str : T.structure) (env, intf_file, intf_sg, cc) =
+  let context = "unit " ^ unit_name ^ " : " ^ Filename.basename intf_file in
+  match coercion ~env ~context ~cline:1 ~src_mty:(Mty_signature str.str_type) ~dst_mty:(Mty_signature intf_sg) cc with
+  | Some c -> acc.coercions <- c :: acc.coercions
+  | None -> ()
+
+let analyze ?interface ~file ~unit_name ~src input : M.compunit =
   let acc = { decls = []; modules = []; coercions = [] } in
   let ctx = { src; prefix = "" } in
   let labels =
     match input with
     | Impl str ->
         structure acc ctx ~name:unit_name ~line:1 ~params:[] str;
+        Option.iter (unit_coercion acc ~unit_name str) interface;
         labels ~file (fun it -> it.structure it str)
     | Intf sg ->
         signature acc ctx sg;

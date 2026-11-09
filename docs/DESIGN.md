@@ -60,7 +60,7 @@ The tag numbers and representation rules in this note were first written from me
 
 **Stage 1.** Done. Variants, records, polymorphic variants and `[@@unboxed]`, read from typed `compiler-libs` output, with the `Obj` fuzz oracle from the start.
 
-**Stage 2.** Done. Module structures and signature coercions. Only coercions inside a file are shown; coercing a whole compilation unit to its `.mli` is still open.
+**Stage 2.** Done. Module structures and signature coercions. A unit with an interface also shows its coercion to the `.mli`, computed with `Includemod.compunit` as the compiler does; `test/unit.t` compares it with `-dlambda`.
 
 **Stage 3.** Open. OxCaml mixed blocks and the byte map.
 
