@@ -59,6 +59,7 @@ lense-ocaml [options] <file.ml | file.mli | file.cmt | file.cmti | -> ...
 | `--source` | Print each declaration above its representation |
 | `--no-modules` | Leave out module structures and coercions |
 | `--labels` | List every polymorphic variant label with its hash, and report collisions |
+| `--values` | Also show closures, lazy values and objects, per backend |
 | `--intf` | Read standard input as an `.mli` |
 | `-I DIR` | Add `DIR` to the load path for `.cmi` files |
 | `-` | Read standard input |
@@ -83,6 +84,16 @@ module Reordered : S  copies 2 of 3 fields into a new block, size 2
     1 <- 0  answer
 ```
 
+**Closures, lazy values and objects.** With `--values`, the output also lists the closures, lazy values and objects that a unit allocates. Closures get one section for native code and one for bytecode, because the backends build them differently. Each closure shows its code pointers, its *closinfo* word (arity and the start of the environment) and the captured variables. Each lazy value shows whether it has a block, and with which tag. Each object shows the slot of every instance variable. Native closures under flambda are reported as not predicted. This excerpt is the native closure returned by `let mk b a = fun x -> x + a + b`, from `test/values.t`.
+
+```
+mk.(fun)  line 5  Closure_tag 247, size 4
+    0  code pointer
+    1  closinfo: arity 1, environment from field 2
+    2  b : int  immediate (int)
+    3  a : int  immediate (int)
+```
+
 ## Testing
 
-`dune test` runs the cram goldens in `test/*.t`, rechecks the representation rules against the compiler in `test/stage0.t`, and runs the fuzz oracle in `test/fuzz/fuzz.ml`; `dune promote` accepts a changed golden. Each fuzz round generates random variants, records, polymorphic variants, GADTs, exceptions and modules with a coerced view, and predicts their representations with `lense-ocaml` in-process. It then compiles a checker with both `ocamlopt` and `ocamlc` that builds a value of every constructor and compares it with the prediction through `Obj.is_int`, `Obj.tag` and `Obj.size`. The 20-round run in `dune test` makes 1,077 checks per backend, and a planted off-by-one in constant numbering failed on the first round. A longer run is `dune exec test/fuzz/fuzz.exe -- -rounds 500`, with `-seed N` for the first seed and `-keep DIR` to keep the generated programs. The ground truth is the running program, so the oracle needs no second implementation of the representation rules to compare against.
+`dune test` runs the cram goldens in `test/*.t`, rechecks the representation rules against the compiler in `test/stage0.t`, and runs the fuzz oracle in `test/fuzz/fuzz.ml`; `dune promote` accepts a changed golden. Each fuzz round generates random variants, records, polymorphic variants, GADTs, exceptions, modules with a coerced view, closures, lazy values and classes, and predicts their representations with `lense-ocaml` in-process. It then compiles a checker with both `ocamlopt` and `ocamlc` that builds a value of every constructor and compares it with the prediction through `Obj.is_int`, `Obj.tag` and `Obj.size`. The 20-round run in `dune test` makes 1,316 checks per backend, and a planted off-by-one in constant numbering failed on the first round. A longer run is `dune exec test/fuzz/fuzz.exe -- -rounds 500`, with `-seed N` for the first seed and `-keep DIR` to keep the generated programs. The ground truth is the running program, so the oracle needs no second implementation of the representation rules to compare against.

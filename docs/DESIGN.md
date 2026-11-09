@@ -62,6 +62,20 @@ The tool builds against OxCaml's `compiler-libs` from the same tree, checked on 
 
 **Bytecode.** The compiler's own runtime header calls these *faux mixed blocks*. Bytecode keeps declaration order, with one scanned field per declared field. Flat fields are boxed: `float#` as a `Double_tag` block, `int32#`, `int64#` and `nativeint#` as custom blocks, `int8#`, `int16#` and `int#` as immediates, and unboxed products as tag-0 blocks. The block sizes differ between the backends whenever products are present. The fuzz oracle generates mixed records and constructors on OxCaml, with scalar flat fields of eight kinds, unboxed tuples and all-float records. It checks native code through `Obj.raw_field` bits and the scanned prefix length, and bytecode through the boxed values. A planted bug that reversed the slot order gave 7 mismatches in 6 rounds. `dune test --build-dir _build-ox` runs 20 rounds.
 
+## Stage 4 results
+
+`--values` prints the closures, lazy values and objects that a unit allocates. The code is in `src/core/values.ml`, and the parts that differ between backends are in `compat_55.ml` and `compat_ox.ml`. Closures are read from the *Lambda* code that each backend compiles. The tool builds it as the compiler drivers do, with `Translmod.transl_store_implementation` for native code and `transl_implementation` for bytecode, followed by `Simplif`. Lazy values follow `Typeopt.classify_lazy_argument`. Objects follow the slot order that `Translclass` allocates, because no compiler data records it.
+
+**Native code.** Without flambda, native code uses the `Closure` middle end. Each function in a set takes 2 words at arity 1, a code pointer and the closinfo word. At any other arity it takes 3 words: a code pointer for partial application or tuple splitting, the closinfo word, and the code pointer of the full function. Every function after the first has an `Infix_tag` (249) header word before it. The captured variables follow, in `Ident` order. Top-level values of the unit are not captured, because native code reads them from the module block. `Simplif.split_default_wrapper` splits a function with defaulted optional arguments into a wrapper and an inner function that share one block, so `opt ?(x=1) y` is a block of size 7 for 2 functions.
+
+**Bytecode.** Each function takes 2 words, and the arity in its closinfo word is 0. A function captures the top-level values it uses, and there is no default-argument split. `Simplif` skips some `let` optimisations under `-g`, so the prediction is for `ocamlc` without `-g`. On both backends the closinfo word holds the arity in its top 8 bits, then the start-of-environment field, then a low tag bit of 1. OxCaml takes one bit of the start-of-environment field for a flag, which leaves it 54 bits instead of 55. Flambda 2, the OxCaml native middle end, reverses function sets, propagates constants and reorders the environment. The tool therefore reports native closures on OxCaml as not predicted, and predicts bytecode closures on OxCaml as usual.
+
+**Lazy values.** A constant, a function or a plain identifier gives the value itself. A float that cannot be short-cut, or an identifier whose type might be a float or a lazy value, gives a `Forward_tag` (250) block of size 1. Anything else gives a `Lazy_tag` (246) block holding a closure, and forcing it turns the block into a `Forward_tag` block.
+
+**Objects.** An object is an `Object_tag` (248) block whose field 0 is the method table and field 1 the object id. Each class level allocates new slots in a fixed order. First comes one slot for each class parameter or class-level `let` that a method uses. Then come the level's own vals that are not overrides, in declaration order, and then the slots of each inherited class in turn. A name that already has a slot keeps it. An unused parameter takes no slot, because `Simplif` drops its `StrictOpt` let. A class or object inside an expression (under `Translobj.oo_wrap`) can get an extra slot right after the object id. It gets one when its methods use variables bound in the enclosing top-level item, and the slot holds a tag-0 block of those variables. Top-level classes have no such slot.
+
+The fuzz oracle builds closures, lazy values and objects and inspects them with `Obj` on `ocamlopt` and `ocamlc`, for 500 rounds on each switch. A planted bug that reversed the closure environment gave 16 mismatches in 8 of 30 rounds, and one that dropped the object environment slot gave 8 mismatches in 4 of 30 rounds. It also caught two wrong object rules during development. The first version missed that methods read class parameters through instance-variable reads, so a used parameter looked unused. It also assumed that inheritance alone forces the environment slot.
+
 ## Plan
 
 **Stage 0.** Done. Every rule in this note was checked against the pinned OCaml release, with the results above.
@@ -72,8 +86,8 @@ The tool builds against OxCaml's `compiler-libs` from the same tree, checked on 
 
 **Stage 3.** Done. OxCaml mixed blocks and the byte map, built against OxCaml's own `compiler-libs` through `src/core/compat_ox.ml`. The fuzz oracle checks native code through `Obj.raw_field` and bytecode through the boxed values.
 
-**Stage 4.** Open. Closures, objects and lazy values, per compiler configuration.
+**Stage 4.** Done. Closures, lazy values and objects, shown by `--values`, with one closure section per backend. The fuzz oracle builds each value and checks it with `Obj` on both backends.
 
-Two pieces sit outside the stages and are also open: the `js_of_ocaml` web front end, and checking the predictions under flambda.
+Two pieces sit outside the stages. The `js_of_ocaml` web front end is open. Closure layouts under flambda are not predicted, for classic flambda on OCaml 5.5 and for flambda 2 in OxCaml native code, and the tool prints "not predicted" for them.
 
 The C++ tool is mostly about the compiler's freedom to place fields. The OCaml tool is mostly about the compiler's freedom to choose a representation, and that choice is where OCaml programmers usually have the least visibility.

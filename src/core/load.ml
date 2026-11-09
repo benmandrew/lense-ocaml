@@ -110,10 +110,19 @@ let coerce_to_interface ~impl_file ~intf_file intf_sg (input : Analyze.input) =
         Some (env, intf_file, intf_sg, cc)
       with exn -> raise (report exn))
 
-let compunit ~include_dirs file : M.compunit =
+(* Closures, lazy values and objects, from an implementation. Run it before
+   anything else is typechecked: the Lambda translation reads global state
+   that typechecking sets. *)
+let values_of ~values ~unit_name ~src (input : Analyze.input) =
+  match input with
+  | Impl str when values -> ( try Some (Values.values ~modname:unit_name ~src str) with exn -> raise (report exn))
+  | _ -> None
+
+let compunit ?(values = false) ~include_dirs file : M.compunit =
   let ext = Filename.extension file in
   if ext = ".cmt" || ext = ".cmti" then
     let unit_name, input, src = read_cmt ~include_dirs file in
+    let vals = values_of ~values ~unit_name ~src input in
     (* The interface the build compiled: a .cmti beside the .cmt marks one. *)
     let base = Filename.remove_extension file in
     let interface =
@@ -127,11 +136,12 @@ let compunit ~include_dirs file : M.compunit =
         coerce_to_interface ~impl_file:file ~intf_file sg input
       else None
     in
-    Analyze.analyze ?interface ~file ~unit_name ~src input
+    { (Analyze.analyze ?interface ~file ~unit_name ~src input) with values = vals }
   else
     let src = if file = "-" then read_stdin () else read_file file in
     let intf = ext = ".mli" in
     let unit_name, input = typecheck ~include_dirs ~file ~intf src in
+    let vals = values_of ~values ~unit_name ~src:(Some src) input in
     let mli = Filename.remove_extension file ^ ".mli" in
     let interface =
       if intf || file = "-" || not (Sys.file_exists mli) then None
@@ -140,4 +150,4 @@ let compunit ~include_dirs file : M.compunit =
         | _, Intf tsg -> coerce_to_interface ~impl_file:file ~intf_file:mli tsg.sig_type input
         | _, Impl _ -> None
     in
-    Analyze.analyze ?interface ~file ~unit_name ~src:(Some src) input
+    { (Analyze.analyze ?interface ~file ~unit_name ~src:(Some src) input) with values = vals }

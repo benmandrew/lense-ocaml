@@ -8,6 +8,6 @@ Stages follow docs/DESIGN.md.
 - [x] Coercion of a compilation unit to its `.mli` (`Includemod.compunit`; `test/unit.t`).
 - [x] Stage 3: OxCaml unboxed layouts and mixed blocks, with a byte map (`src/core/compat_ox.ml`, `test/ox/mixed.t`, mixed-block fuzzing).
 - [x] Share `src/core` between the two compilers; only `compat_55.ml` and `compat_ox.ml` differ.
-- [ ] Stage 4: closures, objects and lazy values per compiler configuration (flambda changes closure shapes).
+- [x] Stage 4: closures, objects and lazy values per backend, behind `--values` (`src/core/values.ml`, `test/values.t`, fuzzed on both switches). Native closures under flambda are reported as not predicted.
 - [ ] Web front end through js_of_ocaml, reusing `src/model`.
 - [ ] Nix flake, as in `../lense`.

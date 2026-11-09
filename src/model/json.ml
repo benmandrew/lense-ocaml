@@ -135,11 +135,52 @@ let coercion (c : coercion) =
 
 let label (l : label_use) = Obj [ ("label", Str l.label); ("hash", Int l.hash); ("file", Str l.file); ("line", Int l.lline) ]
 
+let closure ~native (c : closure) =
+  let offs, envstart = closure_offsets ~native c in
+  Obj
+    [ ("size", Int (closure_size ~native c)); ("env_start", Int envstart);
+      ( "functions",
+        List
+          (List.map2
+             (fun (f : fn) off ->
+               Obj [ ("name", Str f.fname); ("line", Int f.fline); ("arity", Int f.arity); ("tupled", Bool f.tupled);
+                     ("offset", Int off); ("code_words", Int (code_words ~native f)) ])
+             c.fns offs) );
+      ( "env",
+        List (List.map (fun (cv : capture) -> Obj [ ("name", Str cv.cvar); ("type", Str cv.cty); ("word", word cv.cword) ]) c.env) ) ]
+
+let backend (bc : backend_closures) =
+  Obj
+    [ ("backend", Str bc.backend); ("config", Str bc.config);
+      ("closures", opt (fun cs -> List (List.map (closure ~native:(bc.backend = "native code")) cs)) bc.closures) ]
+
+let lazy_value (z : lazy_value) =
+  let kind = match z.zkind with Itself -> "itself" | Forward -> "forward" | Suspended -> "lazy" in
+  Obj [ ("line", Int z.zline); ("source", Str z.zsource); ("kind", Str kind); ("word", word z.zword) ]
+
+let obj (o : obj) =
+  Obj
+    [ ("name", Str o.oname); ("line", Int o.oline); ("env_slot", Bool o.env_slot);
+      ( "vars",
+        List
+          (List.map
+             (fun (v : ivar) ->
+               Obj [ ("name", Str v.vname); ("type", Str v.vty); ("mutable", Bool v.vmutable); ("parameter", Bool v.vparam);
+                     ("from", Str v.vfrom); ("word", word v.vword) ])
+             o.ivars) );
+      ("unknown", strs o.unknown) ]
+
+let values (v : values) =
+  Obj
+    [ ("closures", List (List.map backend v.backends)); ("lazy", List (List.map lazy_value v.lazies));
+      ("objects", List (List.map obj v.objects)) ]
+
 let compunit (u : compunit) =
   Obj
-    [ ("file", Str u.file); ("unit", Str u.unit_name); ("types", List (List.map decl u.decls));
-      ("modules", List (List.map structure u.modules)); ("coercions", List (List.map coercion u.coercions));
-      ("labels", List (List.map label u.labels)) ]
+    ([ ("file", Str u.file); ("unit", Str u.unit_name); ("types", List (List.map decl u.decls));
+       ("modules", List (List.map structure u.modules)); ("coercions", List (List.map coercion u.coercions));
+       ("labels", List (List.map label u.labels)) ]
+    @ match u.values with Some v -> [ ("values", values v) ] | None -> [])
 
 let render units =
   let collisions =

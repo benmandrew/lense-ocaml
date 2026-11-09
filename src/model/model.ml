@@ -132,6 +132,75 @@ type coercion = {
 
 type label_use = { label : string; hash : int; file : string; lline : int }
 
+(* Stage 4: values that are not of a declared type's shape. *)
+
+(* A variable a closure captures. *)
+type capture = { cvar : string; cty : string; cword : word }
+
+type fn = {
+  fname : string;  (** Scope name from the compiler, such as "mk.(fun)". *)
+  fline : int;
+  arity : int;
+  tupled : bool;  (** Takes its arguments as one tuple, unpacked by the caller. *)
+}
+
+(* One closure block: a single function, or a set of mutually recursive ones
+   that share an environment. *)
+type closure = { fns : fn list; env : capture list }
+
+(* The words a function's entry takes before the next entry or the
+   environment: code pointer and closinfo, plus a second code pointer in
+   native code when the function takes more than one argument. *)
+let code_words ~native f = if native && (f.arity > 1 || f.tupled) then 3 else 2
+
+(* Field index of each entry (after its Infix header, if any), and of the
+   environment. *)
+let closure_offsets ~native c =
+  let _, offs =
+    List.fold_left
+      (fun (i, acc) f ->
+        let i = if acc = [] then i else i + 1 in
+        (i + code_words ~native f, i :: acc))
+      (0, []) c.fns
+  in
+  let offs = List.rev offs in
+  let last = List.nth c.fns (List.length c.fns - 1) and lo = List.nth offs (List.length offs - 1) in
+  (offs, lo + code_words ~native last)
+
+let closure_size ~native c = snd (closure_offsets ~native c) + List.length c.env
+
+type backend_closures = {
+  backend : string;  (** "native code" or "bytecode". *)
+  config : string;  (** How the backend was built, such as "Closure, without flambda". *)
+  closures : closure list option;  (** [None]: the layout is not predicted for this configuration. *)
+}
+
+type lazy_kind =
+  | Itself  (** No block: the value is computed at once, and is its own lazy value. *)
+  | Forward  (** A Forward_tag block holding the value. *)
+  | Suspended  (** A Lazy_tag block holding a closure, until forced. *)
+
+type lazy_value = { zline : int; zsource : string; zkind : lazy_kind; zword : word }
+
+type ivar = {
+  vname : string;
+  vty : string;
+  vmutable : bool;
+  vparam : bool;  (** A class parameter or class-level let that a method uses. *)
+  vword : word;
+  vfrom : string;  (** The class that declares it. *)
+}
+
+type obj = {
+  oname : string;  (** "class c", or "object" for an immediate object. *)
+  oline : int;
+  env_slot : bool;  (** Field 2 holds the local variables the class uses, before the instance variables. *)
+  ivars : ivar list;  (** Instance variables in slot order. *)
+  unknown : string list;  (** Inherited classes from other units, whose variables follow. *)
+}
+
+type values = { backends : backend_closures list; lazies : lazy_value list; objects : obj list }
+
 type compunit = {
   file : string;
   unit_name : string;
@@ -139,6 +208,7 @@ type compunit = {
   modules : structure list;
   coercions : coercion list;
   labels : label_use list;
+  values : values option;  (** Closures, lazy values and objects; only when asked for. *)
 }
 
 (* Polymorphic-variant labels that share a hash, across every unit. Each

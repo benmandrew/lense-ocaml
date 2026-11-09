@@ -11,6 +11,8 @@ let tag_name t =
   else if t = double_array_tag then "Double_array_tag 254"
   else if t = custom_tag then "Custom_tag 255"
   else if t = lazy_tag then "Lazy_tag 246"
+  else if t = forward_tag then "Forward_tag 250"
+  else if t = infix_tag then "Infix_tag 249"
   else if t = cont_tag then "Cont_tag 245"
   else if t = forcing_tag then "Forcing_tag 244"
   else "tag " ^ string_of_int t
@@ -214,6 +216,124 @@ let coercion b (c : coercion) =
             Printf.bprintf b "    %s <- %s  %s%s\n" (lpad iw (string_of_int m.dst)) src m.name how)
           moves
 
+(* Stage 4: closures, lazy values and objects. *)
+
+let rows b ~indent (rs : (string * string * string) list) =
+  (* Rows with nothing in the last column do not widen the middle one. *)
+  let w = List.fold_left (fun w (_, l, x) -> if x = "" then w else max w (String.length l)) 0 rs in
+  let iw = List.fold_left (fun w (i, _, _) -> max w (String.length i)) 0 rs in
+  List.iter
+    (fun (i, l, x) ->
+      let line = Printf.sprintf "%s%s  %s  %s" (String.make indent ' ') (lpad iw i) (pad w l) x in
+      (* No trailing spaces when the last column is empty. *)
+      let n = ref (String.length line) in
+      while !n > 0 && line.[!n - 1] = ' ' do decr n done;
+      Printf.bprintf b "%s\n" (String.sub line 0 !n))
+    rs
+
+let fn_name f = if f.fname = "" then "(made by the compiler)" else f.fname
+
+let closure_rows ~native c =
+  let offs, envstart = closure_offsets ~native c in
+  let many = List.length c.fns > 1 in
+  let entry (f : fn) off =
+    let who s = if many then fn_name f ^ ": " ^ s else s in
+    let info =
+      if native then
+        let arity = if f.tupled then -f.arity else f.arity in
+        Printf.sprintf "closinfo: arity %d, environment from field %d" arity envstart
+      else Printf.sprintf "closinfo: environment from field %d" envstart
+    in
+    let infix =
+      if off = 0 then []
+      else [ (string_of_int (off - 1), who (tag_name infix_tag ^ " header: a pointer to " ^ fn_name f ^ " points to the next field"), "") ]
+    in
+    let code =
+      if code_words ~native f = 3 then
+        [ (string_of_int off, who (if f.tupled then "code pointer: takes the tuple apart" else "code pointer: partial application"), "");
+          (string_of_int (off + 1), who info, "");
+          (string_of_int (off + 2), who "code pointer: the function itself", "") ]
+      else [ (string_of_int off, who "code pointer", ""); (string_of_int (off + 1), who info, "") ]
+    in
+    infix @ code
+  in
+  List.concat (List.map2 entry c.fns offs)
+  @ List.mapi
+      (fun i (cv : capture) ->
+        (string_of_int (envstart + i), (if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty), word cv.cword))
+      c.env
+
+let closure b ~native c =
+  let names = String.concat ", " (List.map fn_name c.fns) in
+  let f = List.hd c.fns in
+  let size = closure_size ~native c in
+  if List.length c.fns = 1 && c.env = [] then
+    Printf.bprintf b "  %s  line %d  %s, size %d, arity %d%s, no environment\n" names f.fline (tag_name closure_tag) size f.arity
+      (if f.tupled then " (tupled)" else "")
+  else begin
+    if List.length c.fns = 1 then
+      Printf.bprintf b "  %s  line %d  %s, size %d\n" names f.fline (tag_name closure_tag) size
+    else
+      Printf.bprintf b "  %s  line %d  one %s block for %d functions, size %d\n" names f.fline (tag_name closure_tag)
+        (List.length c.fns) size;
+    rows b ~indent:6 (closure_rows ~native c)
+  end
+
+let backend b (bc : backend_closures) =
+  match bc.closures with
+  | None -> Printf.bprintf b "closures in %s (%s): not predicted\n" bc.backend bc.config
+  | Some [] -> Printf.bprintf b "closures in %s (%s): none\n" bc.backend bc.config
+  | Some cs ->
+      Printf.bprintf b "closures in %s (%s)\n" bc.backend bc.config;
+      List.iter (closure b ~native:(bc.backend = "native code")) cs
+
+let lazy_value b (z : lazy_value) =
+  let what =
+    match z.zkind with
+    | Itself -> "no block: the value itself, " ^ word z.zword
+    | Forward -> Printf.sprintf "%s block, size 1, holding the value: %s" (tag_name forward_tag) (word z.zword)
+    | Suspended ->
+        Printf.sprintf "%s block, size 1, holding a closure; forcing it makes it a %s block holding the result"
+          (tag_name lazy_tag) (tag_name forward_tag)
+  in
+  Printf.bprintf b "%s  line %d  %s\n" (shorten z.zsource) z.zline what
+
+let obj b (o : obj) =
+  let first = if o.env_slot then 3 else 2 in
+  let size = first + List.length o.ivars in
+  Printf.bprintf b "%s  line %d  %s, size %d%s\n" o.oname o.oline (tag_name object_tag) size
+    (if o.unknown = [] then "" else " or more");
+  let rs =
+    [ ("0", "method table", "pointer to the class's method table"); ("1", "object id", "immediate (int)") ]
+    @ (if o.env_slot then [ ("2", "environment", "pointer to a block of the local variables the class uses, tag 0") ] else [])
+    @ List.mapi
+        (fun i (v : ivar) ->
+          let label =
+            (if v.vmutable then "mutable " else "") ^ v.vname ^ " : " ^ v.vty
+          in
+          let from =
+            if v.vparam then "  (parameter)" else ""
+          in
+          let from = if "class " ^ v.vfrom = o.oname || v.vfrom = o.oname then from else from ^ "  (from " ^ v.vfrom ^ ")" in
+          (string_of_int (first + i), label, word v.vword ^ from))
+        o.ivars
+  in
+  rows b ~indent:4 rs;
+  List.iter
+    (fun u -> Printf.bprintf b "    then the variables of %s, from another unit, in an order its class sets\n" u)
+    o.unknown
+
+let values b (v : values) =
+  let first = ref true in
+  let sep () = if !first then first := false else Buffer.add_char b '\n' in
+  List.iter (fun bc -> sep (); backend b bc) v.backends;
+  if v.lazies <> [] then begin
+    sep ();
+    Buffer.add_string b "lazy values\n";
+    List.iter (fun z -> Buffer.add_string b "  "; lazy_value b z) v.lazies
+  end;
+  List.iter (fun o -> sep (); obj b o) v.objects
+
 type options = { source : bool; modules : bool; only : string list }
 
 let selected opts name =
@@ -233,7 +353,10 @@ let compunit opts b (u : compunit) =
   if opts.modules && opts.only = [] then begin
     List.iter (fun m -> sep (); structure b m) u.modules;
     List.iter (fun c -> sep (); coercion b c) u.coercions
-  end
+  end;
+  match u.values with
+  | Some v when opts.only = [] -> sep (); values b v
+  | _ -> ()
 
 let collisions b units =
   List.iter

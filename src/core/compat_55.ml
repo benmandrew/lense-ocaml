@@ -130,3 +130,89 @@ let type_structure env ast =
 let reset_envaux () = Envaux.reset_cache ()
 let cmt_modname (cmt : Cmt_format.cmt_infos) = cmt.cmt_modname
 let read_cmi_signature file = Env.read_signature (Unit_info.Artifact.from_filename file)
+
+(* Closures, from the Lambda code each backend compiles *)
+
+(* The local variable an expression is, if it is one. *)
+let expr_ident (e : T.expression) = match e.exp_desc with T.Texp_ident (Path.Pident id, _, _) -> Some id | _ -> None
+
+let bound_idents (p : _ T.general_pattern) =
+  List.map (fun (id, _, ty, _) -> (id, ty)) (T.pat_bound_idents_full p)
+
+type lfun = { lname : string; lloc : Location.t; nparams : int; ltupled : bool }
+
+let lfun ?id (f : Lambda.lfunction) =
+  let lname, lloc =
+    match f.loc with
+    | Loc_known { loc; scopes } -> (Debuginfo.Scoped_location.string_of_scopes scopes, loc)
+    | Loc_unknown -> ("", Location.none)
+  in
+  (* A function split off by the compiler shares its scope name. *)
+  let lname =
+    match id with
+    | Some id when lname <> "" && not (String.ends_with ~suffix:(Ident.name id) lname) ->
+        let prefix = match String.rindex_opt lname '.' with Some i -> String.sub lname 0 (i + 1) | None -> "" in
+        prefix ^ Ident.name id
+    | _ -> lname
+  in
+  { lname; lloc; nparams = List.length f.params; ltupled = f.kind = Tupled }
+
+(* Closure splits a function with optional arguments and default values into
+   a wrapper and an inner function, which then share a block (Closure's
+   close_functions). Bytecode does not. *)
+let split ~native (bs : Lambda.rec_binding list) =
+  match bs with
+  | _ when not native -> bs
+  | [ { def = { attr = { inline = Always_inline; _ }; _ }; _ } ] -> bs
+  | _ ->
+      List.concat_map
+        (fun ({ id; def = { kind; params; return; body; attr; loc } } : Lambda.rec_binding) ->
+          Simplif.split_default_wrapper ~id ~kind ~params ~return ~body ~attr ~loc)
+        bs
+
+(* Every closure the code allocates: one function, or a recursive set that
+   shares one block, with the variables it captures in Ident order. *)
+let closure_sets ~native (lam : Lambda.lambda) =
+  let acc = ref [] in
+  let add bs =
+    let bs = split ~native bs in
+    let fv = Lambda.free_variables (Lletrec (bs, Lambda.lambda_unit)) in
+    acc := (List.map (fun (b : Lambda.rec_binding) -> lfun ~id:b.id b.def) bs, Ident.Set.elements fv) :: !acc
+  in
+  let rec walk (lam : Lambda.lambda) =
+    match lam with
+    | Lfunction f ->
+        (* Named after its scope, so a split-off inner function reads as "f_inner". *)
+        let scope = (lfun f).lname in
+        let last = match String.rindex_opt scope '.' with Some i -> String.sub scope (i + 1) (String.length scope - i - 1) | None -> scope in
+        add [ { id = Ident.create_local (if last = "" then "fun" else last); def = f } ];
+        walk f.body
+    | Lletrec (bs, body) ->
+        add bs;
+        List.iter (fun (b : Lambda.rec_binding) -> walk b.def.body) bs;
+        walk body
+    | _ -> Lambda.shallow_iter ~tail:walk ~non_tail:walk lam
+  in
+  walk lam;
+  List.rev !acc
+
+(* The Lambda code that ocamlopt (without flambda) or ocamlc compiles, built
+   as the drivers build it. *)
+let lambda ~native ~modname (str : T.structure) =
+  Misc.protect_refs [ Misc.R (Clflags.native_code, native) ] (fun () ->
+      let p =
+        (if native then Translmod.transl_store_implementation else Translmod.transl_implementation)
+          modname (str, T.Tcoerce_none)
+      in
+      Simplif.simplify_lambda p.code)
+
+(* For each backend: its name, its configuration, and the closures, or None
+   when the layout is not predicted. *)
+let closure_backends ~modname str =
+  let sets native = try Some (closure_sets ~native (lambda ~native ~modname str)) with _ -> None in
+  [
+    ( "native code",
+      (if Config.flambda then "flambda, which chooses closure layouts itself" else "Closure, without flambda"),
+      if Config.flambda then None else sets true );
+    ("bytecode", "ocamlc without -g", sets false);
+  ]

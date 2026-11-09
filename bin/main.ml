@@ -9,6 +9,7 @@ let usage =
    Sizes are in words, without the header word.\n\nOptions:"
 
 let () =
+  let values = ref false in
   let json = ref false and source = ref false and modules = ref true and labels = ref false in
   let only = ref [] and includes = ref [] and files = ref [] and intf = ref false in
   let spec =
@@ -18,6 +19,7 @@ let () =
         ("--type", Arg.String (fun s -> only := s :: !only), "NAME Show only the named types (repeatable)");
         ("--source", Arg.Set source, " Print each declaration above its representation");
         ("--no-modules", Arg.Clear modules, " Leave out module structures and coercions");
+        ("--values", Arg.Set values, " Also show closures, lazy values and objects, per backend");
         ("--labels", Arg.Set labels, " List every polymorphic variant label with its hash");
         ("--intf", Arg.Set intf, " Read standard input as an interface (.mli)");
         ("-", Arg.Unit (fun () -> files := "-" :: !files), " Read source from standard input");
@@ -41,7 +43,7 @@ let () =
                  let src = read_stdin () in
                  let unit_name, input = typecheck ~include_dirs:(List.rev !includes) ~file:f' ~intf:true src in
                  Lense_core.Analyze.analyze ~file:f ~unit_name ~src:(Some src) input)
-             else Lense_core.Load.compunit ~include_dirs:(List.rev !includes) f)
+             else Lense_core.Load.compunit ~values:!values ~include_dirs:(List.rev !includes) f)
         with
         | Lense_core.Load.Failed msg ->
             if msg <> "" then prerr_string msg;

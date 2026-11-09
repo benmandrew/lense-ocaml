@@ -27,3 +27,4 @@ Run the fuzz executable with the matching switch's `opam env` in the shell: it c
 - Goldens avoid host-dependent output: no closure sizes or code pointers, no absolute paths.
 - Environments from `.cmt` files hold only summaries; go through `Analyze.rebuild_env` before reading types from them.
 - Field types in compiler-libs are wrapped in `Tpoly`; unwrap before matching on them.
+- Closures are read from the Lambda each backend compiles (`Compat.closure_backends`), built as the drivers build it. Object slot order has no compiler data; `Values.class_vars` follows Translclass, and the fuzz oracle checks it.

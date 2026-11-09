@@ -416,4 +416,4 @@ let analyze ?interface ~file ~unit_name ~src input : M.compunit =
         labels ~file (fun it -> it.signature it sg)
   in
   { M.file; unit_name; decls = List.rev acc.decls; modules = List.rev acc.modules;
-    coercions = List.rev acc.coercions; labels }
+    coercions = List.rev acc.coercions; labels; values = None }

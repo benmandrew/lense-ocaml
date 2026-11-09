@@ -260,3 +260,57 @@ let type_structure env ast =
 let reset_envaux () = Envaux.reset_cache ~preserve_persistent_env:false
 let cmt_modname (cmt : Cmt_format.cmt_infos) = Compilation_unit.name_as_string cmt.cmt_modname
 let read_cmi_signature file = (Cmi_format.read_cmi file).cmi_sign
+
+(* Stage 4 *)
+
+(* The local variable an expression is, if it is one. *)
+let expr_ident (e : T.expression) = match e.exp_desc with T.Texp_ident (Path.Pident id, _, _, _, _) -> Some id | _ -> None
+
+let bound_idents (p : _ T.general_pattern) =
+  List.map (fun (id, _, ty, _, _) -> (id, ty)) (T.pat_bound_idents_full p)
+
+type lfun = { lname : string; lloc : Location.t; nparams : int; ltupled : bool }
+
+let lfun (f : Lambda.lfunction) =
+  let lname, lloc =
+    match f.loc with
+    | Loc_known { loc; scopes } -> (Debuginfo.Scoped_location.string_of_scopes ~include_zero_alloc:false scopes, loc)
+    | Loc_unknown -> ("", Location.none)
+  in
+  { lname; lloc; nparams = List.length f.params; ltupled = f.kind = Tupled }
+
+(* Every closure the bytecode allocates: one function, or a recursive set
+   that shares one block, with the variables it captures in Ident order.
+   OxCaml's ocamlc does not split default arguments. *)
+let closure_sets (lam : Lambda.lambda) =
+  let acc = ref [] in
+  let add fs fv = acc := (List.map lfun fs, Ident.Set.elements fv) :: !acc in
+  let rec walk (lam : Lambda.lambda) =
+    match lam with
+    | Lfunction f ->
+        add [ f ] (Lambda.free_variables lam);
+        walk f.body
+    | Lletrec (bs, body) ->
+        add (List.map (fun (b : Lambda.rec_binding) -> b.def) bs) (Lambda.free_variables (Lletrec (bs, Lambda.lambda_unit)));
+        List.iter (fun (b : Lambda.rec_binding) -> walk b.def.body) bs;
+        walk body
+    | _ -> Lambda.shallow_iter ~tail:walk ~non_tail:walk lam
+  in
+  walk lam;
+  List.rev !acc
+
+(* The Lambda code that OxCaml's ocamlc compiles, built as its driver
+   builds it. *)
+let bytecode_lambda ~modname (str : T.structure) =
+  Misc.protect_refs [ Misc.R (Clflags.native_code, false) ] (fun () ->
+      let cu = Compilation_unit.create Compilation_unit.Prefix.empty (Compilation_unit.Name.of_string modname) in
+      let p = Translmod.transl_implementation cu (str, T.Tcoerce_none, None) in
+      Simplif.simplify_lambda_for_bytecode p.code)
+
+let closure_backends ~modname str =
+  [
+    ("native code", "flambda 2, which chooses closure layouts itself", None);
+    ( "bytecode",
+      "ocamlc without -g",
+      try Some (closure_sets (bytecode_lambda ~modname str)) with _ -> None );
+  ]
