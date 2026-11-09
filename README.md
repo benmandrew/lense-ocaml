@@ -1,5 +1,7 @@
 # lense-ocaml
 
+![Screenshot](web/public/og.png)
+
 `lense-ocaml` prints how each type in an OCaml file is represented at runtime: which constructors become *immediates*, which *tag* each heap block gets, when the compiler drops the block, and how modules lay out their fields. It reads the representations from compiler-libs for OCaml 5.5, and from a vendored frontend for OxCaml. It also runs in a browser through js_of_ocaml. It is the OCaml counterpart of `lense`, and its design is in [docs/DESIGN.md](docs/DESIGN.md).
 
 ```console
