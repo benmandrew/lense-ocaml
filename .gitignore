@@ -2,3 +2,5 @@ _build/
 *.install
 result
 _build-ox/
+web/node_modules/
+web/dist/

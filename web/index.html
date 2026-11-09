@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lense-ocaml</title>
+  <meta name="description" content="How OCaml values are represented at runtime, read from compiler-libs in the browser">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="bar">
+    <h1>lense-ocaml</h1>
+    <label>Example <select id="example"></select></label>
+    <label>File
+      <select id="kind">
+        <option value="ml">.ml</option>
+        <option value="mli">.mli</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="values"> closures, lazy values and objects</label>
+    <label><input type="checkbox" id="source"> source</label>
+    <label><input type="checkbox" id="modules" checked> modules</label>
+    <label><input type="checkbox" id="labels"> variant labels only</label>
+    <span id="status" role="status" aria-live="polite"></span>
+  </header>
+  <main>
+    <section id="editor" aria-label="Source"></section>
+    <section id="output" aria-label="Representations"></section>
+  </main>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

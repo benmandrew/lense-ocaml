@@ -1,0 +1,57 @@
+// lense_web.js comes from `dune build web/jsoo/lense_web.bc.js`. Set
+// LENSE_JS to use a build other than ../_build/default.
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { defineConfig, type Plugin } from 'vite';
+
+const js = resolve(import.meta.dirname, process.env.LENSE_JS ?? '../_build/default/web/jsoo/lense_web.bc.js');
+
+function read(): Buffer {
+  if (!existsSync(js)) throw new Error(`${js} is missing: run dune build web/jsoo/lense_web.bc.js or set LENSE_JS`);
+  return readFileSync(js);
+}
+
+// Serves the script at lense/lense_web.js in development and copies it into
+// the build. Vite must not bundle it: it is a classic script of about 8 MB.
+function lenseScript(): Plugin {
+  return {
+    name: 'lense-script',
+    configureServer(server) {
+      server.middlewares.use('/lense/lense_web.js', (_req, res) => {
+        res.setHeader('Content-Type', 'text/javascript');
+        res.end(read());
+      });
+    },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'lense/lense_web.js', source: read() });
+    },
+  };
+}
+
+// The golden-test inputs, offered in the page's Example menu. Set
+// LENSE_EXAMPLES_DIR to read them from elsewhere.
+const examplesDir = resolve(import.meta.dirname, process.env.LENSE_EXAMPLES_DIR ?? '../test/cases');
+
+function examples(): Plugin {
+  const id = 'virtual:examples';
+  return {
+    name: 'lense-examples',
+    resolveId: (source) => (source === id ? `\0${id}` : undefined),
+    load(resolved) {
+      if (resolved !== `\0${id}`) return;
+      const list = readdirSync(examplesDir).filter((f) => /\.mli?$/.test(f)).sort().map((f) => {
+        const path = resolve(examplesDir, f);
+        this.addWatchFile(path);
+        return { name: f, intf: f.endsWith('.mli'), code: readFileSync(path, 'utf8') };
+      });
+      return `export default ${JSON.stringify(list)};`;
+    },
+  };
+}
+
+export default defineConfig({
+  base: './',
+  plugins: [lenseScript(), examples()],
+  worker: { format: 'es' },
+  build: { target: 'es2022', chunkSizeWarningLimit: 700 },
+});

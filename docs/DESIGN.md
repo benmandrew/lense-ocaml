@@ -38,7 +38,7 @@ The compiler's own libraries, `compiler-libs`, play the role of clang LibTooling
 
 The fuzz oracle is simpler than in the C++ version. A generator writes random type declarations and constructs values of them. The test program then inspects each value with the `Obj` module and compares the result with the tool's prediction. It is compiled with both `ocamlopt` and `ocamlc`, so each prediction is checked on both backends. The ground truth comes from the running program, so no second compiler is needed.
 
-The web front end, not yet built, is also simpler. The [OCaml playground](https://ocaml.org/play) already runs the compiler in the browser through `js_of_ocaml`. The same route avoids the custom WebAssembly build of clang that lense needs.
+The web front end in `web/` is also simpler. The [OCaml playground](https://ocaml.org/play) already runs the compiler in the browser through `js_of_ocaml`. The front end takes the same route, which avoids the custom WebAssembly build of clang that lense needs.
 
 ## OxCaml
 
@@ -88,6 +88,6 @@ The fuzz oracle builds closures, lazy values and objects and inspects them with 
 
 **Stage 4.** Done. Closures, lazy values and objects, shown by `--values`, with one closure section per backend. The fuzz oracle builds each value and checks it with `Obj` on both backends.
 
-Two pieces sit outside the stages. The `js_of_ocaml` web front end is open. Closure layouts under flambda are not predicted, for classic flambda on OCaml 5.5 and for flambda 2 in OxCaml native code, and the tool prints "not predicted" for them.
+Two pieces sit outside the stages. The `js_of_ocaml` web front end is done: a page in `web/` type-checks the source in the browser and shows the same report as the command line. Closure layouts under flambda are not predicted, for classic flambda on OCaml 5.5 and for flambda 2 in OxCaml native code, and the tool prints "not predicted" for them.
 
 The C++ tool is mostly about the compiler's freedom to place fields. The OCaml tool is mostly about the compiler's freedom to choose a representation, and that choice is where OCaml programmers usually have the least visibility.

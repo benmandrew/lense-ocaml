@@ -94,6 +94,25 @@ mk.(fun)  line 5  Closure_tag 247, size 4
     3  a : int  immediate (int)
 ```
 
+## Web front end
+
+`web/` holds a page built with Vite. A *CodeMirror* editor sits on the left, and the representation sits on the right, as one card per paragraph of the text report. The page re-analyses the source 250 ms after each edit. Its options are `.ml` or `.mli`, closures, lazy values and objects (`--values`), source, modules, and variant labels only. The hash part of the page address holds the whole state, so a link reproduces it. The Example menu offers the files in `test/cases/*.ml`.
+
+A *web worker* runs `web/jsoo/lense_web.ml`, which is `lense_core` and compiler-libs compiled by `js_of_ocaml` as a whole program (about 8.5 MB of JavaScript). It type-checks the source in the browser, with the standard library `.cmi` files embedded in the js_of_ocaml *pseudo-filesystem* at `/static/stdlib`. It returns the same text as the command line, from `Text` in `src/model`, or the compiler's error, which the editor marks on its line. A typical analysis took 27 to 48 ms in Chrome.
+
+`js_of_ocaml` 6.5.0 on opam requires OCaml below 5.5, so the build pins its three packages to commit `87ab6ef` of the ocsigen/js_of_ocaml master branch, which accepts versions below 5.7. Plain `dune build` skips the script, so it has its own target.
+
+```sh
+opam pin add js_of_ocaml-compiler git+https://github.com/ocsigen/js_of_ocaml#87ab6ef45c8019288c1988a27be5d64cd7424fe2
+opam pin add js_of_ocaml git+https://github.com/ocsigen/js_of_ocaml#87ab6ef45c8019288c1988a27be5d64cd7424fe2
+opam pin add js_of_ocaml-ppx git+https://github.com/ocsigen/js_of_ocaml#87ab6ef45c8019288c1988a27be5d64cd7424fe2
+opam install js_of_ocaml-compiler js_of_ocaml ocaml.5.5.0
+dune build web/jsoo/lense_web.bc.js
+cd web && npm install && npm run dev   # or npm run build, which writes web/dist
+```
+
+`LENSE_JS` points the Vite configuration at another build of the script. The theme and fonts are those of `../lense/web`, the dark theme of benmandrew.com.
+
 ## Testing
 
 `dune test` runs the cram goldens in `test/*.t`, rechecks the representation rules against the compiler in `test/stage0.t`, and runs the fuzz oracle in `test/fuzz/fuzz.ml`; `dune promote` accepts a changed golden. Each fuzz round generates random variants, records, polymorphic variants, GADTs, exceptions, modules with a coerced view, closures, lazy values and classes, and predicts their representations with `lense-ocaml` in-process. It then compiles a checker with both `ocamlopt` and `ocamlc` that builds a value of every constructor and compares it with the prediction through `Obj.is_int`, `Obj.tag` and `Obj.size`. The 20-round run in `dune test` makes 1,316 checks per backend, and a planted off-by-one in constant numbering failed on the first round. A longer run is `dune exec test/fuzz/fuzz.exe -- -rounds 500`, with `-seed N` for the first seed and `-keep DIR` to keep the generated programs. The ground truth is the running program, so the oracle needs no second implementation of the representation rules to compare against.

@@ -1,0 +1,211 @@
+/* Hacktober, the theme of benmandrew.com, as in ../lense/web: dark only,
+   warm greys, burnt orange and pale gold. Every text colour reaches 4.5:1
+   on each background it sits on. */
+
+/* Libertinus Serif and Iosevka Slab Extended, subset as on benmandrew.com.
+   The -ext files hold Latin Extended and general punctuation. Libertinus has
+   an x-height of 0.429 em against 0.52 for Iosevka and the usual system
+   sans, so size-adjust scales it by 116%: serif text keeps the apparent size
+   the pixel sizes below were chosen for. */
+@font-face {
+  font-family: "Libertinus Serif"; font-style: normal; font-weight: 400; font-display: swap;
+  size-adjust: 116%;
+  src: url("./fonts/libertinus-serif-regular-ext.woff2") format("woff2");
+  unicode-range: U+00A0-017F, U+2000-206F;
+}
+@font-face {
+  font-family: "Libertinus Serif"; font-style: normal; font-weight: 400; font-display: swap;
+  size-adjust: 116%;
+  src: url("./fonts/libertinus-serif-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Libertinus Serif"; font-style: normal; font-weight: 600; font-display: swap;
+  size-adjust: 116%;
+  src: url("./fonts/libertinus-serif-semibold-ext.woff2") format("woff2");
+  unicode-range: U+00A0-017F, U+2000-206F;
+}
+@font-face {
+  font-family: "Libertinus Serif"; font-style: normal; font-weight: 600; font-display: swap;
+  size-adjust: 116%;
+  src: url("./fonts/libertinus-serif-semibold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Libertinus Serif"; font-style: italic; font-weight: 400; font-display: swap;
+  size-adjust: 116%;
+  src: url("./fonts/libertinus-serif-italic-ext.woff2") format("woff2");
+  unicode-range: U+00A0-017F, U+2000-206F;
+}
+@font-face {
+  font-family: "Libertinus Serif"; font-style: italic; font-weight: 400; font-display: swap;
+  size-adjust: 116%;
+  src: url("./fonts/libertinus-serif-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Iosevka Slab Extended"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("./fonts/iosevka-slab-extended-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Iosevka Slab Extended"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("./fonts/iosevka-slab-extended-bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Iosevka Slab Extended"; font-style: italic; font-weight: 400; font-display: swap;
+  src: url("./fonts/iosevka-slab-extended-italic.woff2") format("woff2");
+}
+
+/* Georgia and Times scaled to Libertinus's metrics (values from
+   benmandrew.com, times 1.16), so text does not reflow when the web font
+   arrives. */
+@font-face {
+  font-family: "Libertinus Fallback Georgia"; src: local("Georgia");
+  size-adjust: 107.47%; ascent-override: 96.5%; descent-override: 26.554%; line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Libertinus Fallback Times"; src: local("Times New Roman"), local("Liberation Serif"), local("Tinos");
+  size-adjust: 117.93%; ascent-override: 87.939%; descent-override: 24.198%; line-gap-override: 0%;
+}
+
+:root {
+  color-scheme: dark;
+  accent-color: #d08949;
+  --serif: "Libertinus Serif", "Libertinus Fallback Georgia", "Libertinus Fallback Times", Georgia, "Times New Roman", serif;
+  --mono: "Iosevka Slab Extended", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --page: #141414;
+  --surface: #191918;
+  --code-bg: #1d1b18;
+  --ink: #f1eee7;
+  --ink-2: #c9c9c9;
+  --muted: #ac9166;
+  --grid: #2c2925;
+  --axis: #464444;
+  --border: #464444;
+  /* 14% link orange over --surface: the most that keeps comments at 4.5:1. */
+  --hl-bg: #33291f;
+  --active-line: #23201c;
+  --selection: #33291f;
+  --on-fill: #141414;
+  --c-field: #579dcd;
+  --c-base: #6da361;
+  --c-ptr: #d37d2b;
+  --pad-bg: #211f1c;
+  --pad-ink: #464444;
+  --critical: #e8705f;
+  --warning: #ebc587;
+  --good: #8fb573;
+  --good-ink: #8fb573;
+  --syn-keyword: #d08949;
+  --syn-type: #d8b48a;
+  --syn-string: #ebc587;
+  --syn-number: #e6a46a;
+  --syn-comment: #a08f74;
+  --syn-preproc: #d08949;
+  --syn-function: #f1eee7;
+  --syn-variable: #c9b8a0;
+  --syn-operator: #a3a09a;
+  /* The rule drawn at the indent of a union, left of its members' rows. */
+  --union-rule: linear-gradient(var(--ink-2), var(--ink-2));
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--page);
+  color: var(--ink-2);
+  font: 14px/1.45 var(--serif);
+}
+
+/* --- Toolbar ------------------------------------------------------------ */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.bar h1 { margin: 0 8px 0 0; color: var(--ink); font: 600 16px var(--mono); letter-spacing: 0.02em; }
+
+.bar label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+
+.bar select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--axis);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+#status {
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#status.error { color: var(--critical); }
+
+/* --- Panes -------------------------------------------------------------- */
+
+main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+}
+
+#editor { min-height: 0; overflow: hidden; border-right: 1px solid var(--border); background: var(--code-bg); }
+#output { min-height: 0; overflow: auto; padding: 16px; }
+
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  main { grid-template-columns: minmax(0, 1fr); }
+  #editor { height: 45vh; border-right: none; border-bottom: 1px solid var(--border); }
+  #output { overflow: visible; }
+}
+
+.failure {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--critical);
+  background: var(--surface);
+}
+
+pre.report {
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  font: 12.5px/1.5 var(--mono);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+/* --- Cards: one paragraph of the text report each ------------------------ */
+
+.card {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.card h2 { margin: 0; font: 400 13px/1.6 var(--mono); }
+.card h2 .name { color: var(--ink); font-weight: 700; }
+.card h2 .desc { margin-left: 1.2em; color: var(--syn-type); }
+
+.card pre {
+  margin: 6px 0 0;
+  overflow-x: auto;
+  font: 12.5px/1.6 var(--mono);
+  color: var(--ink-2);
+}

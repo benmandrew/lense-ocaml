@@ -1,0 +1,3 @@
+; Only the js_of_ocaml entry point is an OCaml directory; the rest is the
+; Vite front end.
+(dirs jsoo)
