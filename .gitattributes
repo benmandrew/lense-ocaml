@@ -1,0 +1,3 @@
+# OxCaml sources and files generated from them; see scripts/vendor-oxcaml.sh.
+vendor/** linguist-vendored
+vendor/oxcaml/frontend/parser.ml linguist-generated -diff

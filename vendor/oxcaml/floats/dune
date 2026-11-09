@@ -1,0 +1,7 @@
+; OxCaml's Float32, which the frontend uses for float32 constants.
+
+(library
+ (name flambda2_floats)
+ (wrapped true)
+ (foreign_stubs (language c) (names float32_stubs))
+ (flags (:standard -w -a)))

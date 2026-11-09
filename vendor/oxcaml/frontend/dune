@@ -1,0 +1,53 @@
+; OxCaml's frontend (parser, type checker, Lambda), from the OxCaml source
+; tree by scripts/vendor-oxcaml.sh and built by OCaml 5.5. The library is
+; wrapped, so its Types, Env and so on do not clash with compiler-libs.
+; The module list follows the ocamlcommon library in OxCaml's root dune.
+; Warnings are off: this is OxCaml's code, not ours.
+
+(ocamllex lexer)
+
+(library
+ (name oxfront)
+ (wrapped true)
+ (flags (-w -a -strict-sequence -safe-string -strict-formats -g))
+ (preprocess
+  (per_module
+   ((action
+     (progn
+      (echo "module MenhirLib = CamlinternalMenhirLib\n")
+      (run cat %{input-file})))
+    parser)))
+ (libraries flambda2_floats)
+ (modules_without_implementation
+  annot value_rec_types asttypes cmo_format cmj_format outcometree parsetree
+  debug_event solver_intf mode_hint mode_intf)
+ (modules
+  arrayset config build_path_prefix_map misc identifiable numbers arg_helper 
+  clflags debug profile profile_counters_functions priority_queue terminfo 
+  ccomp warnings consistbl strongly_connected_components targetint load_path 
+  int_replace_polymorphic_compare domainstate binutils local_store 
+  target_system compilation_unit import_info linkage_name symbol 
+  lazy_backtrack diffing diffing_with_keys unit_info 
+  language_extension_kernel language_extension zero_alloc_utils 
+  zero_alloc_annotations location longident docstrings printast syntaxerr 
+  ast_helper ast_iterator camlinternalMenhirLib parser lexer parse pprintast 
+  ast_mapper attr_helper builtin_attributes ast_invariants depend 
+  parser_types asttypes parsetree ident path jkind scalar primitive shape 
+  shape_reduce zero_alloc types btype oprint subst predef datarepr 
+  global_module cmi_format vicuna_traverse_typed_tree vicuna_value_shapes 
+  persistent_env env errortrace jkind_types jkind_intf 
+  signature_with_global_bindings typedtree printtyped ctype printtyp 
+  includeclass mtype envaux includecore type_shape tast_iterator tast_mapper 
+  signature_group cmt_format cms_format untypeast includemod 
+  includemod_errorprinter typemode jkind_axis typetexp patterns printpat 
+  parmatch stypes typedecl typeopt value_rec_check typecore solver_intf 
+  solver mode_hint mode_intf mode uniqueness_analysis typeclass typemod 
+  typedecl_variance typedecl_properties typedecl_separability cmt2annot annot 
+  outcometree allowance debuginfo lambda static_label matching 
+  mixed_block_shape mixed_product_bytes printlambda runtimedef runtimetags 
+  tmc simplif switch value_rec_compiler translmode transl_comprehension_utils 
+  transl_array_comprehension transl_list_comprehension translattribute 
+  translclass translcore translmod translobj translprim translquote 
+  debug_event meta opcodes bytesections dll symtable pparse main_args compenv 
+  compmisc makedepend compile_common instantiator value_rec_types cmo_format 
+  cmj_format camlinternalQuote))

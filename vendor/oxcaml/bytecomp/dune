@@ -1,0 +1,17 @@
+; OxCaml's bytecode compiler driver, built as oxc. It compiles the OxCaml
+; stdlib interfaces in ../stdlib/cmi; lense does not link it.
+
+(library
+ (name oxbytecomp)
+ (wrapped true)
+ (flags (-w -a -open Oxfront -g))
+ (libraries oxfront)
+ (modules blambda printblambda blambda_of_lambda bytegen byteinstantiator
+  bytelibrarian bytelink bytepackager emitcode printinstr instruct errors
+  compile maindriver))
+
+(executable
+ (name oxc)
+ (flags (-w -a -g))
+ (libraries oxfront oxbytecomp)
+ (modules oxc))

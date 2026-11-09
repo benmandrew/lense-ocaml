@@ -1,0 +1,35 @@
+(* Values that replace or extend utils/config.fixed.ml, OxCaml's placeholder
+   boot configuration. They describe a 64-bit OxCaml with runtime 5 and
+   flambda 2. lense reads layouts and the type checker reads these flags;
+   nothing here runs a C compiler or an assembler. *)
+let multidomain = true
+let flambda2 = true
+let stack_allocation = true
+let poll_insertion = true
+let native_compiler = true
+let supports_shared_libraries = true
+let native_dynlink = true
+let asm_cfi_supported = true
+let systhread_supported = true
+let c_has_debug_prefix_map = true
+let runtime5 = true
+let reserved_header_bits = 8
+let architecture = {|arm64|}
+let model = {|default|}
+let system = {|macosx|}
+let host = {|aarch64-apple-darwin|}
+let target = {|aarch64-apple-darwin|}
+let objcopy_compress_debug_sections_flag = ""
+let objcopy = ""
+let syntax_quotations = false
+let has_pclmul = false
+let has_popcnt = false
+let has_sse3 = false
+let has_ssse3 = false
+let has_sse4_1 = false
+let has_sse4_2 = false
+let has_bmi = false
+let has_bmi2 = false
+let has_avx = false
+let has_avx2 = false
+let oxcaml_dwarf = false
