@@ -129,11 +129,17 @@ let variant_summary (cs : case list) =
   if unboxed then "variant, unboxed"
   else if cs = [] then "variant with no constructors: it has no values"
   else
-    let parts =
-      (if consts = [] then [] else [ plural (List.length consts) "immediate" "immediates" ^ " " ^ range consts ])
-      @ if tags = [] then [] else [ plural (List.length tags) "block tag" "block tags" ^ " " ^ range tags ]
+    let part xs ~what ~one ~many =
+      match List.length xs with
+      | 0 -> []
+      | 1 -> [ Printf.sprintf "the constructor %s is %s %s" what one (range xs) ]
+      | n -> [ Printf.sprintf "the %d constructors %s are %s %s" n what many (range xs) ]
     in
-    "variant: " ^ String.concat ", " parts
+    let parts =
+      part consts ~what:"without arguments" ~one:"the immediate" ~many:"the immediates"
+      @ part tags ~what:"with arguments" ~one:"a block with tag" ~many:"blocks with tags"
+    in
+    "variant: " ^ String.concat "; " parts
 
 let decl_head (d : decl) =
   d.keyword ^ " " ^ (if d.params = "" then "" else d.params ^ " ") ^ d.name

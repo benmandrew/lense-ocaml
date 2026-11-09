@@ -121,10 +121,90 @@ function diagnostic(error: string): { diag: Diagnostic | null; line: number } {
 
 // --- Output ---------------------------------------------------------------
 
+// The text report separates its columns with two or more spaces. Each column
+// is coloured by what it says: an index, a label, or a representation.
+
+/** The class for a column that describes a representation, or null. */
+function kind(s: string): string | null {
+  if (/^immediate or pointer/.test(s)) return 'k-any';
+  if (/^immediate\b/.test(s)) return 'k-imm';
+  if (/^(unboxed|no block|no copy)\b/.test(s)) return 'k-flat';
+  if (/^(pointer|block|flat float block|mixed block|structure block|extension slot|functor body|copies)\b/.test(s)
+      || /^[A-Z][a-z_]*_tag \d+/.test(s) || /^one [A-Z][a-z_]*_tag \d+ block/.test(s)) return 'k-ptr';
+  return null;
+}
+
+const KEYWORD = /^(mutable|val|module|functor|exception|extension|class|external|type)\b\s*/;
+const TAG = /\b(?:[A-Z][a-z_]*_tag \d+|tags? \d+(?:-\d+)?)/g;
+
+/** Text with each block tag in it set in bold. */
+function tagged(s: string, cls: string): HTMLElement {
+  const span = el('span', cls);
+  let last = 0;
+  for (const m of s.matchAll(TAG)) {
+    span.append(s.slice(last, m.index), el('b', '', m[0]));
+    last = m.index + m[0].length;
+  }
+  span.append(s.slice(last));
+  return span;
+}
+
+/** A label column: an optional keyword, a name, then ": type". */
+function label(s: string, first: boolean): (Node | string)[] {
+  const out: Node[] = [];
+  const kw = KEYWORD.exec(s);
+  if (kw) {
+    out.push(el('span', 'k-kw', kw[0]));
+    s = s.slice(kw[0].length);
+  }
+  const colon = s.indexOf(' : ');
+  const name = colon < 0 ? s : s.slice(0, colon);
+  out.push(el('span', first && !kw ? 'k-ctor' : 'k-name', name));
+  if (colon >= 0) out.push(el('span', 'k-type', s.slice(colon)));
+  return out;
+}
+
+function line(text: string): (Node | string)[] {
+  const lead = text.length - text.trimStart().length;
+  const rest = text.slice(lead);
+  if (/^(note|no field|then)\b/.test(rest)) return [text.slice(0, lead), el('span', 'k-note', rest)];
+  const out: (Node | string)[] = [text.slice(0, lead)];
+  // A label that starts its row, with no index before it, names a constructor.
+  let first = true;
+  for (const part of rest.split(/(\s{2,})/)) {
+    if (/^\s*$/.test(part)) {
+      out.push(part);
+      continue;
+    }
+    const k = kind(part);
+    if (/^(\d+(-\d+)?|-|\d+ <- (\d+|-)|line \d+|header)$/.test(part)) out.push(el('span', 'k-index', part));
+    else if (k) out.push(tagged(part, k));
+    else if (/^\(.*\)$/.test(part)) out.push(el('span', 'k-note', part));
+    else out.push(...label(part, first));
+    first = false;
+  }
+  return out;
+}
+
+function legend(): HTMLElement {
+  const p = el('p', 'legend');
+  for (const [cls, name, what] of [
+    ['k-imm', 'immediate', 'the value is in the word itself, with no allocation'],
+    ['k-ptr', 'block or pointer', 'the word points to a block on the heap'],
+    ['k-flat', 'unboxed', 'the value is stored in place, with no pointer'],
+    ['k-any', 'immediate or pointer', 'it depends on the value'],
+  ]) {
+    const s = el('span', cls, `■ ${name}`);
+    s.title = what;
+    p.append(s);
+  }
+  return p;
+}
+
 /** One card per paragraph of the text report. The first line is the
  *  heading: its name, then the description after two spaces. */
 function render(text: string) {
-  output.replaceChildren();
+  output.replaceChildren(legend());
   for (const para of text.split(/\n\s*\n/)) {
     const lines = para.replace(/\s+$/, '').split('\n');
     if (!lines[0]) continue;
@@ -139,7 +219,9 @@ function render(text: string) {
       // Strip the indent the body shares, so it starts at the card's edge.
       const body = lines.slice(1);
       const indent = Math.min(...body.filter((l) => l.trim()).map((l) => l.length - l.trimStart().length));
-      card.append(el('pre', '', body.map((l) => l.slice(indent)).join('\n')));
+      const pre = el('pre');
+      body.forEach((l, i) => pre.append(...(i ? ['\n'] : []), ...line(l.slice(indent))));
+      card.append(pre);
     }
     output.append(card);
   }

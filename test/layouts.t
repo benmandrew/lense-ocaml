@@ -222,7 +222,7 @@ Every case file, as text with its source.
       1  count : int            immediate (int)
   
   type inline = | I0 | I1 of int | I2 of { ix : int; iy : float } | I3 of { f1 : float; f2 : float }
-  type inline  variant: 1 immediate 0, 3 block tags 0-2
+  type inline  variant: the constructor without arguments is the immediate 0; the 3 constructors with arguments are blocks with tags 0-2
     I0  immediate 0
     I1  block, tag 0, size 1
           0  int  immediate (int)
@@ -253,7 +253,7 @@ Every case file, as text with its source.
   module Records  structure block, size 0: no item takes a field
   ### cases/variants.ml
   type t = A | B of int | C | D of string
-  type t  variant: 2 immediates 0-1, 2 block tags 0-1
+  type t  variant: the 2 constructors without arguments are the immediates 0-1; the 2 constructors with arguments are blocks with tags 0-1
     A  immediate 0
     B  block, tag 0, size 1
          0  int  immediate (int)
@@ -262,7 +262,7 @@ Every case file, as text with its source.
          0  string  pointer to string, String_tag 252
   
   type shape = Circle of float | Rect of float * float | Point
-  type shape  variant: 1 immediate 0, 2 block tags 0-1
+  type shape  variant: the constructor without arguments is the immediate 0; the 2 constructors with arguments are blocks with tags 0-1
     Circle  block, tag 0, size 1
               0  float  pointer to boxed float, Double_tag 253
     Rect    block, tag 1, size 2
@@ -271,7 +271,7 @@ Every case file, as text with its source.
     Point   immediate 0
   
   type nested = T of (int * int) | T2 of int * int
-  type nested  variant: 2 block tags 0-1
+  type nested  variant: the 2 constructors with arguments are blocks with tags 0-1
     T   block, tag 0, size 1
           0  int * int  pointer to tuple, tag 0
     T2  block, tag 1, size 2
@@ -279,7 +279,7 @@ Every case file, as text with its source.
           1  int  immediate (int)
   
   type 'a tree = Leaf | Node of 'a tree * 'a * 'a tree
-  type 'a tree  variant: 1 immediate 0, 1 block tag 0
+  type 'a tree  variant: the constructor without arguments is the immediate 0; the constructor with arguments is a block with tag 0
     Leaf  immediate 0
     Node  block, tag 0, size 3
             0  'a tree  immediate or pointer (tree)
@@ -290,7 +290,7 @@ Every case file, as text with its source.
   type empty  variant with no constructors: it has no values
   
   type _ expr = | Int : int -> int expr | Bool : bool -> bool expr | Pair : 'a expr * 'b expr -> ('a * 'b) expr | Hide : 'a * ('a -> string) -> string expr | Unit : unit expr
-  type _ expr  variant: 1 immediate 0, 4 block tags 0-3
+  type _ expr  variant: the constructor without arguments is the immediate 0; the 4 constructors with arguments are blocks with tags 0-3
     Int   block, tag 0, size 1
             0  int  immediate (int)
     Bool  block, tag 1, size 1

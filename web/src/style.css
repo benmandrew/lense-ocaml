@@ -209,3 +209,25 @@ pre.report {
   font: 12.5px/1.6 var(--mono);
   color: var(--ink-2);
 }
+
+/* Columns of a card body, coloured by what they say. Each colour reaches
+   4.5:1 on --surface: green 5.9, orange 5.7, blue 6.0, gold 10.8. */
+.card pre .k-index { color: var(--muted); }
+.card pre .k-kw { color: var(--syn-keyword); }
+.card pre .k-ctor { color: var(--ink); font-weight: 700; }
+.card pre .k-name { color: var(--ink); }
+.card pre .k-type { color: var(--syn-type); }
+.card pre .k-imm { color: var(--c-base); }
+.card pre .k-ptr { color: var(--c-ptr); }
+.card pre .k-flat { color: var(--c-field); }
+.card pre .k-any { color: var(--warning); }
+.card pre .k-note { color: var(--syn-comment); font-style: italic; }
+.card pre b { font-weight: 700; }
+
+/* The key to those colours, above the cards. */
+.legend { margin: 0 0 12px; font: 12.5px var(--mono); color: var(--muted); }
+.legend span { margin-right: 1.4em; }
+.legend .k-imm { color: var(--c-base); }
+.legend .k-ptr { color: var(--c-ptr); }
+.legend .k-flat { color: var(--c-field); }
+.legend .k-any { color: var(--warning); }
