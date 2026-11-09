@@ -1,6 +1,7 @@
 (* What one word of a given type holds: an immediate, a pointer to a block
    with a known tag, or either. Read from the type declarations in the
-   environment, the same ones the compiler uses to choose a representation. *)
+   environment, the same ones the compiler uses to choose a representation.
+   What differs between OCaml 5.5 and OxCaml goes through Compat. *)
 
 open Types
 module M = Lense_model.Model
@@ -37,22 +38,24 @@ let rec word ?(depth = 0) env ty : M.word =
   if depth > 64 then M.Any "type too deep to classify"
   else
     let ty = expand env ty in
-    match get_desc ty with
-    | Tvar None | Tunivar None -> M.Any "type variable"
-    | Tvar (Some v) | Tunivar (Some v) -> M.Any ("type variable '" ^ v)
-    | Tpoly (t, _) -> word ~depth:(depth + 1) env t
-    | Tarrow _ | Tfunctor _ -> ptr ~tag:M.closure_tag "closure"
-    | Ttuple _ -> ptr ~tag:0 "tuple"
-    | Tobject _ -> ptr ~tag:M.object_tag "object"
-    | Tpackage _ -> ptr "first-class module"
-    | Tvariant row -> (
+    match Compat.view ty with
+    | Poly t -> word ~depth:(depth + 1) env t
+    | _ when Option.is_some (Compat.flat_word env ty) -> Option.get (Compat.flat_word env ty)
+    | Var None -> M.Any "type variable"
+    | Var (Some v) -> M.Any ("type variable '" ^ v)
+    | Arrow -> ptr ~tag:M.closure_tag "closure"
+    | Tuple -> ptr ~tag:0 "tuple"
+    | Unboxed_tuple -> M.Any "unboxed tuple"
+    | Object -> ptr ~tag:M.object_tag "object"
+    | Package -> ptr "first-class module"
+    | Variant row -> (
         match row_counts row with
         | None -> M.Any "open polymorphic variant"
         | Some (_, 0) -> M.Immediate "constant polymorphic variant"
         | Some (0, _) -> ptr ~tag:0 "polymorphic variant"
         | Some _ -> M.Any "polymorphic variant")
-    | Tconstr (p, args, _) -> constr ~depth env p args
-    | Tlink _ | Tsubst _ | Tfield _ | Tnil -> M.Any "unknown type"
+    | Constr (p, args) -> constr ~depth env p args
+    | Other -> M.Any "unknown type"
 
 and constr ~depth env p args =
   let elt_is_float () =
@@ -98,34 +101,33 @@ and constr ~depth env p args =
   else if path_is p Predef.path_exn then ptr "exception"
   else if path_is p Predef.path_extension_constructor then
     ptr ~tag:M.object_tag "extension slot"
-  else if path_is p Predef.path_continuation then ptr ~tag:M.cont_tag "continuation"
+  else if Compat.or_null p then
+    match args with
+    | [ a ] -> (
+        match word ~depth:(depth + 1) env a with
+        | M.Immediate why -> M.Any ("null or " ^ why)
+        | M.Pointer { what; _ } -> M.Any ("null or pointer to " ^ what)
+        | w -> w)
+    | _ -> M.Any "or_null"
   else
-    match Env.find_type p env with
-    | exception Not_found -> M.Any "unknown type"
-    | decl -> (
-        let name = Path.name p in
-        match decl.type_kind with
-        | Type_variant ([ { cd_args = Cstr_tuple [ arg ]; _ } ], Variant_unboxed)
-        | Type_variant
-            ( [ { cd_args = Cstr_record [ { ld_type = arg; _ } ]; _ } ],
-              Variant_unboxed )
-        | Type_record ([ { ld_type = arg; _ } ], Record_unboxed _) ->
-            word ~depth:(depth + 1) env (instantiate env decl args arg)
-        | Type_variant (cstrs, _) -> (
-            let consts =
-              List.length (List.filter (fun c -> c.cd_args = Cstr_tuple []) cstrs)
-            in
-            match (consts, List.length cstrs - consts) with
-            | _, 0 -> M.Immediate ("constant constructors of " ^ name)
-            | 0, 1 -> ptr ~tag:0 name
-            | 0, _ -> ptr name
-            | _ -> M.Any name)
-        | Type_record (_, Record_float) -> ptr ~tag:M.double_array_tag ("float record " ^ name)
-        | Type_record _ -> ptr ~tag:0 ("record " ^ name)
-        | Type_open -> ptr ("extensible variant " ^ name)
-        | Type_abstract _ | Type_external _ -> (
-            match decl.type_immediate with
-            | Type_immediacy.Always -> M.Immediate (name ^ " [@@immediate]")
-            | Always_on_64bits when Sys.word_size = 64 ->
-                M.Immediate (name ^ " [@@immediate64]")
-            | _ -> M.Any ("abstract type " ^ name)))
+    match Compat.predef_word p with
+    | Some w -> w
+    | None -> (
+        match Env.find_type p env with
+        | exception Not_found -> M.Any "unknown type"
+        | decl -> (
+            let name = Path.name p in
+            match Compat.decl_view env p args decl with
+            | Unboxed_arg arg -> word ~depth:(depth + 1) env (instantiate env decl args arg)
+            | Constructors (consts, blocks) -> (
+                match (consts, blocks) with
+                | _, 0 -> M.Immediate ("constant constructors of " ^ name)
+                | 0, 1 -> ptr ~tag:0 name
+                | 0, _ -> ptr name
+                | _ -> M.Any name)
+            | Float_record -> ptr ~tag:M.double_array_tag ("float record " ^ name)
+            | Record -> ptr ~tag:0 ("record " ^ name)
+            | Unboxed_record -> M.Any ("unboxed record " ^ name)
+            | Open -> ptr ("extensible variant " ^ name)
+            | Immediate why -> M.Immediate (name ^ " " ^ why)
+            | Abstract -> M.Any ("abstract type " ^ name)))

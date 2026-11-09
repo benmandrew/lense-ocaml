@@ -47,16 +47,22 @@ let spell ctx (ct : T.core_type) =
 
 let line (loc : Location.t) = loc.loc_start.pos_lnum
 
+let word env ty = Word.word env ty
+
 let field ?(fkind = M.Arg) ?(mutable_ = false) ~env ctx (ct : T.core_type) : M.field =
   { fkind; ty = spell ctx ct; mutable_; word = Word.word env ct.ctyp_type }
 
 let label_field ~env ctx (ld : T.label_declaration) =
-  field ~fkind:(M.Label ld.ld_name.txt) ~mutable_:(ld.ld_mutable = Mutable) ~env ctx
+  field ~fkind:(M.Label ld.ld_name.txt) ~mutable_:(Compat.ld_mutable ld) ~env ctx
     ld.ld_type
 
 let arg_fields ~env ctx = function
-  | T.Cstr_tuple cts -> List.map (field ~env ctx) cts
   | T.Cstr_record lds -> List.map (label_field ~env ctx) lds
+  | args -> List.map (field ~env ctx) (Compat.tuple_args args)
+
+let arg_types = function
+  | T.Cstr_record lds -> List.map (fun (ld : T.label_declaration) -> ld.ld_type.ctyp_type) lds
+  | args -> List.map (fun (ct : T.core_type) -> ct.ctyp_type) (Compat.tuple_args args)
 
 (* Field types are wrapped in Tpoly, because fields can be polymorphic. *)
 let rec is_float env ty =
@@ -66,10 +72,10 @@ let rec is_float env ty =
   | _ -> false
 
 (* Notes on a constructor that the tag alone does not show. *)
-let constructor_notes env (desc : Data_types.constructor_description)
+let constructor_notes env (desc : Compat.cstr_desc)
     (args : T.constructor_arguments) =
   let ex =
-    match desc.cstr_existentials with
+    match Compat.cstr_existentials desc with
     | [] -> []
     | tys ->
         [
@@ -91,16 +97,8 @@ let slot_field name =
   { M.fkind = M.Slot name; ty = "extension slot"; mutable_ = false;
     word = M.Pointer { tag = Some M.object_tag; what = "extension slot" } }
 
-let shape_of_tag name tag fields : M.shape =
-  match (tag : Data_types.constructor_tag) with
-  | Cstr_constant n -> Constant n
-  | Cstr_block tag -> Block { tag; fields }
-  | Cstr_unboxed -> (
-      match fields with
-      | [ f ] -> Unboxed f
-      | _ -> Block { tag = 0; fields })
-  | Cstr_extension (_, true) -> Ext_slot
-  | Cstr_extension (_, false) -> Block { tag = 0; fields = slot_field name :: fields }
+let constructor_shape ~env ~args name desc fields =
+  Compat.constructor_shape ~word ~env ~tys:(arg_types args) ~slot:(slot_field name) desc fields
 
 let poly_cases env row : M.case list =
   List.filter_map
@@ -135,21 +133,18 @@ let type_decl ~env ctx (td : T.type_declaration) : M.decl =
   let decl = td.typ_type in
   let path = Path.Pident td.typ_id in
   let kind : M.kind =
+    match Compat.record_shape ~word ~env decl td.typ_kind ~field:(label_field ~env ctx) with
+    | Some shape -> Record shape
+    | None -> (
     match (decl.type_kind, td.typ_kind) with
-    | Type_record (_, repr), Ttype_record lds -> (
-        let fields = List.map (label_field ~env ctx) lds in
-        match repr with
-        | Record_float -> Record (Flat_float (List.map (fun (f : M.field) -> { f with word = M.Double }) fields))
-        | Record_unboxed _ -> Record (match fields with [ f ] -> Unboxed f | _ -> Block { tag = 0; fields })
-        | Record_regular | Record_inlined _ | Record_extension _ -> Record (Block { tag = 0; fields }))
     | Type_variant _, Ttype_variant cds ->
         let descs = Datarepr.constructors_of_type ~current_unit:None path decl in
         Variant
           (List.map2
-             (fun (cd : T.constructor_declaration) (_, (desc : Data_types.constructor_description)) ->
+             (fun (cd : T.constructor_declaration) (_, (desc : Compat.cstr_desc)) ->
                let fields = arg_fields ~env ctx cd.cd_args in
                { M.name = cd.cd_name.txt;
-                 shape = shape_of_tag cd.cd_name.txt desc.cstr_tag fields;
+                 shape = constructor_shape ~env ~args:cd.cd_args cd.cd_name.txt desc fields;
                  notes = constructor_notes env desc cd.cd_args })
              cds descs)
     | Type_open, _ -> Open
@@ -160,11 +155,7 @@ let type_decl ~env ctx (td : T.type_declaration) : M.decl =
             | Tvariant row ->
                 Polyvariant { cases = poly_cases env row; closed = Word.row_counts row <> None }
             | _ -> Alias (Word.word env ty))
-        | None -> (
-            match decl.type_immediate with
-            | Type_immediacy.Always -> Abstract (M.Immediate "[@@immediate]")
-            | Always_on_64bits -> Abstract (M.Immediate "[@@immediate64]")
-            | Unknown -> Abstract (M.Any "abstract type")))
+        | None -> Abstract (Compat.abstract_word ~word env path decl)))
   in
   let notes =
     match td.typ_kind with
@@ -185,7 +176,7 @@ let ext_decl ~env ctx ~keyword (ec : T.extension_constructor) : M.decl =
           Datarepr.extension_descr ~current_unit:None (Path.Pident ec.ext_id) ec.ext_type
         in
         let fields = arg_fields ~env ctx args in
-        { name; shape = shape_of_tag name desc.cstr_tag fields;
+        { name; shape = constructor_shape ~env ~args name desc fields;
           notes = constructor_notes env desc args }
   in
   { M.name = ctx.prefix ^ name; params = ""; keyword; line = line ec.ext_loc;

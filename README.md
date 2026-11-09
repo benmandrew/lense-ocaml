@@ -24,7 +24,7 @@ It needs OCaml 5.5 with compiler-libs, and dune. There are no other dependencies
 
 ### OxCaml
 
-The tool also builds against OxCaml's `compiler-libs`. `src/core` is the 5.5 library and `src/ox` is the OxCaml one, and dune picks one by `%{ocaml_version}`.
+The tool also builds against OxCaml's `compiler-libs`. The library in `src/core` is shared, and the parts of `compiler-libs` that differ live in `compat_55.ml` and `compat_ox.ml`. Dune picks one by `%{ocaml_version}`.
 
 ```sh
 eval $(opam env --switch=5.2.0+ox --set-switch)

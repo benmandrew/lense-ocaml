@@ -21,7 +21,7 @@ Run the fuzz executable with the matching switch's `opam env` in the shell: it c
 
 - Pinned to OCaml 5.5, plus OxCaml 5.2.0+ox. compiler-libs changes every release. The OxCaml code is selected by `enabled_if` on `%{ocaml_version}`.
 - Read representations from the compiler's data: `record_representation`, `Datarepr` constructor tags, `Types.bound_value_identifiers` order, `Typedtree.module_coercion`. Never parse `-dlambda` text, but compare against it when in doubt.
-- `src/model` (Model, Text, Json) has no compiler-libs dependency, so a js_of_ocaml front end can reuse it. Everything touching compiler-libs lives in `src/core`.
+- `src/model` (Model, Text, Json) has no compiler-libs dependency, so a js_of_ocaml front end can reuse it. Everything touching compiler-libs lives in `src/core`. What differs between OCaml 5.5 and OxCaml goes in `compat_55.ml` and `compat_ox.ml`, which must define the same names; a dune rule copies one to `compat.ml`.
 - Sizes are in words without the header, matching `Obj.size`.
 - The fuzz oracle (`test/fuzz`) is the ground truth: a prediction is wrong if the running program disagrees, on either ocamlopt or ocamlc.
 - Goldens avoid host-dependent output: no closure sizes or code pointers, no absolute paths.

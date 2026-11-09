@@ -56,7 +56,7 @@ The tag numbers and representation rules in this note were first written from me
 
 ## Stage 3 results
 
-The tool builds against OxCaml's `compiler-libs` from the same tree, checked on the 5.2.0+ox switch. `src/core` is the 5.5 library and `src/ox` is the OxCaml one. Both are named `lense_core`, and dune picks one by `%{ocaml_version}`. The 5.5 goldens are disabled on OxCaml, and `test/ox/mixed.t` holds the OxCaml goldens. The field order of a mixed block comes from the compiler's own `Mixed_block_shape` module (`lambda/mixed_block_shape.ml`, part of `compiler-libs`), and the tool does not derive it again.
+The tool builds against OxCaml's `compiler-libs` from the same tree, checked on the 5.2.0+ox switch. `src/core` is shared between the two compilers. The parts of `compiler-libs` that differ are in `compat_55.ml` and `compat_ox.ml`, and a dune rule copies one of them to `compat.ml`, chosen by `%{ocaml_version}`. The mixed-block code is only in `compat_ox.ml`. The 5.5 goldens are disabled on OxCaml, and `test/ox/mixed.t` holds the OxCaml goldens. The field order of a mixed block comes from the compiler's own `Mixed_block_shape` module (`lambda/mixed_block_shape.ml`, part of `compiler-libs`), and the tool does not derive it again.
 
 **Native code.** Values come first, then flat fields, each group in declaration order. Each flat scalar takes a whole word, even `int8#`, `int16#`, `int32#` and `float32#`; the compiler's comment says they "aren't packed tightly". An `int32#` is written with a 32-bit store, an `int16#` with a 16-bit store and an `int8#` with an 8-bit store, so the rest of the word is unused. A `vec128` takes two words. The header records the length of the scanned prefix, and `Obj.Uniform_or_mixed` reads it back. Unboxed products (unboxed records `#{...}` and unboxed tuples `#(...)`) inside a block are split. Their value parts join the scanned prefix and their flat parts join the flat suffix, and an unboxed record type has no block of its own. A record of only `float` and `float#` fields is stored entirely flat, and its `float` fields are boxed again when read. A record of only `float#` fields is a `Double_array_tag` block, like an all-`float` record. Extension constructors and exceptions cannot have unboxed fields, because the compiler rejects them.
 
@@ -70,7 +70,7 @@ The tool builds against OxCaml's `compiler-libs` from the same tree, checked on 
 
 **Stage 2.** Done. Module structures and signature coercions. A unit with an interface also shows its coercion to the `.mli`, computed with `Includemod.compunit` as the compiler does; `test/unit.t` compares it with `-dlambda`.
 
-**Stage 3.** Done. OxCaml mixed blocks and the byte map, built against OxCaml's own `compiler-libs` in `src/ox`. The fuzz oracle checks native code through `Obj.raw_field` and bytecode through the boxed values.
+**Stage 3.** Done. OxCaml mixed blocks and the byte map, built against OxCaml's own `compiler-libs` through `src/core/compat_ox.ml`. The fuzz oracle checks native code through `Obj.raw_field` and bytecode through the boxed values.
 
 **Stage 4.** Open. Closures, objects and lazy values, per compiler configuration.
 

@@ -38,21 +38,14 @@ let typecheck ~include_dirs ~file ~intf src =
   let source_file = if file = "-" then "stdin" ^ if intf then ".mli" else ".ml" else file in
   try
     Compmisc.init_path ();
-    let ui =
-      Unit_info.make ~check_modname:false ~source_file
-        (if intf then Unit_info.Intf else Unit_info.Impl)
-        (Filename.remove_extension source_file)
-    in
-    Env.set_current_unit ui;
+    let ui = Compat.init_unit ~source_file ~intf in
     let env = Compmisc.initial_env () in
     let lexbuf = Lexing.from_string src in
     Location.init lexbuf source_file;
     Location.input_name := source_file;
     let input =
-      if intf then Analyze.Intf (Typemod.type_interface env (Parse.interface lexbuf))
-      else
-        let str, _, _, _, _ = Typemod.type_structure env (Parse.implementation lexbuf) in
-        Analyze.Impl str
+      if intf then Analyze.Intf (Compat.type_interface ~source_file ui env (Parse.interface lexbuf))
+      else Analyze.Impl (Compat.type_structure env (Parse.implementation lexbuf))
     in
     (unit_name, input)
   with exn -> raise (report exn)
@@ -81,7 +74,7 @@ let read_cmt ~include_dirs file =
   in
   Load_path.init ~auto_include:Load_path.no_auto_include ~visible
     ~hidden:(List.map rel cmt.cmt_loadpath.hidden);
-  Envaux.reset_cache ();
+  Compat.reset_envaux ();
   Analyze.rebuild_env := (fun e -> try Envaux.env_of_only_summary e with _ -> e);
   let input =
     match cmt.cmt_annots with
@@ -103,7 +96,7 @@ let read_cmt ~include_dirs file =
         with Sys_error _ -> None)
     | None -> None
   in
-  (cmt.cmt_modname, input, src)
+  (Compat.cmt_modname cmt, input, src)
 
 (* Coerce a unit's structure to its interface, as the compiler does at the
    end of compiling an implementation that has an .mli. *)
@@ -125,10 +118,7 @@ let compunit ~include_dirs file : M.compunit =
     let base = Filename.remove_extension file in
     let interface =
       if ext = ".cmt" && Sys.file_exists (base ^ ".cmti") && Sys.file_exists (base ^ ".cmi") then
-        let sg =
-          try Env.read_signature (Unit_info.Artifact.from_filename (base ^ ".cmi"))
-          with exn -> raise (report exn)
-        in
+        let sg = try Compat.read_cmi_signature (base ^ ".cmi") with exn -> raise (report exn) in
         let intf_file =
           match (Cmt_format.read_cmt (base ^ ".cmti")).cmt_sourcefile with
           | Some f -> f

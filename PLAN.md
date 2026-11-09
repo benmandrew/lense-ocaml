@@ -6,8 +6,8 @@ Stages follow docs/DESIGN.md.
 - [x] Stage 1: variants, records, inline records, `[@@unboxed]`, polymorphic variants, GADTs, exceptions and extension constructors; `Obj` fuzz oracle on both backends.
 - [x] Stage 2: structure blocks (field order, items without fields, functors) and signature coercions inside a file, including functor arguments.
 - [x] Coercion of a compilation unit to its `.mli` (`Includemod.compunit`; `test/unit.t`).
-- [x] Stage 3: OxCaml unboxed layouts and mixed blocks, with a byte map (`src/ox`, `test/ox/mixed.t`, mixed-block fuzzing).
-- [ ] Share the code of `src/core` and `src/ox`, keeping only the compiler-specific parts apart.
+- [x] Stage 3: OxCaml unboxed layouts and mixed blocks, with a byte map (`src/core/compat_ox.ml`, `test/ox/mixed.t`, mixed-block fuzzing).
+- [x] Share `src/core` between the two compilers; only `compat_55.ml` and `compat_ox.ml` differ.
 - [ ] Stage 4: closures, objects and lazy values per compiler configuration (flambda changes closure shapes).
 - [ ] Web front end through js_of_ocaml, reusing `src/model`.
 - [ ] Nix flake, as in `../lense`.
