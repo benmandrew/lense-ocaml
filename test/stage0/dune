@@ -1,0 +1,5 @@
+(executable
+ (name runtime)
+ (modules runtime)
+ (ocamlopt_flags (:standard -w -a))
+ (flags (:standard -w -a)))

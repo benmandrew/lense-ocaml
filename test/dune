@@ -1,0 +1,3 @@
+; Cram tests. `dune test` shows a diff on a change; `dune promote` accepts it.
+(cram
+ (deps stage0/runtime.exe stage0/lambda.ml))
