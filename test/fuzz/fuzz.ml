@@ -506,7 +506,7 @@ let shape_checks ?(trees = []) b ~what ~v (shape : M.shape) =
   | Flat_float fields ->
       Printf.bprintf b "  block %S %s %d %d;\n" what r M.double_array_tag (List.length fields);
       List.iteri
-        (fun i e -> Printf.bprintf b "  dbl %S %s %d (%s);\n" (Printf.sprintf "%s field %d" what i) r i e)
+        (fun i e -> Printf.bprintf b "  dbl %S %s %d (Obj.magic (%s) : float);\n" (Printf.sprintf "%s field %d" what i) r i e)
         v.vfields
   | Unboxed f -> (
       match v.vfields with
