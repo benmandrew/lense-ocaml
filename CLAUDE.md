@@ -13,6 +13,7 @@ dune exec test/fuzz/fuzz.exe -- -rounds 500 [-seed N] [-keep DIR]
 
 dune build web/jsoo/lense_web.bc.js              # lense_core for the browser (js_of_ocaml, pinned to master)
 cd web && npm install && npm run dev             # the page; npm run build writes web/dist
+nix build [.#web]                                # flake: tool and tests, or the static site
 
 eval $(opam env --switch=5.2.0+ox --set-switch)  # OxCaml: separate build dir
 dune test --build-dir _build-ox                  # test/ox goldens, fuzz with mixed blocks

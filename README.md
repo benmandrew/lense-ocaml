@@ -22,6 +22,16 @@ dune test      # cram goldens, Stage 0 checks and a 20-round fuzz run
 
 It needs OCaml 5.5 with compiler-libs, and dune. There are no other dependencies. The tool is pinned to OCaml 5.5 because compiler-libs changes between releases.
 
+### Nix
+
+```sh
+nix build            # the tool, after the cram goldens and the 20-round fuzz run pass
+nix build .#web      # the web front end as static files
+nix develop          # OCaml 5.5, dune, js_of_ocaml, ocamlfind, ocaml-lsp and Node
+```
+
+The flake uses `ocamlPackages_5_5` from nixpkgs. Its `js_of_ocaml` 6.5.0 builds `web/jsoo` on OCaml 5.5.1, so the Nix build needs no pin from master. Under the release profile the script is 2.6 MB, against 8.5 MB in the dev profile.
+
 ### OxCaml
 
 The tool also builds against OxCaml's `compiler-libs`. The library in `src/core` is shared, and the parts of `compiler-libs` that differ live in `compat_55.ml` and `compat_ox.ml`. Dune picks one by `%{ocaml_version}`.
