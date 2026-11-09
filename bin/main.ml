@@ -36,7 +36,7 @@ let find_ox_stdlib given =
   let candidates =
     match given with
     | Some d -> [ d ]
-    | None -> [ Filename.concat here "../share/lense_ocaml/oxcaml-stdlib"; Filename.concat here "../vendor/oxcaml/stdlib/cmi" ]
+    | None -> [ Filename.concat here "../share/lense-ocaml/oxcaml-stdlib"; Filename.concat here "../vendor/oxcaml/stdlib/cmi" ]
   in
   match List.find_opt (fun d -> Sys.file_exists (Filename.concat d "stdlib.cmi")) candidates with
   | Some d -> d

@@ -18,7 +18,7 @@
         root = ./.;
         fileset = nixpkgs.lib.fileset.unions [
           ./dune-project
-          ./lense_ocaml.opam
+          ./lense-ocaml.opam
           ./bin
           ./src
           ./test
@@ -34,7 +34,7 @@
           # The command-line tool. The check runs the cram goldens, the Stage 0
           # checks and 20 fuzz rounds, which compile checkers with ocamlfind.
           default = ocamlPackages.buildDunePackage {
-            pname = "lense_ocaml";
+            pname = "lense-ocaml";
             inherit version;
             src = source;
             doCheck = true;

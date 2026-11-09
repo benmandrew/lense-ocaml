@@ -1,5 +1,5 @@
 (executable
  (name main)
  (public_name lense-ocaml)
- (package lense_ocaml)
+ (package lense-ocaml)
  (libraries lense_model lense_core_55 lense_core_ox oxfront))

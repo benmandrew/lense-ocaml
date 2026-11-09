@@ -6,5 +6,5 @@
 
 (install
  (section share)
- (package lense_ocaml)
+ (package lense-ocaml)
  (files (glob_files (*.cmi with_prefix oxcaml-stdlib))))
