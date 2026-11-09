@@ -22,6 +22,7 @@
           ./bin
           ./src
           ./test
+          ./vendor
           ./web/dune
           ./web/jsoo
         ];
@@ -78,7 +79,7 @@
             npmDeps = pkgs.importNpmLock { npmRoot = ./web; };
             npmConfigHook = pkgs.importNpmLock.npmConfigHook;
             LENSE_JS = "${web-js}/lense_web.js";
-            LENSE_EXAMPLES_DIR = ./test/cases;
+            LENSE_EXAMPLES_DIR = ./test;
             installPhase = "cp -r dist $out";
             dontFixup = true;
           };

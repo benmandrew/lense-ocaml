@@ -1,0 +1,5 @@
+; lense_core for OxCaml, on the OxCaml frontend in vendor/oxcaml, built by
+; the same compiler as everything else.
+(copy_files# ../core/{analyze,load,values,word}.ml)
+(rule (action (copy ../core/compat_ox.ml compat.ml)))
+(library (name lense_core_ox) (flags (:standard -open Oxfront)) (libraries lense_model oxfront))

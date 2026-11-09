@@ -40,7 +40,30 @@ let constant e = value (fun _ -> e) []
 (* OxCaml: a field of a mixed block, as a leaf or an unboxed tuple of
    leaves. [bits] is the native word expected for a flat leaf, compared
    under [mask]; [boxed] is what bytecode stores instead. *)
-let ox = String.ends_with ~suffix:"+ox" Sys.ocaml_version
+(* Which compiler the oracle runs, read from the ocamlc on PATH. lense
+   type-checks with the matching half of its build. *)
+let ox =
+  let ic = Unix.open_process_in "ocamlfind ocamlc -version 2>/dev/null || ocamlc -version" in
+  let v = try input_line ic with End_of_file -> "" in
+  ignore (Unix.close_process_in ic);
+  String.ends_with ~suffix:"+ox" v
+
+(* Type-check and analyse a generated program, as lense-ocaml would. *)
+let analyze ~file src =
+  if ox then
+    Lense_core_ox.(
+      match Load.typecheck ~include_dirs:[] ~file ~intf:false src with
+      | exception Load.Failed msg -> Error msg
+      | unit_name, input ->
+          let u = Analyze.analyze ~file ~unit_name ~src:(Some src) input in
+          Ok { u with values = Load.values_of ~values:true ~unit_name ~src:(Some src) input })
+  else
+    Lense_core_55.(
+      match Load.typecheck ~include_dirs:[] ~file ~intf:false src with
+      | exception Load.Failed msg -> Error msg
+      | unit_name, input ->
+          let u = Analyze.analyze ~file ~unit_name ~src:(Some src) input in
+          Ok { u with values = Load.values_of ~values:true ~unit_name ~src:(Some src) input })
 
 type leaf = { lty : string; lexpr : string; bits : string option; mask : string; boxed : string }
 type ftree = Leaf of leaf | Prod of ftree list
@@ -716,7 +739,8 @@ let () =
   let rounds = ref 30 and keep = ref "" in
   Arg.parse
     [ ("-seed", Arg.Set_int seed, "N First seed"); ("-rounds", Arg.Set_int rounds, "N Programs to try");
-      ("-keep", Arg.Set_string keep, "DIR Keep the programs here") ]
+      ("-keep", Arg.Set_string keep, "DIR Keep the programs here");
+      ("-ox-stdlib", Arg.String (fun d -> Lense_core_ox.Load.stdlib_dir := Some d), "DIR The OxCaml stdlib .cmi files") ]
     (fun _ -> ()) "fuzz.exe [-seed N] [-rounds N] [-keep DIR]";
   let ocamlopt = Option.value (Sys.getenv_opt "LENSE_OCAMLOPT") ~default:"ocamlfind ocamlopt -package unix" in
   let ocamlc = Option.value (Sys.getenv_opt "LENSE_OCAMLC") ~default:"ocamlfind ocamlc -package unix" in
@@ -730,14 +754,12 @@ let () =
     st := Random.State.make [| seed |];
     let src, s = program () in
     let file = Filename.concat dir (Printf.sprintf "prog%d.ml" seed) in
-    match Lense_core.Load.typecheck ~include_dirs:[] ~file ~intf:false src with
-    | exception Lense_core.Load.Failed msg ->
+    match analyze ~file src with
+    | Error msg ->
         (* A generator bug, not a lense bug; report it all the same. *)
         Printf.printf "seed %d: generated program does not type-check\n%s\n%s\n" seed msg src;
         incr failures
-    | unit_name, input ->
-        let u = Lense_core.Analyze.analyze ~file ~unit_name ~src:(Some src) input in
-        let u = { u with values = Lense_core.Load.values_of ~values:true ~unit_name ~src:(Some src) input } in
+    | Ok u ->
         let prog = checker src s u in
         checks := !checks + List.length (String.split_on_char '\n' prog) - List.length (String.split_on_char '\n' src);
         let oc = open_out file in

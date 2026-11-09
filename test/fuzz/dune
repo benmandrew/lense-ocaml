@@ -1,11 +1,10 @@
 (executable
  (name fuzz)
- (libraries lense_model lense_core unix))
+ (libraries lense_model lense_core_55 lense_core_ox unix))
 
-; A short run on every `dune test`; run longer with
-;   dune exec test/fuzz/fuzz.exe -- -rounds 500
+; The oracle is the ocamlc on PATH: OCaml 5.5 or OxCaml.
 (rule
  (alias runtest)
- (deps fuzz.exe)
+ (deps fuzz.exe (glob_files ../../vendor/oxcaml/stdlib/cmi/*.cmi))
  (action
-  (run %{dep:fuzz.exe} -seed 1 -rounds 20)))
+  (run %{dep:fuzz.exe} -seed 1 -rounds 20 -ox-stdlib ../../vendor/oxcaml/stdlib/cmi)))

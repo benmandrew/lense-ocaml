@@ -1,4 +1,14 @@
-; OxCaml goldens. Run with the 5.2.0+ox switch active; see CLAUDE.md.
+; OxCaml goldens. mixed.t runs in `dune test` with the vendored OxCaml
+; frontend. mixed_oracle.t compiles and runs OxCaml programs, so it needs
+; the OxCaml compiler (see that file); run it with
+; `dune build @test/ox/runtest-ox`.
+
 (cram
- (enabled_if (< %{ocaml_version} 5.5))
- (deps %{bin:lense-ocaml} mixed.ml))
+ (applies_to mixed)
+ (deps (package lense_ocaml) mixed.ml))
+
+(cram
+ (applies_to mixed_oracle)
+ (runtest_alias false)
+ (alias runtest-ox)
+ (deps (env_var OXCAML_BIN)))

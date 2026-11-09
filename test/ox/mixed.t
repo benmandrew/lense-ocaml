@@ -1,7 +1,7 @@
 OxCaml records and constructors with flat fields are mixed blocks: values
 first, then flat data, one word per scalar in native code.
 
-  $ lense-ocaml --no-modules mixed.ml
+  $ lense-ocaml --compiler ox --no-modules mixed.ml
   type m  mixed block, tag 0, size 5: 2 scanned fields, then 3 flat
          0-7    header
       0  8-15   a : int     immediate (int)
@@ -62,34 +62,3 @@ first, then flat data, one word per scalar in native code.
   type al  abbreviation: unboxed bits32, 4 bytes
   
   type o  abbreviation: immediate or pointer (null or int)
-
-The running program agrees. Native code reorders the fields and marks the
-scanned prefix in the header; bytecode keeps declaration order and boxes
-the flat fields.
-
-  $ cat > probe.ml <<'SRC'
-  > type m = { a : int; b : float#; c : string; d : int32#; f : int8# }
-  > let () =
-  >   let r = Obj.repr { a = Sys.opaque_identity 1; b = #2.0; c = "c"; d = -#3l; f = #5s } in
-  >   let d f = if Obj.is_int f then Printf.sprintf "int %d" (Obj.obj f : int) else Printf.sprintf "tag %d" (Obj.tag f) in
-  >   let prefix = match Obj.Uniform_or_mixed.(repr (of_block r)) with Uniform -> "uniform" | Mixed { scannable_prefix_len = n } -> string_of_int n ^ " scanned" in
-  >   Printf.printf "size %d, %s\n" (Obj.size r) prefix;
-  >   for i = 0 to Obj.size r - 1 do
-  >     if Sys.backend_type = Sys.Native && i >= 2 then Printf.printf "  %d raw %nx\n" i (Obj.raw_field r i)
-  >     else Printf.printf "  %d %s\n" i (d (Obj.field r i))
-  >   done
-  > SRC
-  $ ocamlfind ocamlopt probe.ml -o probe.exe 2>/dev/null && ./probe.exe
-  size 5, 2 scanned
-    0 int 1
-    1 tag 252
-    2 raw 4000000000000000
-    3 raw fffffffd
-    4 raw 5
-  $ ocamlfind ocamlc probe.ml -o probe.byte && ./probe.byte
-  size 5, 5 scanned
-    0 int 1
-    1 tag 253
-    2 tag 252
-    3 tag 255
-    4 int 5

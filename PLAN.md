@@ -11,3 +11,4 @@ Stages follow docs/DESIGN.md.
 - [x] Stage 4: closures, objects and lazy values per backend, behind `--values` (`src/core/values.ml`, `test/values.t`, fuzzed on both switches). Native closures under flambda are reported as not predicted.
 - [x] Web front end through js_of_ocaml, reusing `src/model` (`web/`, `web/jsoo/lense_web.ml`). Needs js_of_ocaml from master: 6.5.0 does not support OCaml 5.5.
 - [x] Nix flake, as in `../lense`: `nix build` (tool and tests), `.#web-js`, `.#web`, and a dev shell.
+- [x] One OCaml 5.5 build for both compilers: the OxCaml frontend vendored as `oxfront` (`vendor/oxcaml`), `src/core` built as `lense_core_55` and `lense_core_ox`, `--compiler 5.5|ox`, and a Compiler select on the page.

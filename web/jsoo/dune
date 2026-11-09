@@ -1,23 +1,22 @@
 ; lense_core compiled to JavaScript for the web front end. The stdlib .cmi
-; files are embedded at /static/stdlib, the load path the type checker uses.
+; files are embedded at /static/stdlib and the OxCaml ones at /static/oxstdlib,
+; the load paths the two type checkers use.
 ; Build with: dune build web/jsoo/lense_web.bc.js
 
 (executable
  (name lense_web)
  (modes js)
  (optional)
- (enabled_if (>= %{ocaml_version} 5.5))
- (libraries lense_model lense_core js_of_ocaml)
+ (libraries lense_model lense_core_55 lense_core_ox js_of_ocaml)
  (js_of_ocaml
   (compilation_mode whole_program)
   (flags (:standard (:include cmi_flags.sexp)))))
 
 (rule
- (enabled_if (>= %{ocaml_version} 5.5))
- (deps (glob_files %{ocaml_where}/*.cmi))
+ (deps (glob_files %{ocaml_where}/*.cmi) (glob_files ../../vendor/oxcaml/stdlib/cmi/*.cmi))
  (action
   (with-stdout-to cmi_flags.sexp
-   (run sh -c "printf '('; for f in \"$1\"/*.cmi; do printf ' --file=%s:/static/stdlib/' \"$f\"; done; printf ')\\n'" sh %{ocaml_where}))))
+   (run sh -c "printf '('; for f in \"$1\"/*.cmi; do printf ' --file=%s:/static/stdlib/' \"$f\"; done; for f in \"$2\"/*.cmi; do printf ' --file=%s:/static/oxstdlib/' \"$f\"; done; printf ')\\n'" sh %{ocaml_where} ../../vendor/oxcaml/stdlib/cmi))))
 
 ; Building the JavaScript takes a while, so plain `dune build` skips it.
 (rule (alias default) (action (progn)))

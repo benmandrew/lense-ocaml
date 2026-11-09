@@ -12,7 +12,8 @@ function read(): Buffer {
 }
 
 // Serves the script at lense/lense_web.js in development and copies it into
-// the build. Vite must not bundle it: it is a classic script of about 8 MB.
+// the build. Vite must not bundle it: it is a classic script, 37 MB from a
+// dev build of lense_web and 6.1 MB from --profile release.
 function lenseScript(): Plugin {
   return {
     name: 'lense-script',
@@ -28,9 +29,11 @@ function lenseScript(): Plugin {
   };
 }
 
-// The golden-test inputs, offered in the page's Example menu. Set
-// LENSE_EXAMPLES_DIR to read them from elsewhere.
-const examplesDir = resolve(import.meta.dirname, process.env.LENSE_EXAMPLES_DIR ?? '../test/cases');
+// The golden-test inputs, offered in the page's Example menu: cases/ for
+// OCaml 5.5 and ox/ for OxCaml. Set LENSE_EXAMPLES_DIR to read them from a
+// test directory elsewhere.
+const examplesDir = resolve(import.meta.dirname, process.env.LENSE_EXAMPLES_DIR ?? '../test');
+const exampleDirs = [{ dir: 'cases', ox: false }, { dir: 'ox', ox: true }];
 
 function examples(): Plugin {
   const id = 'virtual:examples';
@@ -39,11 +42,11 @@ function examples(): Plugin {
     resolveId: (source) => (source === id ? `\0${id}` : undefined),
     load(resolved) {
       if (resolved !== `\0${id}`) return;
-      const list = readdirSync(examplesDir).filter((f) => /\.mli?$/.test(f)).sort().map((f) => {
-        const path = resolve(examplesDir, f);
+      const list = exampleDirs.flatMap(({ dir, ox }) => readdirSync(resolve(examplesDir, dir)).filter((f) => /\.mli?$/.test(f)).sort().map((f) => {
+        const path = resolve(examplesDir, dir, f);
         this.addWatchFile(path);
-        return { name: f, intf: f.endsWith('.mli'), code: readFileSync(path, 'utf8') };
-      });
+        return { name: f, intf: f.endsWith('.mli'), ox, code: readFileSync(path, 'utf8') };
+      }));
       return `export default ${JSON.stringify(list)};`;
     },
   };

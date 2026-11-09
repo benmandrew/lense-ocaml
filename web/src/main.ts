@@ -4,7 +4,7 @@ import { type Diagnostic, lintGutter, setDiagnostics } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
 import { basicSetup, EditorView } from 'codemirror';
 import EXAMPLES from 'virtual:examples';
-import type { FromWorker, Options, ToWorker } from './protocol';
+import type { Compiler, FromWorker, Options, ToWorker } from './protocol';
 import './style.css';
 
 const SAMPLE = `(* Edit the code: the representations update as you type. *)
@@ -32,6 +32,7 @@ let area = function
 
 interface Saved {
   code: string;
+  compiler: Compiler;
   intf: boolean;
   values: boolean;
   source: boolean;
@@ -42,6 +43,7 @@ interface Saved {
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const exampleBox = $<HTMLSelectElement>('example');
 const kindBox = $<HTMLSelectElement>('kind');
+const compilerBox = $<HTMLSelectElement>('compiler');
 const valuesBox = $<HTMLInputElement>('values');
 const sourceBox = $<HTMLInputElement>('source');
 const modulesBox = $<HTMLInputElement>('modules');
@@ -85,6 +87,7 @@ async function unpack(hash: string): Promise<Saved | null> {
 function current(): Saved {
   return {
     code: view.state.doc.toString(),
+    compiler: compilerBox.value === 'ox' ? 'ox' : '5.5',
     intf: kindBox.value === 'mli',
     values: valuesBox.checked,
     source: sourceBox.checked,
@@ -94,7 +97,7 @@ function current(): Saved {
 }
 
 const options = (s: Saved): Options => ({
-  intf: s.intf, values: s.values, source: s.source, nomodules: !s.modules, labels: s.labels,
+  compiler: s.compiler, intf: s.intf, values: s.values, source: s.source, nomodules: !s.modules, labels: s.labels,
 });
 
 // --- Diagnostics ----------------------------------------------------------
@@ -194,7 +197,7 @@ function send(msg?: ToWorker) {
   queued = null;
 }
 
-const examples = [{ name: 'sample', intf: false, code: SAMPLE }, ...EXAMPLES];
+const examples = [{ name: 'sample', intf: false, ox: false, code: SAMPLE }, ...EXAMPLES];
 
 /** Selects the example the editor holds, or "edited" if it holds none. */
 function syncExample(code: string) {
@@ -254,9 +257,10 @@ function setCode(code: string) {
 
 async function start() {
   const saved = (location.hash.length > 1 && (await unpack(location.hash.slice(1)))) || null;
-  const s: Saved = { code: SAMPLE, intf: false, values: false, source: false, modules: true, labels: false, ...saved };
+  const s: Saved = { code: SAMPLE, compiler: '5.5', intf: false, values: false, source: false, modules: true, labels: false, ...saved };
   setCode(s.code);
   kindBox.value = s.intf ? 'mli' : 'ml';
+  compilerBox.value = s.compiler;
   valuesBox.checked = s.values;
   sourceBox.checked = s.source;
   modulesBox.checked = s.modules;
@@ -270,10 +274,11 @@ async function start() {
     const e = examples.find((x) => x.name === exampleBox.value);
     if (!e) return;
     kindBox.value = e.intf ? 'mli' : 'ml';
+    compilerBox.value = e.ox ? 'ox' : '5.5';
     setCode(e.code);
     analyze();
   };
-  for (const box of [kindBox, valuesBox, sourceBox, modulesBox, labelsBox]) box.onchange = analyze;
+  for (const box of [kindBox, compilerBox, valuesBox, sourceBox, modulesBox, labelsBox]) box.onchange = analyze;
 
   status('Loading compiler-libs');
   worker.postMessage({ type: 'init', url: new URL('lense/lense_web.js', document.baseURI).href } satisfies ToWorker);

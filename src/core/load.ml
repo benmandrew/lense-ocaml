@@ -18,6 +18,10 @@ let read_stdin () =
 
 exception Failed of string
 
+(* The directory of the stdlib .cmi files, when it is not the compiler's own. *)
+let stdlib_dir = ref None
+let standard_library () = Option.value ~default:Config.standard_library !stdlib_dir
+
 let report exn =
   match Location.error_of_exn exn with
   | Some (`Ok err) -> Failed (Format.asprintf "%a" Location.print_report err)
@@ -31,7 +35,8 @@ let unit_name_of file =
 (* Type-check source text. [intf] chooses .mli syntax. *)
 let typecheck ~include_dirs ~file ~intf src =
   Analyze.rebuild_env := Fun.id;
-  Clflags.include_dirs := include_dirs;
+  Clflags.include_dirs := include_dirs @ Option.to_list !stdlib_dir;
+  Clflags.no_std_include := !stdlib_dir <> None;
   Clflags.color := Some Misc.Color.Never;
   ignore (Warnings.parse_options false "-a");
   let unit_name = unit_name_of file in
@@ -70,7 +75,7 @@ let read_cmt ~include_dirs file =
   in
   let rel d = if Filename.is_relative d then Filename.concat builddir d else d in
   let visible =
-    List.map rel cmt.cmt_loadpath.visible @ include_dirs @ [ Filename.dirname file; Config.standard_library ]
+    List.map rel cmt.cmt_loadpath.visible @ include_dirs @ [ Filename.dirname file; standard_library () ]
   in
   Load_path.init ~auto_include:Load_path.no_auto_include ~visible
     ~hidden:(List.map rel cmt.cmt_loadpath.hidden);
@@ -151,3 +156,11 @@ let compunit ?(values = false) ~include_dirs file : M.compunit =
         | _, Impl _ -> None
     in
     { (Analyze.analyze ?interface ~file ~unit_name ~src:(Some src) input) with values = vals }
+
+(* One input file, or standard input when [file] is "-". *)
+let run ~values ~include_dirs ~intf file : M.compunit =
+  if file = "-" && intf then (
+    let src = read_stdin () in
+    let unit_name, input = typecheck ~include_dirs ~file ~intf:true src in
+    Analyze.analyze ~file ~unit_name ~src:(Some src) input)
+  else compunit ~values ~include_dirs file

@@ -1,0 +1,4 @@
+; lense_core for OCaml 5.5, on the compiler's own compiler-libs.
+(copy_files# ../core/{analyze,load,values,word}.ml)
+(rule (action (copy ../core/compat_55.ml compat.ml)))
+(library (name lense_core_55) (libraries lense_model compiler-libs.common))

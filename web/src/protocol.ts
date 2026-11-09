@@ -1,6 +1,9 @@
 // Messages between the page and the worker that runs lense.
 
+export type Compiler = '5.5' | 'ox';
+
 export interface Options {
+  compiler: Compiler;
   intf: boolean;
   values: boolean;
   source: boolean;
