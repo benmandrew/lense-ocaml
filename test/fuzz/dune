@@ -1,0 +1,11 @@
+(executable
+ (name fuzz)
+ (libraries lense_model lense_core unix))
+
+; A short run on every `dune test`; run longer with
+;   dune exec test/fuzz/fuzz.exe -- -rounds 500
+(rule
+ (alias runtest)
+ (deps fuzz.exe)
+ (action
+  (run %{dep:fuzz.exe} -seed 1 -rounds 20)))
