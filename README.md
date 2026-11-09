@@ -1,0 +1,64 @@
+# lense-ocaml
+
+`lense-ocaml` prints how each type declared in an OCaml file is represented at runtime: which constructors become *immediates*, which *tag* each heap *block* gets, when the compiler drops the block, and how module structures and signature *coercions* lay out their fields. It reads the representations from the compiler's own libraries (*compiler-libs*) for OCaml 5.5, and never parses `-dlambda` text. It is the OCaml counterpart of `lense`, the C and C++ record layout printer, and its design is in [docs/DESIGN.md](docs/DESIGN.md).
+
+```console
+$ printf 'type t = A | B of int | C | D of string\n' | lense-ocaml --no-modules -
+type t  variant: 2 immediates 0-1, 2 block tags 0-1
+  A  immediate 0
+  B  block, tag 0, size 1
+       0  int  immediate (int)
+  C  immediate 1
+  D  block, tag 1, size 1
+       0  string  pointer to string, String_tag 252
+```
+
+## Building
+
+```sh
+dune build
+dune test      # cram goldens, Stage 0 checks and a 20-round fuzz run
+```
+
+It needs OCaml 5.5 with compiler-libs, and dune. There are no other dependencies. The tool is pinned to OCaml 5.5 because compiler-libs changes between releases.
+
+## Usage
+
+```sh
+lense-ocaml [options] <file.ml | file.mli | file.cmt | file.cmti | -> ...
+```
+
+| Option | Effect |
+| --- | --- |
+| `--json` | Print JSON instead of text |
+| `--type NAME` | Show only the named types; repeatable, and matches the last component of a qualified name |
+| `--source` | Print each declaration above its representation |
+| `--no-modules` | Leave out module structures and coercions |
+| `--labels` | List every polymorphic variant label with its hash, and report collisions |
+| `--intf` | Read standard input as an `.mli` |
+| `-I DIR` | Add `DIR` to the load path for `.cmi` files |
+| `-` | Read standard input |
+
+Several files can be given in one run, and hash collisions between polymorphic variant labels are reported across all of them. In a dune project, pass the `.cmt` files from `_build`, which dune writes by default. The tool rebuilds each file's environment from the load path that the file records. Sizes are in words and leave out the header word, so they match `Obj.size`.
+
+## What it shows
+
+**Variants.** Constant and non-constant constructors are numbered by separate counters, so `A` and `C` above are immediates 0 and 1 while `B` and `D` are blocks with tags 0 and 1. A *generalised algebraic data type* (GADT) uses the same numbering, because its type indices are erased. OCaml 5.5 accepts at most 244 non-constant constructors per type.
+
+**Records.** A record is a tag-0 block of its fields in declaration order. A record whose fields are all `float` is a flat block of unboxed doubles with `Double_array_tag` (254). A record marked `[@@unboxed]` has no block. An *inline record* takes its constructor's tag and is never stored flat.
+
+**Polymorphic variants.** A constant label is the immediate hash of its name. A non-constant one is a block `[hash; argument]` of size 2. `--labels` lists every label with its hash and reports collisions.
+
+**Exceptions and extensions.** A constant exception or extension constructor is an *extension slot*, an `Object_tag` (248) block of size 2 holding its name and a unique identifier. A non-constant one is a tag-0 block whose field 0 points to that slot, followed by its arguments. A rebinding such as `exception Again = Empty` is the same value as the original.
+
+**Modules and coercions.** A structure is a tag-0 block of its value-bearing items in order. Types, module types and `external` declarations take no field. When a signature ascription inserts a coercion, the output shows which fields are copied into the new block, and from where. This excerpt is from `test/cases/modules.ml`.
+
+```
+module Reordered : S  copies 2 of 3 fields into a new block, size 2
+    0 <- 2  greet
+    1 <- 0  answer
+```
+
+## Testing
+
+`dune test` runs the cram goldens in `test/*.t`, rechecks the representation rules against the compiler in `test/stage0.t`, and runs the fuzz oracle in `test/fuzz/fuzz.ml`; `dune promote` accepts a changed golden. Each fuzz round generates random variants, records, polymorphic variants, GADTs, exceptions and modules with a coerced view, and predicts their representations with `lense-ocaml` in-process. It then compiles a checker with both `ocamlopt` and `ocamlc` that builds a value of every constructor and compares it with the prediction through `Obj.is_int`, `Obj.tag` and `Obj.size`. The 20-round run in `dune test` makes 1,077 checks per backend, and a planted off-by-one in constant numbering failed on the first round. A longer run is `dune exec test/fuzz/fuzz.exe -- -rounds 500`, with `-seed N` for the first seed and `-keep DIR` to keep the generated programs. The ground truth is the running program, so the oracle needs no second implementation of the representation rules to compare against.

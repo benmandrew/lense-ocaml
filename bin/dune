@@ -1,0 +1,5 @@
+(executable
+ (name main)
+ (public_name lense-ocaml)
+ (package lense_ocaml)
+ (libraries lense_model lense_core))

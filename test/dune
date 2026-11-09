@@ -1,3 +1,4 @@
-; Cram tests. `dune test` shows a diff on a change; `dune promote` accepts it.
+; Golden tests: each case in cases/ is printed as text and as JSON.
+; `dune test` shows a diff on a change; `dune promote` accepts it.
 (cram
- (deps stage0/runtime.exe stage0/lambda.ml))
+ (deps %{bin:lense-ocaml} (glob_files cases/*) stage0/runtime.exe stage0/lambda.ml))

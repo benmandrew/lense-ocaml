@@ -1,0 +1,4 @@
+; The runtime-representation model and its printers. No compiler-libs here,
+; so a future js_of_ocaml front end can reuse them unchanged.
+(library
+ (name lense_model))

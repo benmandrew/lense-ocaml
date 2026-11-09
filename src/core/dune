@@ -1,0 +1,3 @@
+(library
+ (name lense_core)
+ (libraries lense_model compiler-libs.common))
