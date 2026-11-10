@@ -1152,12 +1152,16 @@ let flat what r i bits mask =
 let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed value, got " ^ desc f)
 |};
   Buffer.add_string b "let () =\n";
+  (* Every generated value must meet a prediction: a missing one fails. *)
+  let checked = Hashtbl.create 32 in
+  let missing what = Printf.bprintf b "  fail %S \"no prediction\";\n" what in
   List.iter
     (fun (d : M.decl) ->
       let ty = d.name in
       let check case shape =
         match Hashtbl.find_opt s.values (ty, case) with
         | Some v ->
+            Hashtbl.replace checked (ty, case) ();
             let trees =
               Option.value (Hashtbl.find_opt s.trees (ty, case)) ~default:[]
             in
@@ -1174,12 +1178,18 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
           in
           match Hashtbl.find_opt s.values (ty, c.name) with
           | Some v ->
+              Hashtbl.replace checked (ty, c.name) ();
               shape_checks b ~what:c.name
                 ~v:{ v with vexpr = "(" ^ v.vexpr ^ " : " ^ ty ^ ")" }
                 c.shape
           | None -> ())
       | Alias _ | Abstract _ | Open -> ())
     u.decls;
+  Hashtbl.iter
+    (fun (ty, case) _ ->
+      if not (Hashtbl.mem checked (ty, case)) then
+        missing (if case = "" then ty else ty ^ "." ^ case))
+    s.values;
   (* First-class modules: pack each module into a package type that has
      fewer of its items, in another order. *)
   List.iter
@@ -1200,11 +1210,11 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
               in
               if c <> "" then Printf.bprintf b "  %s\n" c)
             p.slots
-      | None -> ())
+      | None -> missing ("(module " ^ mt ^ ")"))
     s.modules;
   (* Stage 4: closures, lazy values and objects. *)
   (match u.values with
-  | None -> ()
+  | None -> if s.vchecks <> [] then missing "values"
   | Some vals ->
       let backend name =
         List.find_opt
@@ -1271,7 +1281,14 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
                       Printf.bprintf c "    end;\n"
                     end)
                   values)
-        | _ -> ());
+        (* Flambda 2: OxCaml native closures are not predicted. *)
+        | Some { closures = None; _ } when ox && native -> ()
+        | Some { closures = None; _ } ->
+            Printf.bprintf c "    fail %S \"closures not predicted\";\n"
+              (fst (List.hd values))
+        | None ->
+            Printf.bprintf c "    fail %S \"no backend predicted\";\n"
+              (fst (List.hd values)));
         Buffer.contents c
       in
       List.iter
