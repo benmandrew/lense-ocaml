@@ -48,7 +48,7 @@ Every case file, as text with its source.
   ### cases/packages.ml
   (module ORDERED)  structure block, tag 0, size 4
       0  val name             pointer to string, String_tag 252
-      1  val compare          pointer to closure, Closure_tag 247
+      1  val compare          pointer to closure, Closure_tag 247 or Infix_tag 249
       2  module Sub           pointer to structure, tag 0
       3  exception Unordered  pointer to extension slot, Object_tag 248
     no field: type t, external id
@@ -76,6 +76,10 @@ Every case file, as text with its source.
       1  object id     immediate (int)
   
   (module EMPTY)  structure block, size 0: no item takes a field
+  
+  (module PARITY)  structure block, tag 0, size 2
+      0  val even  pointer to closure, Closure_tag 247 or Infix_tag 249
+      1  val odd   pointer to closure, Closure_tag 247 or Infix_tag 249
   ### cases/polyvariants.ml
   type colour = [ `Red | `Green | `Blue ]
   type colour  polymorphic variant
@@ -196,7 +200,7 @@ Every case file, as text with its source.
       5  big : int64           pointer to custom block, Custom_tag 255
       6  ch : char             immediate (char)
       7  lz : int Lazy.t       immediate or pointer (lazy value)
-      8  apply : 'a. 'a -> 'a  pointer to closure, Closure_tag 247
+      8  apply : 'a. 'a -> 'a  pointer to closure, Closure_tag 247 or Infix_tag 249
       cost: 13, 15, 17, 18, 20 or 22 words per value, with headers
       not counted: ids (id list: 3 words per node), arr (array), iarr (array), lz (lazy value), apply (closure)
   ### cases/recursive.ml
@@ -357,8 +361,8 @@ Every case file, as text with its source.
   
   type counter = { next : unit -> int; reset : unit -> unit }
   type counter  block, tag 0, size 2
-      0  next : unit -> int    pointer to closure, Closure_tag 247
-      1  reset : unit -> unit  pointer to closure, Closure_tag 247
+      0  next : unit -> int    pointer to closure, Closure_tag 247 or Infix_tag 249
+      1  reset : unit -> unit  pointer to closure, Closure_tag 247 or Infix_tag 249
       cost: 3 words per value, with headers
       not counted: next (closure), reset (closure)
   
@@ -388,7 +392,7 @@ Every case file, as text with its source.
   
   lazy (i + 1)  line 44  Lazy_tag 246 block, size 1, holding a closure; forcing it makes it a Forward_tag 250 block holding the result
   
-  lazy (fun x -> x)  line 44  no block: the value itself, pointer to closure, Closure_tag 247
+  lazy (fun x -> x)  line 44  no block: the value itself, pointer to closure, Closure_tag 247 or Infix_tag 249
   
   class point  line 46  Object_tag 248, size 4
       0  method table   pointer to the class's method table
@@ -470,7 +474,7 @@ Every case file, as text with its source.
             cost: 2 words per value, with headers
     Hide  block, tag 2, size 2
             0  'a            immediate or pointer (type variable 'a)
-            1  'a -> string  pointer to closure, Closure_tag 247
+            1  'a -> string  pointer to closure, Closure_tag 247 or Infix_tag 249
             cost: 3 words per value, with headers
             not counted: field 0 ('a), field 1 (closure)
             note: existential 'a: stored as uniform values
@@ -500,7 +504,7 @@ Every case file, as text with its source.
       not counted: a (abstract type t)
   
   (module CODEC)  structure block, tag 0, size 2
-      0  val encode   pointer to closure, Closure_tag 247
+      0  val encode   pointer to closure, Closure_tag 247 or Infix_tag 249
       1  val default  immediate or pointer (abstract type v)
     no field: type v
 

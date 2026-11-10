@@ -77,3 +77,16 @@ let empty =
   (module struct
     type t = int
   end : EMPTY)
+
+(* A function after the first of a recursive set is an Infix_tag pointer
+   into the closure of the set, so odd is not a Closure_tag block. *)
+module type PARITY = sig
+  val even : int -> bool
+  val odd : int -> bool
+end
+
+let parity =
+  (module struct
+    let rec even n = n = 0 || odd (n - 1)
+    and odd n = n <> 0 && even (n - 1)
+  end : PARITY)

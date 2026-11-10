@@ -560,8 +560,8 @@
                 "name": "compare",
                 "word": {
                   "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
+                  "tag": null,
+                  "what": "closure, Closure_tag 247 or Infix_tag 249"
                 },
                 "range": {"line": 5, "column": 2, "end_line": 5, "end_column": 29}
               },
@@ -645,6 +645,37 @@
               "type t"
             ],
             "range": {"line": 72, "column": 0, "end_line": 74, "end_column": 3}
+          },
+          {
+            "name": "PARITY",
+            "line": 89,
+            "size": 2,
+            "fields": [
+              {
+                "index": 0,
+                "item": "value",
+                "name": "even",
+                "word": {
+                  "kind": "pointer",
+                  "tag": null,
+                  "what": "closure, Closure_tag 247 or Infix_tag 249"
+                },
+                "range": {"line": 84, "column": 2, "end_line": 84, "end_column": 24}
+              },
+              {
+                "index": 1,
+                "item": "value",
+                "name": "odd",
+                "word": {
+                  "kind": "pointer",
+                  "tag": null,
+                  "what": "closure, Closure_tag 247 or Infix_tag 249"
+                },
+                "range": {"line": 85, "column": 2, "end_line": 85, "end_column": 23}
+              }
+            ],
+            "no_field": [],
+            "range": {"line": 83, "column": 0, "end_line": 86, "end_column": 3}
           }
         ],
         "labels": [],
@@ -1940,8 +1971,8 @@
                   "mutable": false,
                   "word": {
                     "kind": "pointer",
-                    "tag": 247,
-                    "what": "closure"
+                    "tag": null,
+                    "what": "closure, Closure_tag 247 or Infix_tag 249"
                   },
                   "owns": {
                     "words": [0],
@@ -3163,8 +3194,8 @@
                   "mutable": false,
                   "word": {
                     "kind": "pointer",
-                    "tag": 247,
-                    "what": "closure"
+                    "tag": null,
+                    "what": "closure, Closure_tag 247 or Infix_tag 249"
                   },
                   "owns": {
                     "words": [0],
@@ -3186,8 +3217,8 @@
                   "mutable": false,
                   "word": {
                     "kind": "pointer",
-                    "tag": 247,
-                    "what": "closure"
+                    "tag": null,
+                    "what": "closure, Closure_tag 247 or Infix_tag 249"
                   },
                   "owns": {
                     "words": [0],
@@ -3590,8 +3621,8 @@
               "kind": "itself",
               "word": {
                 "kind": "pointer",
-                "tag": 247,
-                "what": "closure"
+                "tag": null,
+                "what": "closure, Closure_tag 247 or Infix_tag 249"
               },
               "range": {"line": 44, "column": 51, "end_line": 44, "end_column": 68}
             }
@@ -4254,8 +4285,8 @@
                       "mutable": false,
                       "word": {
                         "kind": "pointer",
-                        "tag": 247,
-                        "what": "closure"
+                        "tag": null,
+                        "what": "closure, Closure_tag 247 or Infix_tag 249"
                       },
                       "owns": {
                         "words": [0],
@@ -4512,8 +4543,8 @@
                 "name": "encode",
                 "word": {
                   "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
+                  "tag": null,
+                  "what": "closure, Closure_tag 247 or Infix_tag 249"
                 },
                 "range": {"line": 11, "column": 2, "end_line": 11, "end_column": 26}
               },

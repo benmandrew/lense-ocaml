@@ -55,8 +55,8 @@ default, and the first paragraph says how that backend was built.
       7  k : int  immediate (int)
   
   type counter  block, tag 0, size 2
-      0  next : unit -> int    pointer to closure, Closure_tag 247
-      1  reset : unit -> unit  pointer to closure, Closure_tag 247
+      0  next : unit -> int    pointer to closure, Closure_tag 247 or Infix_tag 249
+      1  reset : unit -> unit  pointer to closure, Closure_tag 247 or Infix_tag 249
       cost: 3 words per value, with headers
       not counted: next (closure), reset (closure)
   
@@ -86,7 +86,7 @@ default, and the first paragraph says how that backend was built.
   
   lazy (i + 1)  line 44  Lazy_tag 246 block, size 1, holding a closure; forcing it makes it a Forward_tag 250 block holding the result
   
-  lazy (fun x -> x)  line 44  no block: the value itself, pointer to closure, Closure_tag 247
+  lazy (fun x -> x)  line 44  no block: the value itself, pointer to closure, Closure_tag 247 or Infix_tag 249
   
   class point  line 46  Object_tag 248, size 4
       0  method table   pointer to the class's method table
@@ -177,7 +177,7 @@ default, and the first paragraph says how that backend was built.
   fun known.(fun)  line 28  Closure_tag 247, size 3
       0  code pointer
       1  closinfo: environment from field 2
-      2  g : int -> int  pointer to closure, Closure_tag 247
+      2  g : int -> int  pointer to closure, Closure_tag 247 or Infix_tag 249
   
   fun counter.(fun)  line 37  Closure_tag 247, size 3
       0  code pointer
@@ -281,7 +281,7 @@ out differently, it shows each layout under the backend's name.
   fun known.(fun)  line 28  Closure_tag 247, size 3  (bytecode only)
       0  code pointer
       1  closinfo: environment from field 2
-      2  g : int -> int  pointer to closure, Closure_tag 247
+      2  g : int -> int  pointer to closure, Closure_tag 247 or Infix_tag 249
   
   fun counter.(fun)  line 37  Closure_tag 247, size 3
       0  code pointer
@@ -306,7 +306,7 @@ out differently, it shows each layout under the backend's name.
 
   $ lense-ocaml --no-values cases/values.ml
   type counter  block, tag 0, size 2
-      0  next : unit -> int    pointer to closure, Closure_tag 247
-      1  reset : unit -> unit  pointer to closure, Closure_tag 247
+      0  next : unit -> int    pointer to closure, Closure_tag 247 or Infix_tag 249
+      1  reset : unit -> unit  pointer to closure, Closure_tag 247 or Infix_tag 249
       cost: 3 words per value, with headers
       not counted: next (closure), reset (closure)

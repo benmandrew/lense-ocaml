@@ -43,7 +43,12 @@ let rec word ?(depth = 0) env ty : M.word =
         Option.get (Compat.flat_word env ty)
     | Var None -> M.Any "type variable"
     | Var (Some v) -> M.Any ("type variable '" ^ v)
-    | Arrow -> ptr ~tag:M.closure_tag "closure"
+    (* A function after the first of a recursive set is an Infix_tag pointer
+       into the set's closure, so the tag varies. *)
+    | Arrow ->
+        ptr
+          (Printf.sprintf "closure, Closure_tag %d or Infix_tag %d"
+             M.closure_tag M.infix_tag)
     | Tuple -> ptr ~tag:0 "tuple"
     | Unboxed_tuple -> M.Any "unboxed tuple"
     | Object -> ptr ~tag:M.object_tag "object"

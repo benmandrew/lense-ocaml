@@ -25,7 +25,7 @@ program, so they are left out.
   $ lense-ocaml p.ml
   (module S)  structure block, tag 0, size 4
       0  val name     pointer to string, String_tag 252
-      1  val compare  pointer to closure, Closure_tag 247
+      1  val compare  pointer to closure, Closure_tag 247 or Infix_tag 249
       2  module Sub   pointer to structure, tag 0
       3  exception E  pointer to extension slot, Object_tag 248
     no field: type t
@@ -60,3 +60,25 @@ order and two more of them; the packed block has S's four.
   tag 0, size 4
   0 string true, 1 closure true, 3 extension slot true
   2 Sub: tag 0, size 1
+
+A function after the first of a recursive set is an Infix_tag pointer into
+the closure of the set, so a field of function type can have either tag.
+
+  $ cat > rec.ml <<'SRC'
+  > module type PARITY = sig val even : int -> bool val odd : int -> bool end
+  > let parity = (module struct
+  >   let rec even n = n = 0 || odd (n - 1)
+  >   and odd n = n <> 0 && even (n - 1)
+  > end : PARITY)
+  > let () =
+  >   let r = Obj.repr parity in
+  >   Printf.printf "even %d, odd %d\n" (Obj.tag (Obj.field r 0)) (Obj.tag (Obj.field r 1))
+  > SRC
+  $ lense-ocaml rec.ml
+  (module PARITY)  structure block, tag 0, size 2
+      0  val even  pointer to closure, Closure_tag 247 or Infix_tag 249
+      1  val odd   pointer to closure, Closure_tag 247 or Infix_tag 249
+  $ ocamlopt rec.ml -o rec_native.exe 2>/dev/null && ./rec_native.exe
+  even 247, odd 249
+  $ ocamlc rec.ml -o rec_byte.exe && ./rec_byte.exe
+  even 247, odd 249
