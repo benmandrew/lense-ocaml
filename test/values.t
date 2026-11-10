@@ -1,6 +1,6 @@
 With --values, lense also prints the closures, lazy values and objects a unit
-allocates. Closures differ between ocamlopt and ocamlc, so each backend has
-its own section.
+allocates. Closures differ between ocamlopt and ocamlc; --backend picks which
+one to show, native code by default.
 
   $ lense-ocaml --values cases/values.ml
   type counter  block, tag 0, size 2
@@ -68,6 +68,53 @@ its own section.
         4  shared    immediate or pointer (a variable the compiler introduced)
         5  c_tables  immediate or pointer (a variable the compiler introduced)
   
+  lazy values
+    lazy 3  line 28  no block: the value itself, immediate (int)
+    lazy 2.5  line 28  Forward_tag 250 block, size 1, holding the value: pointer to boxed float, Double_tag 253
+    lazy i  line 28  no block: the value itself, immediate (int)
+    lazy v  line 28  Forward_tag 250 block, size 1, holding the value: immediate or pointer (type variable)
+    lazy (i + 1)  line 28  Lazy_tag 246 block, size 1, holding a closure; forcing it makes it a Forward_tag 250 block holding the result
+    lazy (fun x -> x)  line 28  no block: the value itself, pointer to closure, Closure_tag 247
+  
+  class point  line 30  Object_tag 248, size 4
+      0  method table   pointer to the class's method table
+      1  object id      immediate (int)
+      2  x : int        immediate (int)
+      3  name : string  pointer to string, String_tag 252
+  
+  class labelled  line 36  Object_tag 248, size 5
+      0  method table  pointer to the class's method table
+      1  object id     immediate (int)
+      2  k : int       immediate (int)  (parameter)
+      3  s : string    pointer to string, String_tag 252  (parameter)
+      4  v : int       immediate (int)
+  
+  class point3  line 43  Object_tag 248, size 6
+      0  method table   pointer to the class's method table
+      1  object id      immediate (int)
+      2  z : int        immediate (int)
+      3  w : string     pointer to string, String_tag 252
+      4  x : int        immediate (int)  (from point)
+      5  name : string  pointer to string, String_tag 252  (from point)
+  
+  object  line 52  Object_tag 248, size 4
+      0  method table  pointer to the class's method table
+      1  object id     immediate (int)
+      2  environment   pointer to a block of the local variables the class uses, tag 0
+      3  a : int       immediate (int)
+  
+  class c  line 59  Object_tag 248, size 6
+      0  method table   pointer to the class's method table
+      1  object id      immediate (int)
+      2  environment    pointer to a block of the local variables the class uses, tag 0
+      3  a : int        immediate (int)
+      4  x : int        immediate (int)  (from point)
+      5  name : string  pointer to string, String_tag 252  (from point)
+
+--backend bytecode shows the closures ocamlc allocates instead, and --backend
+both shows the two sections in turn.
+
+  $ lense-ocaml --values --backend bytecode cases/values.ml | sed -n '/^closures in/,/^$/p'
   closures in bytecode (ocamlc without -g)
     succ  line 3  Closure_tag 247, size 2, arity 1, no environment
     add  line 4  Closure_tag 247, size 2, arity 2, no environment
@@ -127,45 +174,6 @@ its own section.
         5  shared    immediate or pointer (a variable the compiler introduced)
         6  c_tables  immediate or pointer (a variable the compiler introduced)
   
-  lazy values
-    lazy 3  line 28  no block: the value itself, immediate (int)
-    lazy 2.5  line 28  Forward_tag 250 block, size 1, holding the value: pointer to boxed float, Double_tag 253
-    lazy i  line 28  no block: the value itself, immediate (int)
-    lazy v  line 28  Forward_tag 250 block, size 1, holding the value: immediate or pointer (type variable)
-    lazy (i + 1)  line 28  Lazy_tag 246 block, size 1, holding a closure; forcing it makes it a Forward_tag 250 block holding the result
-    lazy (fun x -> x)  line 28  no block: the value itself, pointer to closure, Closure_tag 247
-  
-  class point  line 30  Object_tag 248, size 4
-      0  method table   pointer to the class's method table
-      1  object id      immediate (int)
-      2  x : int        immediate (int)
-      3  name : string  pointer to string, String_tag 252
-  
-  class labelled  line 36  Object_tag 248, size 5
-      0  method table  pointer to the class's method table
-      1  object id     immediate (int)
-      2  k : int       immediate (int)  (parameter)
-      3  s : string    pointer to string, String_tag 252  (parameter)
-      4  v : int       immediate (int)
-  
-  class point3  line 43  Object_tag 248, size 6
-      0  method table   pointer to the class's method table
-      1  object id      immediate (int)
-      2  z : int        immediate (int)
-      3  w : string     pointer to string, String_tag 252
-      4  x : int        immediate (int)  (from point)
-      5  name : string  pointer to string, String_tag 252  (from point)
-  
-  object  line 52  Object_tag 248, size 4
-      0  method table  pointer to the class's method table
-      1  object id     immediate (int)
-      2  environment   pointer to a block of the local variables the class uses, tag 0
-      3  a : int       immediate (int)
-  
-  class c  line 59  Object_tag 248, size 6
-      0  method table   pointer to the class's method table
-      1  object id      immediate (int)
-      2  environment    pointer to a block of the local variables the class uses, tag 0
-      3  a : int        immediate (int)
-      4  x : int        immediate (int)  (from point)
-      5  name : string  pointer to string, String_tag 252  (from point)
+  $ lense-ocaml --values --backend both cases/values.ml | grep '^closures in'
+  closures in native code (Closure, without flambda)
+  closures in bytecode (ocamlc without -g)

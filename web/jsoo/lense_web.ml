@@ -3,7 +3,8 @@
    returns { text, links, diagrams } or { error }. links is a JSON list of
    [line, ranges] pairs: the source ranges of each line of text, counting
    lines from 0. diagrams is Diagram.json's string. The option "compiler" is "5.5" (the default) or "ox"; each has
-   its stdlib .cmi files embedded under /static. *)
+   its stdlib .cmi files embedded under /static. The option "backend" is "native" (the default) or
+   "bytecode": whose closures "values" shows. *)
 
 open Js_of_ocaml
 module M = Lense_model.Model
@@ -35,6 +36,7 @@ let analyze code opts =
   let intf = flag opts "intf" in
   let file = if intf then "example.mli" else "example.ml" in
   let values = flag opts "values" in
+  let backend = if str opts "backend" = "bytecode" then "bytecode" else "native code" in
   let result =
     try
       Result.map
@@ -48,7 +50,8 @@ let analyze code opts =
             let topts : Lense_model.Text.options = { source = false; only = [] } in
             let text, links = Lense_model.Text.render_linked topts [ u ] in
             (text, links, Lense_model.Diagram.(json (compunit topts u))))
-        ((if str opts "compiler" = "ox" then unit_ox else unit_55) ~file ~intf ~values src)
+        (Result.map (M.only_backend backend)
+           ((if str opts "compiler" = "ox" then unit_ox else unit_55) ~file ~intf ~values src))
     with exn -> Error ("lense stopped: " ^ Printexc.to_string exn)
   in
   match result with

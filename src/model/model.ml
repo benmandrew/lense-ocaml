@@ -204,6 +204,11 @@ type compunit = {
   values : values option;  (** Closures, lazy values and objects; only when asked for. *)
 }
 
+(* The unit with the closures of one backend only, "native code" or "bytecode". *)
+let only_backend name (u : compunit) =
+  let keep (v : values) = { v with backends = List.filter (fun bc -> bc.backend = name) v.backends } in
+  { u with values = Option.map keep u.values }
+
 (* Polymorphic-variant labels that share a hash, across every unit. Each
    group lists the distinct labels with one use of each. *)
 let collisions (units : compunit list) =

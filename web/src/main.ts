@@ -6,7 +6,7 @@ import { Decoration, type DecorationSet } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { basicSetup, EditorView } from 'codemirror';
 import examples from 'virtual:examples';
-import type { Compiler, Diagram, FromWorker, Kind, Options, Range, Shape, ToWorker } from './protocol';
+import type { Backend, Compiler, Diagram, FromWorker, Kind, Options, Range, Shape, ToWorker } from './protocol';
 import './style.css';
 
 interface Saved {
@@ -14,6 +14,7 @@ interface Saved {
   compiler: Compiler;
   intf: boolean;
   values: boolean;
+  backend: Backend;
   labels: boolean;
 }
 
@@ -22,6 +23,7 @@ const exampleBox = $<HTMLSelectElement>('example');
 const kindBox = $<HTMLSelectElement>('kind');
 const compilerBox = $<HTMLSelectElement>('compiler');
 const valuesBox = $<HTMLInputElement>('values');
+const backendBox = $<HTMLSelectElement>('backend');
 const labelsBox = $<HTMLInputElement>('labels');
 const statusBox = $<HTMLSpanElement>('status');
 const output = $<HTMLElement>('output');
@@ -65,12 +67,13 @@ function current(): Saved {
     compiler: compilerBox.value === 'ox' ? 'ox' : '5.5',
     intf: kindBox.value === 'mli',
     values: valuesBox.checked,
+    backend: backendBox.value === 'bytecode' ? 'bytecode' : 'native',
     labels: labelsBox.checked,
   };
 }
 
 const options = (s: Saved): Options => ({
-  compiler: s.compiler, intf: s.intf, values: s.values, labels: s.labels,
+  compiler: s.compiler, intf: s.intf, values: s.values, backend: s.backend, labels: s.labels,
 });
 
 // --- Diagnostics ----------------------------------------------------------
@@ -506,6 +509,7 @@ function syncExample(code: string) {
 }
 
 async function analyze() {
+  backendBox.disabled = !valuesBox.checked;
   const s = current();
   syncExample(s.code);
   send({ type: 'analyze', id: ++seq, code: s.code, options: options(s) });
@@ -558,11 +562,12 @@ function setCode(code: string) {
 
 async function start() {
   const saved = (location.hash.length > 1 && (await unpack(location.hash.slice(1)))) || null;
-  const s: Saved = { code: sample.code, compiler: '5.5', intf: false, values: false, labels: false, ...saved };
+  const s: Saved = { code: sample.code, compiler: '5.5', intf: false, values: false, backend: 'native', labels: false, ...saved };
   setCode(s.code);
   kindBox.value = s.intf ? 'mli' : 'ml';
   compilerBox.value = s.compiler;
   valuesBox.checked = s.values;
+  backendBox.value = s.backend;
   labelsBox.checked = s.labels;
 
   const edited = new Option('edited', '');
@@ -579,7 +584,7 @@ async function start() {
     setCode(e.code);
     analyze();
   };
-  for (const box of [kindBox, compilerBox, valuesBox, labelsBox]) box.onchange = analyze;
+  for (const box of [kindBox, compilerBox, valuesBox, backendBox, labelsBox]) box.onchange = analyze;
 
   status('Loading compiler-libs');
   worker.postMessage({ type: 'init', url: new URL('lense/lense_web.js', document.baseURI).href } satisfies ToWorker);

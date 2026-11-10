@@ -2,10 +2,14 @@
 
 export type Compiler = '5.5' | 'ox';
 
+/** Whose closures the values report shows. */
+export type Backend = 'native' | 'bytecode';
+
 export interface Options {
   compiler: Compiler;
   intf: boolean;
   values: boolean;
+  backend: Backend;
   labels: boolean;
 }
 

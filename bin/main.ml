@@ -49,8 +49,15 @@ let find_ox_stdlib given =
         (Lense_core_ox.Load.Failed
            ("lense-ocaml: no OxCaml stdlib.cmi in " ^ String.concat " or " candidates ^ "; pass --ox-stdlib DIR"))
 
+(* The backend whose closures --values prints, or None for both. *)
+let backend_of_string = function
+  | "native" -> Some "native code"
+  | "bytecode" -> Some "bytecode"
+  | "both" -> None
+  | s -> raise (Arg.Bad ("unknown backend " ^ s ^ ": use native, bytecode or both"))
+
 let () =
-  let values = ref false in
+  let values = ref false and backend = ref (Some "native code") in
   let compiler = ref None and ox_stdlib = ref (Sys.getenv_opt "LENSE_OX_STDLIB") in
   let json = ref false and source = ref false and labels = ref false in
   let only = ref [] and includes = ref [] and files = ref [] and intf = ref false in
@@ -60,7 +67,10 @@ let () =
         ("--json", Arg.Set json, " Print JSON instead of text");
         ("--type", Arg.String (fun s -> only := s :: !only), "NAME Show only the named types (repeatable)");
         ("--source", Arg.Set source, " Print each declaration above its representation");
-        ("--values", Arg.Set values, " Also show closures, lazy values and objects, per backend");
+        ("--values", Arg.Set values, " Also show closures, lazy values and objects");
+        ( "--backend",
+          Arg.String (fun s -> backend := backend_of_string s),
+          "native|bytecode|both Whose closures --values shows (default: native)" );
         ("--labels", Arg.Set labels, " List every polymorphic variant label with its hash");
         ("--intf", Arg.Set intf, " Read standard input as an interface (.mli)");
         ("-", Arg.Unit (fun () -> files := "-" :: !files), " Read source from standard input");
@@ -101,6 +111,7 @@ let () =
             None)
       files
   in
+  let units = match !backend with Some b -> List.map (M.only_backend b) units | None -> units in
   if !json then print_string (Lense_model.Json.render units)
   else if !labels then (
     let b = Buffer.create 1024 in
