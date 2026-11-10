@@ -122,9 +122,7 @@ let read_cmt ~include_dirs file =
           let s = read_file path in
           (* Only trust the text if it is what the build compiled. *)
           match cmt.cmt_source_digest with
-          | Some d
-            when Digest.to_hex (Digest.string s) = d || Digest.string s = d ->
-              Some s
+          | Some d when Compat.source_digest s = d -> Some s
           | Some _ -> None
           | None -> Some s
         with Sys_error _ -> None)

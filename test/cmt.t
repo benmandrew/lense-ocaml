@@ -47,7 +47,8 @@ the source, and resolves types from other units through their .cmi files.
 
 The closures and lazy values come from the saved typed tree
 too. The Lambda translation looks names up in its environments, so they are
-rebuilt from their summaries first.
+rebuilt from their summaries first. The source file the .cmt names is read
+when its digest matches, so types are spelt and lazy values quoted as written.
 
   $ cat > c.ml <<'SRC'
   > type sw = { s : [ `On | `Off ] }
@@ -59,7 +60,7 @@ rebuilt from their summaries first.
   closures in native code: Closure, without flambda
   
   type sw  block, tag 0, size 1
-      0  s : [ `Off | `On ]  immediate (constant polymorphic variant)
+      0  s : [ `On | `Off ]  immediate (constant polymorphic variant)
       cost: 2 words per value, with headers
   
   fun adder.(fun)  line 2  Closure_tag 247, size 3
@@ -67,4 +68,4 @@ rebuilt from their summaries first.
       1  closinfo: arity 1, environment from field 2
       2  a : int  immediate (int)
   
-  lazy  line 3  Lazy_tag 246 block, size 1, holding a closure; forcing it makes it a Forward_tag 250 block holding the result
+  lazy (String.make 1 'z')  line 3  Lazy_tag 246 block, size 1, holding a closure; forcing it makes it a Forward_tag 250 block holding the result
