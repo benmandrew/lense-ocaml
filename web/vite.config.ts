@@ -12,7 +12,7 @@ function read(): Buffer {
 }
 
 // Serves the script at lense/lense_web.js in development and copies it into
-// the build. Vite must not bundle it: it is a classic script, 37 MB from a
+// the build. Vite must not bundle it: it is a classic script, 54 MB from a
 // dev build of lense_web and 6.1 MB from --profile release.
 function lenseScript(): Plugin {
   return {

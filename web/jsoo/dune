@@ -5,12 +5,15 @@
 
 (executable
  (name lense_web)
- (modes js)
  (optional)
  (libraries lense_model lense_core_55 lense_core_ox js_of_ocaml)
+ (modes js)
+ ; Dev compiles each library separately and embeds the .cmi files in the
+ ; runtime; release compiles the whole program and embeds them there.
  (js_of_ocaml
-  (compilation_mode whole_program)
-  (flags (:standard (:include cmi_flags.sexp)))))
+  (build_runtime_flags (:standard (:include cmi_flags.sexp)))))
+
+(env (_ (js_of_ocaml (flags (:standard (:include cmi_flags.sexp))))))
 
 (rule
  (deps (glob_files %{ocaml_where}/*.cmi) (glob_files ../../vendor/oxcaml/stdlib/cmi/*.cmi))
