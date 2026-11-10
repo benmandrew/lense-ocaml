@@ -48,6 +48,7 @@ let base =
     ("[ `On | `Off ]", "`On");
     ("[ `N of int ]", "(`N 3)");
     ("fstr", "{ fa = 1.; fb = 2. }");
+    ("< m : int >", "(object method m = 1 end)");
   ]
   |> List.map (fun (ty, expr) -> { ty; expr })
 
@@ -1475,6 +1476,421 @@ let gen_values s =
   | 2 -> gen_lazy s
   | _ -> gen_class s
 
+(* Type parameters, abstract and private types, open rows, packages and
+   more recursion. A type spelled as a polymorphic variant makes an
+   abbreviation of it a polymorphic variant declaration, not an alias. *)
+
+let is_poly ty =
+  String.length ty > 1
+  && (ty.[0] = '[' || (ty.[0] = 'p' && ty.[1] >= '0' && ty.[1] <= '9'))
+
+let rec plain_sample s =
+  let x = field_sample s in
+  if is_poly x.ty then plain_sample s else x
+
+let shuffle l =
+  List.map snd (List.sort compare (List.map (fun x -> (rand 1000, x)) l))
+
+let add_pool s ty expr = s.pool <- { ty; expr } :: s.pool
+
+(* A record of [xs], checked as a value and added to the pool. *)
+let emit_record s xs =
+  let name = fresh s "hr" in
+  let fs = List.map (fun x -> (fresh s "h", x)) xs in
+  Printf.bprintf s.decls "type %s = { %s }\n" name
+    (String.concat "; " (List.map (fun (l, x) -> l ^ " : " ^ x.ty) fs));
+  let make es =
+    "{ "
+    ^ String.concat "; " (List.map2 (fun (l, _) e -> l ^ " = " ^ e) fs es)
+    ^ " }"
+  in
+  let v = value make (List.map (fun (_, x) -> x.expr) fs) in
+  add_value s name "" v;
+  add_pool s name ("(" ^ v.vexpr ^ ")")
+
+(* The parameters of a declaration, and an instance of it at [xs]. *)
+let params_decl ps name =
+  match ps with
+  | [ p ] -> p ^ " " ^ name
+  | _ -> "(" ^ String.concat ", " ps ^ ") " ^ name
+
+let inst xs name =
+  "("
+  ^ String.concat ", " (List.map (fun x -> "(" ^ x.ty ^ ")") xs)
+  ^ ") " ^ name
+
+(* A field over a parameter, at the instance [xs], or a plain field. *)
+let param_field s ps xs =
+  let i = rand (List.length ps) in
+  let p = List.nth ps i and x = List.nth xs i in
+  match rand 5 with
+  | 0 | 1 -> { ty = p; expr = x.expr }
+  | 2 -> { ty = p ^ " option"; expr = "(Some " ^ x.expr ^ ")" }
+  | 3 -> { ty = p ^ " * int"; expr = "(" ^ x.expr ^ ", 3)" }
+  | _ -> field_sample s
+
+(* A record or variant over 'a, or 'a and 'b, instantiated at concrete
+   types. A record of floats keeps its parameter as a phantom. *)
+let gen_param s =
+  let ps = if chance 0.3 then [ "'a"; "'b" ] else [ "'a" ] in
+  let xs = List.map (fun _ -> field_sample s) ps in
+  let annot name e = "(" ^ e ^ " : " ^ inst xs name ^ ")" in
+  if chance 0.5 then (
+    let name = fresh s "pr" in
+    let n = 1 + rand 4 in
+    let unboxed = n = 1 && chance 0.4 in
+    let floats = (not unboxed) && chance 0.25 in
+    let fs =
+      List.init n (fun _ ->
+          ( fresh s "q",
+            (not unboxed) && chance 0.3,
+            if floats then float_sample () else param_field s ps xs ))
+    in
+    Printf.bprintf s.decls "type %s = { %s }%s\n" (params_decl ps name)
+      (String.concat "; "
+         (List.map
+            (fun (l, m, x) -> (if m then "mutable " else "") ^ l ^ " : " ^ x.ty)
+            fs))
+      (if unboxed then " [@@unboxed]" else "");
+    let make es =
+      annot name
+        ("{ "
+        ^ String.concat "; "
+            (List.map2 (fun (l, _, _) e -> l ^ " = " ^ e) fs es)
+        ^ " }")
+    in
+    let v = value make (List.map (fun (_, _, x) -> x.expr) fs) in
+    add_value s name "" v;
+    add_pool s (inst xs name) v.vexpr)
+  else
+    let name = fresh s "pv" in
+    let n = 1 + rand 4 in
+    let unboxed = n = 1 && chance 0.4 in
+    let cases =
+      List.init n (fun _ ->
+          let c = fresh s "P" in
+          if (not unboxed) && chance 0.25 then (c, `Const)
+          else if (not unboxed) && chance 0.25 then
+            ( c,
+              `Inline
+                (List.init
+                   (1 + rand 3)
+                   (fun _ -> (fresh s "l", param_field s ps xs))) )
+          else
+            ( c,
+              `Tuple
+                (List.init
+                   (if unboxed then 1 else 1 + rand 3)
+                   (fun _ -> param_field s ps xs)) ))
+    in
+    Printf.bprintf s.decls "type %s =%s%s\n" (params_decl ps name)
+      (String.concat ""
+         (List.map
+            (fun (c, a) ->
+              match a with
+              | `Const -> " | " ^ c
+              | `Tuple xs ->
+                  " | " ^ c ^ " of "
+                  ^ String.concat " * "
+                      (List.map (fun x -> "(" ^ x.ty ^ ")") xs)
+              | `Inline fs ->
+                  " | " ^ c ^ " of { "
+                  ^ String.concat "; "
+                      (List.map (fun (l, x) -> l ^ " : " ^ x.ty) fs)
+                  ^ " }")
+            cases))
+      (if unboxed then " [@@unboxed]" else "");
+    List.iter
+      (fun (c, a) ->
+        let v =
+          match a with
+          | `Const -> constant (annot name c)
+          | `Tuple xs ->
+              value
+                (fun es -> annot name (c ^ " (" ^ String.concat ", " es ^ ")"))
+                (List.map (fun x -> x.expr) xs)
+          | `Inline fs ->
+              value
+                (fun es ->
+                  annot name
+                    (c ^ " { "
+                    ^ String.concat "; "
+                        (List.map2 (fun (l, _) e -> l ^ " = " ^ e) fs es)
+                    ^ " }"))
+                (List.map (fun (_, x) -> x.expr) fs)
+        in
+        add_value s name c v;
+        add_pool s (inst xs name) v.vexpr)
+      cases
+
+(* Recursion the goldens cover: an abbreviation in a group, a recursive
+   polymorphic variant, [@@unboxed] in a group, and parameterised
+   recursive types. Each value holds its further nodes in [vsubs]. *)
+let gen_recursive_more s =
+  let rec rec_sample s =
+    let x = field_sample s in
+    if contains x.expr "[||]" then rec_sample s else x
+  in
+  let paren x = "(" ^ x.ty ^ ")" in
+  let tuple es = "(" ^ String.concat ", " es ^ ")" in
+  let x = rec_sample s in
+  match rand 5 with
+  | 0 ->
+      let a = fresh s "ga" and u = fresh s "gu" in
+      let stop = fresh s "Gs" and go = fresh s "Gg" in
+      add_value s a stop (constant stop);
+      if chance 0.5 then (
+        (* The abbreviation expands to an option: its Some block counts. *)
+        Printf.bprintf s.decls
+          "type %s = %s | %s of %s * %s\nand %s = %s option\n" a stop go
+          (paren x) u u a;
+        let mk es = go ^ " " ^ tuple es in
+        let inner = "(" ^ mk [ x.expr; "None" ] ^ ")" in
+        let some = "(Some " ^ inner ^ ")" in
+        let v = { (value mk [ x.expr; some ]) with vsubs = [ (1, inner) ] } in
+        add_value s a go v;
+        add_value s u "" (constant some);
+        add_pool s a ("(" ^ v.vexpr ^ ")"))
+      else (
+        (* The abbreviation is a tuple: the node itself. *)
+        Printf.bprintf s.decls "type %s = %s | %s of %s\nand %s = %s * %s\n" a
+          stop go u u a (paren x);
+        let t2 = tuple [ stop; x.expr ] in
+        let t1 = tuple [ "(" ^ go ^ " " ^ t2 ^ ")"; x.expr ] in
+        let mk es = go ^ " (" ^ String.concat ", " es ^ ")" in
+        let v = { (value mk [ t1 ]) with vsubs = [ (0, t1) ] } in
+        add_value s a go v;
+        add_value s u "" (constant t1);
+        add_pool s a ("(" ^ v.vexpr ^ ")"))
+  | 1 ->
+      let p = fresh s "p" in
+      let one = chance 0.5 in
+      Printf.bprintf s.decls "type %s = [ `End | `More of %s * %s%s ]\n" p
+        (paren x) p
+        (if one then " | `One of " ^ paren x else "");
+      let tag l es = "(`" ^ l ^ " " ^ String.concat "" es ^ " : " ^ p ^ ")" in
+      let inner = tag "More" [ tuple [ x.expr; "`End" ] ] in
+      let arg = tuple [ x.expr; inner ] in
+      let v = { (value (tag "More") [ arg ]) with vsubs = [ (0, inner) ] } in
+      add_value s p "`End" (constant ("(`End : " ^ p ^ ")"));
+      add_value s p "`More" v;
+      if one then add_value s p "`One" (value (tag "One") [ x.expr ]);
+      add_pool s p v.vexpr
+  | 2 ->
+      let a = fresh s "ua" and b = fresh s "ub" in
+      let c = fresh s "U" in
+      let l1 = fresh s "u" and l2 = fresh s "u" in
+      let record es =
+        "{ "
+        ^ String.concat "; "
+            (List.map2 (fun l e -> l ^ " = " ^ e) [ l1; l2 ] es)
+        ^ " }"
+      in
+      let unboxed es = c ^ " " ^ String.concat "" es in
+      if chance 0.5 then (
+        (* The unboxed constructor is the record node. *)
+        Printf.bprintf s.decls
+          "type %s = %s of %s [@@unboxed]\n\
+           and %s = { %s : %s; mutable %s : %s option }\n"
+          a c b b l1 x.ty l2 a;
+        let leaf = record [ x.expr; "None" ] in
+        let inner = "(" ^ unboxed [ "(" ^ leaf ^ ")" ] ^ ")" in
+        add_value s a c (value unboxed [ "(" ^ leaf ^ ")" ]);
+        let v =
+          {
+            (value record [ x.expr; "(Some " ^ inner ^ ")" ]) with
+            vsubs = [ (1, inner) ];
+          }
+        in
+        add_value s b "" v;
+        add_pool s b ("(" ^ v.vexpr ^ ")"))
+      else (
+        (* The unboxed constructor is an option of the record node. *)
+        Printf.bprintf s.decls
+          "type %s = { %s : %s; %s : %s }\n\
+           and %s = %s of %s option [@@unboxed]\n"
+          a l1 x.ty l2 b b c a;
+        let leaf = "(" ^ record [ x.expr; c ^ " None" ] ^ ")" in
+        let some = "(Some " ^ leaf ^ ")" in
+        let bv = "(" ^ unboxed [ some ] ^ ")" in
+        let v = { (value record [ x.expr; bv ]) with vsubs = [ (1, bv) ] } in
+        add_value s a "" v;
+        add_value s b c { (value unboxed [ some ]) with vsubs = [ (0, leaf) ] };
+        add_pool s a ("(" ^ v.vexpr ^ ")"))
+  | 3 ->
+      (* A list of pairs, as an unboxed option of a tuple. *)
+      let name = fresh s "sq" in
+      let ty = inst [ x ] name in
+      let case, wrap, decl =
+        if chance 0.5 then
+          let c = fresh s "Sq" in
+          (c, (fun e -> c ^ " " ^ e), c ^ " of ('a * 'a " ^ name ^ ") option")
+        else
+          let l = fresh s "st" in
+          ( "",
+            (fun e -> "{ " ^ l ^ " = " ^ e ^ " }"),
+            "{ " ^ l ^ " : ('a * 'a " ^ name ^ ") option }" )
+      in
+      Printf.bprintf s.decls "type 'a %s = %s [@@unboxed]\n" name decl;
+      let mk es = "(" ^ wrap (String.concat "" es) ^ " : " ^ ty ^ ")" in
+      let inner = mk [ "(Some " ^ tuple [ x.expr; mk [ "None" ] ] ^ ")" ] in
+      let field = "(Some " ^ tuple [ x.expr; inner ] ^ ")" in
+      let v = { (value mk [ field ]) with vsubs = [ (0, inner) ] } in
+      add_value s name case v;
+      add_pool s ty v.vexpr
+  | _ ->
+      let name = fresh s "pt" in
+      let leaf = fresh s "Pl" and node = fresh s "Pn" in
+      Printf.bprintf s.decls "type 'a %s = %s | %s of 'a %s * 'a * 'a %s\n" name
+        leaf node name name;
+      let ty = inst [ x ] name in
+      let make es = "(" ^ node ^ " " ^ tuple es ^ " : " ^ ty ^ ")" in
+      let small = make [ leaf; x.expr; leaf ] in
+      let side () = if chance 0.5 then leaf else small in
+      let l = side () and r = side () in
+      let v =
+        {
+          (value make [ l; x.expr; r ]) with
+          vsubs =
+            List.filter_map
+              (fun (i, e) -> if e = small then Some (i, e) else None)
+              [ (0, l); (2, r) ];
+        }
+      in
+      add_value s name node v;
+      add_value s name leaf (constant ("(" ^ leaf ^ " : " ^ ty ^ ")"));
+      add_pool s ty v.vexpr
+
+(* A module that hides a type behind its signature: abstract, immediate or
+   private. Its values are fields of a record, which is flat when they are
+   private floats among floats. *)
+let gen_hidden s =
+  let m = fresh s "H" in
+  let imm () =
+    pick
+      [
+        { ty = "int"; expr = "7" };
+        { ty = "bool"; expr = "false" };
+        { ty = "char"; expr = "'d'" };
+        { ty = "unit"; expr = "()" };
+      ]
+  in
+  let maybe_float () = if chance 0.4 then float_sample () else plain_sample s in
+  let x, sg =
+    match rand 4 with
+    | 0 -> (maybe_float (), "type t")
+    | 1 -> (imm (), "type t [@@immediate]")
+    | 2 -> (imm (), "type t [@@immediate64]")
+    | _ ->
+        let x = maybe_float () in
+        (x, "type t = private " ^ x.ty)
+  in
+  Printf.bprintf s.decls
+    "module %s : sig %s val v : t end = struct type t = %s let v : t = %s end\n"
+    m sg x.ty x.expr;
+  let h = { ty = m ^ ".t"; expr = m ^ ".v" } in
+  add_value s h.ty "" (constant h.expr);
+  add_pool s h.ty h.expr;
+  let float = x.ty = "float" || x.ty = "fl" in
+  if chance 0.7 then
+    emit_record s
+      (shuffle
+         (h
+         :: List.init (rand 3) (fun _ ->
+             if float then float_sample () else field_sample s)))
+
+(* An abbreviation, or an abstract type the program promises is
+   immediate. *)
+let gen_alias s =
+  let name = fresh s "al" in
+  match rand 3 with
+  | 0 ->
+      let x = field_sample s in
+      let body, e =
+        pick
+          [
+            ("'a * int", "(" ^ x.expr ^ ", 3)");
+            ("'a option", "(Some " ^ x.expr ^ ")");
+            ("'a ref", "(ref " ^ x.expr ^ ")");
+            ("'a -> 'a", "(fun y -> y)");
+            ("'a list", "[" ^ x.expr ^ "]");
+          ]
+      in
+      Printf.bprintf s.decls "type 'a %s = %s\n" name body;
+      let e = "(" ^ e ^ " : " ^ inst [ x ] name ^ ")" in
+      add_value s name "" (constant e);
+      add_pool s (inst [ x ] name) e
+  | 1 ->
+      let x = plain_sample s in
+      Printf.bprintf s.decls "type %s = %s\n" name x.ty;
+      let e = "(" ^ x.expr ^ " : " ^ name ^ ")" in
+      add_value s name "" (constant e);
+      add_pool s name e
+  | _ ->
+      Printf.bprintf s.decls "type %s [@@immediate%s]\n" name
+        (if chance 0.5 then "64" else "");
+      let e = Printf.sprintf "(Obj.magic %d : %s)" (rand 100) name in
+      add_value s name "" (constant e);
+      add_pool s name e
+
+(* Fields of an open polymorphic variant, through a parameter or a
+   polymorphic field, and of a package type. *)
+let gen_open s =
+  let extra () = List.init (rand 3) (fun _ -> field_sample s) in
+  (* Modules packed directly, as "(module M : P ...)", have a type pk_M. *)
+  let direct =
+    List.filter_map
+      (fun pk ->
+        match String.index_opt pk.pexpr ':' with
+        | Some i when not (String.starts_with ~prefix:"(module (val" pk.pexpr)
+          ->
+            Some (String.trim (String.sub pk.pexpr 8 (i - 8)), pk.pexpr)
+        | _ -> None)
+      s.modules
+  in
+  match (rand 5, direct) with
+  | 0, (_ :: _ as ms) ->
+      let m, e = pick ms in
+      let x = { ty = "pk_" ^ m; expr = e } in
+      add_value s x.ty "" (constant x.expr);
+      add_pool s x.ty x.expr;
+      emit_record s (shuffle (x :: extra ()))
+  | k, _ ->
+      let name = fresh s "op" and l = fresh s "o" in
+      let param, fty, e =
+        match k mod 4 with
+        | 0 -> (true, "[> `A ] as 'a", "`A")
+        | 1 -> (true, "([> `A ] as 'a) -> int", "(function `A -> 1 | `B -> 2)")
+        | 2 -> (false, "'a. ([> `A ] as 'a) -> int", "(fun _ -> 1)")
+        | _ -> (false, "'a. ([> `A ] as 'a)", "`A")
+      in
+      let fs =
+        (l, { ty = fty; expr = e })
+        :: List.map (fun x -> (fresh s "o", x)) (extra ())
+      in
+      let fs = shuffle fs in
+      Printf.bprintf s.decls "type %s%s = { %s }\n"
+        (if param then "'a " else "")
+        name
+        (String.concat "; " (List.map (fun (l, x) -> l ^ " : " ^ x.ty) fs));
+      let ty = if param then "([ `A | `B ]) " ^ name else name in
+      let make es =
+        "({ "
+        ^ String.concat "; " (List.map2 (fun (l, _) e -> l ^ " = " ^ e) fs es)
+        ^ " } : " ^ ty ^ ")"
+      in
+      let v = value make (List.map (fun (_, x) -> x.expr) fs) in
+      add_value s name "" v;
+      add_pool s ty v.vexpr
+
+let gen_more s =
+  match rand 6 with
+  | 0 | 1 -> gen_param s
+  | 2 -> gen_recursive_more s
+  | 3 -> gen_hidden s
+  | 4 -> gen_alias s
+  | _ -> gen_open s
+
 let program () =
   let s =
     {
@@ -1489,7 +1905,8 @@ let program () =
     }
   in
   for _ = 1 to 4 + rand 8 do
-    match rand 17 with
+    match rand 23 with
+    | 17 | 18 | 19 | 20 | 21 | 22 -> gen_more s
     | 15 | 16 -> gen_recursive s
     | (10 | 11 | 12) when ox -> gen_mixed s
     | 10 | 11 | 12 | 13 | 14 -> gen_values s
@@ -1832,7 +2249,15 @@ external v128 : string -> int -> int64x2# = "%caml_string_getu128#"
                 ~v:{ v with vexpr = "(" ^ v.vexpr ^ " : " ^ ty ^ ")" }
                 c.shape
           | None -> ())
-      | Alias _ | Abstract _ | Open -> ())
+      | Alias w | Abstract w -> (
+          (* An abbreviation or abstract type: the word of its value. *)
+          match Hashtbl.find_opt s.values (ty, "") with
+          | Some v ->
+              Hashtbl.replace checked (ty, "") ();
+              let c = word_check ty ("(Obj.repr (" ^ v.vexpr ^ "))") w in
+              if c <> "" then Printf.bprintf b "  %s\n" c
+          | None -> ())
+      | Open -> ())
     u.decls;
   Hashtbl.iter
     (fun (ty, case) _ ->
