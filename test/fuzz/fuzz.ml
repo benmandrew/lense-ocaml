@@ -94,7 +94,7 @@ type state = {
   trees : (string * string, ftree list) Hashtbl.t;  (** OxCaml: (type, case) -> fields *)
   mutable pool : sample list;
   values : (string * string, value) Hashtbl.t;  (** (type, case) -> value *)
-  mutable modules : (string * string) list;  (** module, its module type *)
+  mutable modules : (string * string) list;  (** module, a package type it is packed into *)
   mutable n : int;
   mutable vchecks : vcheck list;  (** Stage 4 values to check. *)
   mutable classes : (string * sample list * (string * bool * sample) list) list;  (** class, parameters, vals *)
@@ -244,8 +244,6 @@ let gen_exn s =
     let v = match a with None -> constant c | Some (_, make, fs) -> value (fun es -> c ^ " " ^ make es) fs in
     add_value s (if ext then "ext" else "exn") c v
 
-(* A module of random items, plus a coerced view of it with a random
-   subset of its values in a random order. *)
 (* OxCaml: a record or variant whose fields mix values, flat scalars and
    unboxed tuples. A record of only float and float# fields is all flat. *)
 let gen_mixed s =
@@ -305,6 +303,8 @@ let gen_mixed s =
             Hashtbl.replace s.trees (name, c) (List.map snd fs))
       cases
 
+(* A module of random items, and a package type of a random subset of
+   them in a random order, which the module is packed into. *)
 let gen_module s =
   let m = fresh s "M" in
   let items =
@@ -323,9 +323,7 @@ let gen_module s =
     | `Type t -> "type " ^ t ^ " = int"
     | `Sub sm -> "module " ^ sm ^ " = struct let z = 1 let w = \"w\" end"
   in
-  Printf.bprintf s.decls "module %s = struct %s end\nmodule type %s_S = module type of %s\n" m
-    (String.concat " " (List.map item_src items)) m m;
-  s.modules <- (m, m ^ "_S") :: s.modules;
+  Printf.bprintf s.decls "module %s = struct %s end\n" m (String.concat " " (List.map item_src items));
   let sig_item = function
     | `Val (v, x) -> Some (Printf.sprintf "val %s : %s" v x.ty)
     | `Ext e -> if chance 0.5 then Some (Printf.sprintf "val %s : 'a -> 'a" e) else None
@@ -335,10 +333,9 @@ let gen_module s =
   in
   let chosen = List.filter_map (fun it -> if chance 0.7 then sig_item it else None) items in
   let shuffled = List.map snd (List.sort compare (List.map (fun x -> (rand 1000, x)) chosen)) in
-  let c = m ^ "c" in
-  Printf.bprintf s.decls "module %s : sig %s end = %s\nmodule type %s_S = module type of %s\n" c
-    (String.concat " " shuffled) m c c;
-  s.modules <- (c, c ^ "_S") :: s.modules
+  let p = m ^ "_P" in
+  Printf.bprintf s.decls "module type %s = sig %s end\ntype pk_%s = (module %s)\n" p (String.concat " " shuffled) m p;
+  s.modules <- (m, p) :: s.modules
 
 (* Stage 4: closures, lazy values and objects. Each definition the
    prediction is matched by starts its own line. *)
@@ -615,43 +612,20 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
           | None -> ())
       | Alias _ | Abstract _ | Open -> ())
     u.decls;
-  (* Stage 2: structure blocks and coercions. *)
+  (* First-class modules: pack each module into a package type that has
+     fewer of its items, in another order. *)
   List.iter
     (fun (m, mt) ->
-      let r = Printf.sprintf "(Obj.repr (module %s : %s))" m mt in
-      match List.find_opt (fun (st : M.structure) -> st.mname = m) u.modules with
-      | Some st ->
-          Printf.bprintf b "  block %S %s 0 %d;\n" ("module " ^ m) r (List.length st.slots);
+      match List.find_opt (fun (p : M.package) -> p.pname = mt) u.packages with
+      | Some p ->
+          let r = Printf.sprintf "(Obj.repr (module %s : %s))" m mt in
+          Printf.bprintf b "  block %S %s 0 %d;\n" ("(module " ^ mt ^ ")") r (List.length p.slots);
           List.iter
             (fun (sl : M.slot) ->
-              let c = word_check (Printf.sprintf "%s.%s" m sl.name) (Printf.sprintf "(Obj.field %s %d)" r sl.index) sl.word in
+              let c = word_check (Printf.sprintf "(module %s).%s" mt sl.name) (Printf.sprintf "(Obj.field %s %d)" r sl.index) sl.word in
               if c <> "" then Printf.bprintf b "  %s\n" c)
-            st.slots
+            p.slots
       | None -> ())
-    s.modules;
-  List.iter
-    (fun (m, mt) ->
-      let prefix = "module " ^ m ^ " : " in
-      match
-        List.find_opt
-          (fun (c : M.coercion) -> String.length c.context >= String.length prefix && String.sub c.context 0 (String.length prefix) = prefix)
-          u.coercions
-      with
-      | Some { copy = Some moves; _ } ->
-          let src = String.sub m 0 (String.length m - 1) in
-          let cr = Printf.sprintf "(Obj.repr (module %s : %s))" m mt in
-          let sr = Printf.sprintf "(Obj.repr (module %s : %s_S))" src src in
-          Printf.bprintf b "  block %S %s 0 %d;\n" ("coerced " ^ m) cr (List.length moves);
-          List.iter
-            (fun (mv : M.move) ->
-              let what = Printf.sprintf "coerced %s field %d (%s)" m mv.dst mv.name in
-              let dst = Printf.sprintf "(Obj.field %s %d)" cr mv.dst in
-              match mv.how with
-              | Copy -> Printf.bprintf b "  same %S %s (Obj.field %s %d);\n" what dst sr mv.src
-              | Wrapped_primitive -> Printf.bprintf b "  ptr %S %s (Some %d);\n" what dst M.closure_tag
-              | Coerced | Realised_alias -> Printf.bprintf b "  ptr %S %s (Some 0);\n" what dst)
-            moves
-      | _ -> ())
     s.modules;
   (* Stage 4: closures, lazy values and objects. *)
   (match u.values with

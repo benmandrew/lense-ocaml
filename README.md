@@ -2,10 +2,10 @@
 
 ![Screenshot](web/public/og.png)
 
-`lense-ocaml` prints how each type in an OCaml file is represented at runtime: which constructors become *immediates*, which *tag* each heap block gets, when the compiler drops the block, and how modules lay out their fields. It reads the representations from compiler-libs for OCaml 5.5, and from a vendored frontend for OxCaml. It also runs in a browser through `js_of_ocaml`.
+`lense-ocaml` prints how each type in an OCaml file is represented at runtime: which constructors become *immediates*, which *tag* each heap block gets, when the compiler drops the block, and how first-class modules lay out their fields. It reads the representations from compiler-libs for OCaml 5.5, and from a vendored frontend for OxCaml. It also runs in a browser through `js_of_ocaml`.
 
 ```console
-$ printf 'type t = A | B of int | C | D of string\n' | lense-ocaml --no-modules -
+$ printf 'type t = A | B of int | C | D of string\n' | lense-ocaml -
 type t  variant
   A  immediate 0
   B  block, tag 0, size 1
@@ -35,7 +35,6 @@ lense-ocaml [options] <file.ml | file.mli | file.cmt | file.cmti | -> ...
 | `--json` | Print JSON instead of text |
 | `--type NAME` | Show only the named types |
 | `--source` | Print each declaration above its representation |
-| `--no-modules` | Leave out module structures and coercions |
 | `--labels` | List polymorphic variant labels with their hashes, and report collisions |
 | `--values` | Also show closures, lazy values and objects, per backend |
 | `--intf` | Read standard input as an `.mli` |

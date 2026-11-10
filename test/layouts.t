@@ -49,83 +49,30 @@ Every case file, as text with its source.
   extension Ok_  block, tag 0, size 2
       0  slot  pointer to extension slot, Object_tag 248
       1  'a    immediate or pointer (type variable 'a)
+  ### cases/packages.ml
+  type entry = { key : int; ops : (module ORDERED with type t = int) }
+  type entry  block, tag 0, size 2
+      0  key : int                                 immediate (int)
+      1  ops : (module ORDERED with type t = int)  pointer to first-class module
   
-  module Exceptions  structure block, tag 0, size 9
-      0  exception Empty   pointer to extension slot, Object_tag 248
-      1  exception Error   pointer to extension slot, Object_tag 248
-      2  exception Detail  pointer to extension slot, Object_tag 248
-      3  exception Again   pointer to extension slot, Object_tag 248
-      4  extension X1      pointer to extension slot, Object_tag 248
-      5  extension X2      pointer to extension slot, Object_tag 248
-      6  extension X3      pointer to extension slot, Object_tag 248
-      7  extension X4      pointer to extension slot, Object_tag 248
-      8  extension Ok_     pointer to extension slot, Object_tag 248
-    no field: type ext, type res
-  ### cases/modules.ml
-  type t = int
-  type t  abbreviation: immediate (int)
-  
-  exception Stop
-  exception Stop  extension slot: block, Object_tag 248, size 2 (name, unique id)
-  
-  type point = { x : float; y : float }
-  type Inner.point  flat float block, Double_array_tag 254, size 2
-      0  x : float  unboxed double
-      1  y : float  unboxed double
+  exception Unordered
+  exception Ints.Unordered  extension slot: block, Object_tag 248, size 2 (name, unique id)
   
   type t = int
-  type IntOrd.t  abbreviation: immediate (int)
+  type Ints.t  abbreviation: immediate (int)
   
-  module Modules  structure block, tag 0, size 11
-       0  val answer        immediate (int)
-       1  val greet         pointer to closure, Closure_tag 247
-       2  exception Stop    pointer to extension slot, Object_tag 248
-       3  module Inner      pointer to structure, tag 0
-       4  module Reordered  pointer to structure, tag 0
-       5  module Same       pointer to structure, tag 0
-       6  functor Make      pointer to closure, Closure_tag 247
-       7  module IntOrd     pointer to structure, tag 0
-       8  module M          pointer to structure, tag 0
-       9  module Prim       pointer to structure, tag 0
-      10  class counter     pointer to class, tag 0
-    no field: external identity, type t, module type S, module type ORD
+  (module ORDERED)  structure block, tag 0, size 4
+      0  val name             pointer to string, String_tag 252
+      1  val compare          pointer to closure, Closure_tag 247
+      2  module Sub           pointer to structure, tag 0
+      3  exception Unordered  pointer to extension slot, Object_tag 248
+    no field: type t, external id
   
-  module Inner  structure block, tag 0, size 2
-      0  val origin  pointer to float record point, Double_array_tag 254
-      1  val norm    pointer to closure, Closure_tag 247
-    no field: type point
+  (module Shapes.SHAPE)  structure block, tag 0, size 2
+      0  val area       pointer to boxed float, Double_tag 253
+      1  functor Scale  pointer to closure, Closure_tag 247
   
-  module Reordered  structure block, tag 0, size 3
-      0  val answer  immediate (int)
-      1  val unused  pointer to string, String_tag 252
-      2  val greet   pointer to closure, Closure_tag 247
-  
-  module Same  structure block, tag 0, size 2
-      0  val a  immediate (int)
-      1  val b  immediate (int)
-  
-  module Make(O)  functor body: each application builds a block, tag 0, size 2
-      0  val max  pointer to closure, Closure_tag 247
-      1  val min  pointer to closure, Closure_tag 247
-  
-  module IntOrd  structure block, tag 0, size 2
-      0  val compare  pointer to closure, Closure_tag 247
-      1  val extra    immediate (unit)
-    no field: type t
-  
-  module Prim  structure block, size 0: no item takes a field
-  
-  module Reordered : S  copies 2 of 3 fields into a new block, size 2
-      0 <- 2  greet
-      1 <- 0  answer
-  
-  module Same : sig val a : int val b : int end  no copy: the block is used as it is
-  
-  argument of Make at line 42  copies 1 of 2 fields into a new block, size 1
-      0 <- 0  compare
-  
-  module Prim : sig val id : 'a -> 'a end  copies 0 of 0 fields into a new block, size 1
-      0 <- -  id  (external wrapped in a closure)
+  (module EMPTY)  structure block, size 0: no item takes a field
   ### cases/polyvariants.ml
   type colour = [ `Red | `Green | `Blue ]
   type colour  polymorphic variant
@@ -174,10 +121,6 @@ Every case file, as text with its source.
   type nested  block, tag 0, size 2
       0  c : colour  immediate (constant polymorphic variant)
       1  e : event   immediate or pointer (polymorphic variant)
-  
-  module Polyvariants  structure block, tag 0, size 1
-      0  val f  pointer to closure, Closure_tag 247
-    no field: type colour, type event, type opened, type sub, type both, type nested
   ### cases/records.ml
   type r = { a : int; b : float }
   type r  block, tag 0, size 2
@@ -249,8 +192,6 @@ Every case file, as text with its source.
       5  big : int64        pointer to custom block, Custom_tag 255
       6  ch : char          immediate (char)
       7  lz : int Lazy.t    immediate or pointer (lazy value)
-  
-  module Records  structure block, size 0: no item takes a field
   ### cases/variants.ml
   type t = A | B of int | C | D of string
   type t  variant
@@ -304,8 +245,6 @@ Every case file, as text with its source.
             note: existential 'a: stored as uniform values
     Unit  immediate 0
     note: GADT: type indices are erased, so the constructors are numbered as in an ordinary variant
-  
-  module Variants  structure block, size 0: no item takes a field
 
 Polymorphic variant labels and their hashes.
 
@@ -323,15 +262,15 @@ Polymorphic variant labels and their hashes.
 
 A name filter matches the last component.
 
-  $ lense-ocaml --type point cases/records.ml cases/modules.ml
+  $ lense-ocaml --type point --type SHAPE cases/records.ml cases/packages.ml
   == cases/records.ml
   
   type point  flat float block, Double_array_tag 254, size 2
       0  x : float  unboxed double
       1  y : float  unboxed double
   
-  == cases/modules.ml
+  == cases/packages.ml
   
-  type Inner.point  flat float block, Double_array_tag 254, size 2
-      0  x : float  unboxed double
-      1  y : float  unboxed double
+  (module Shapes.SHAPE)  structure block, tag 0, size 2
+      0  val area       pointer to boxed float, Double_tag 253
+      1  functor Scale  pointer to closure, Closure_tag 247

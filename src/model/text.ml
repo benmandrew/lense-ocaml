@@ -159,15 +159,13 @@ let item_name (s : slot) =
   | Primitive -> "external ")
   ^ s.name
 
-let structure b (m : structure) =
-  let name = m.mname ^ String.concat "" m.functor_params in
+let shorten s = if String.length s <= 72 then s else String.sub s 0 69 ^ "..."
+
+(* The block of every value of type [(module S)]. *)
+let package b (m : package) =
   let n = List.length m.slots in
-  if n = 0 && m.functor_params = [] then
-    Printf.bprintf b "module %s  structure block, size 0: no item takes a field\n" name
-  else if m.functor_params = [] then
-    Printf.bprintf b "module %s  structure block, tag 0, size %d\n" name n
-  else
-    Printf.bprintf b "module %s  functor body: each application builds a block, tag 0, size %d\n" name n;
+  if n = 0 then Printf.bprintf b "(module %s)  structure block, size 0: no item takes a field\n" m.pname
+  else Printf.bprintf b "(module %s)  structure block, tag 0, size %d\n" m.pname n;
   let names = List.map item_name m.slots in
   let w = List.fold_left (fun w l -> max w (String.length l)) 0 names in
   let iw = String.length (string_of_int (n - 1)) in
@@ -175,35 +173,6 @@ let structure b (m : structure) =
     (fun s l -> Printf.bprintf b "    %s  %s  %s\n" (lpad iw (string_of_int s.index)) (pad w l) (word s.word))
     m.slots names;
   if m.no_slot <> [] && n > 0 then Printf.bprintf b "  no field: %s\n" (String.concat ", " m.no_slot)
-
-let shorten s = if String.length s <= 72 then s else String.sub s 0 69 ^ "..."
-
-let coercion b (c : coercion) =
-  let head = shorten c.context in
-  if c.functor_wrap then
-    Printf.bprintf b "%s  wraps the functor in a new closure that coerces its argument and result\n" head
-  else
-    match c.copy with
-    | None -> Printf.bprintf b "%s  no copy: the block is used as it is\n" head
-    | Some moves ->
-        let n = List.length moves in
-        let copied = List.length (List.filter (fun (m : move) -> m.how <> Wrapped_primitive) moves) in
-        Printf.bprintf b "%s  copies %d of %d fields into a new block, size %d\n" head copied c.src_size n;
-        let iw = String.length (string_of_int (max (n - 1) (c.src_size - 1))) in
-        List.iter
-          (fun (m : move) ->
-            let src = if m.src < 0 then lpad iw "-" else lpad iw (string_of_int m.src) in
-            let how =
-              match m.how with
-              | Copy -> ""
-              | Coerced -> "  (coerced again)"
-              | Wrapped_primitive -> "  (external wrapped in a closure)"
-              | Realised_alias -> "  (module alias made a field)"
-            in
-            Printf.bprintf b "    %s <- %s  %s%s\n" (lpad iw (string_of_int m.dst)) src m.name how)
-          moves
-
-(* Stage 4: closures, lazy values and objects. *)
 
 let rows b ~indent (rs : (string * string * string) list) =
   (* Rows with nothing in the last column do not widen the middle one. *)
@@ -321,7 +290,7 @@ let values b (v : values) =
   end;
   List.iter (fun o -> sep (); obj b o) v.objects
 
-type options = { source : bool; modules : bool; only : string list }
+type options = { source : bool; only : string list }
 
 let selected opts name =
   opts.only = []
@@ -337,10 +306,7 @@ let compunit opts b (u : compunit) =
   let first = ref true in
   let sep () = if !first then first := false else Buffer.add_char b '\n' in
   List.iter (fun (d : decl) -> if selected opts d.name then (sep (); decl ~source:opts.source b d)) u.decls;
-  if opts.modules && opts.only = [] then begin
-    List.iter (fun m -> sep (); structure b m) u.modules;
-    List.iter (fun c -> sep (); coercion b c) u.coercions
-  end;
+  List.iter (fun (m : package) -> if selected opts m.pname then (sep (); package b m)) u.packages;
   match u.values with
   | Some v when opts.only = [] -> sep (); values b v
   | _ -> ()

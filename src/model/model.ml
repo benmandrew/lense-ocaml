@@ -108,29 +108,13 @@ type slot_kind = Value | Module | Functor | Exception | Extension | Class | Prim
 
 type slot = { index : int; item : slot_kind; name : string; word : word }
 
-(* A structure: one block with tag 0, its fields the value-bearing items. *)
-type structure = {
-  mname : string;
-  mline : int;
-  functor_params : string list;  (** Non-empty for a functor's body. *)
+(* The block of every value of a first-class module type [(module S)]: tag
+   0, its fields the value-bearing items of [S]. *)
+type package = {
+  pname : string;  (** The module type [S]. *)
+  pline : int;  (** Its first use as a package type. *)
   slots : slot list;
   no_slot : string list;  (** Items that take no field, such as types. *)
-}
-
-type move_kind =
-  | Copy
-  | Coerced  (** The field is itself coerced before the copy. *)
-  | Wrapped_primitive  (** An external becomes a closure. *)
-  | Realised_alias  (** A module alias becomes a real field. *)
-
-type move = { dst : int; src : int; name : string; how : move_kind }
-
-type coercion = {
-  context : string;  (** What is coerced: "module M : S", "argument of F". *)
-  cline : int;
-  src_size : int;  (** Fields in the block being coerced. *)
-  copy : move list option;  (** [None]: no copy, the block is reused. *)
-  functor_wrap : bool;  (** A functor is wrapped in a new closure. *)
 }
 
 type label_use = { label : string; hash : int; file : string; lline : int }
@@ -208,8 +192,7 @@ type compunit = {
   file : string;
   unit_name : string;
   decls : decl list;
-  modules : structure list;
-  coercions : coercion list;
+  packages : package list;  (** Each module type the unit uses as [(module S)]. *)
   labels : label_use list;
   values : values option;  (** Closures, lazy values and objects; only when asked for. *)
 }

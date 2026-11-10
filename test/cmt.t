@@ -10,7 +10,7 @@ the source, and resolves types from other units through their .cmi files.
   > type t = W of A.pair [@@unboxed]
   > SRC
   $ ocamlc -bin-annot -c a.ml b.ml
-  $ lense-ocaml --no-modules b.cmt
+  $ lense-ocaml b.cmt
   type uses  block, tag 0, size 3
       0  f : A.flag         immediate (constant constructors of A.flag)
       1  p : A.pair         pointer to float record A.pair, Double_array_tag 254
@@ -19,7 +19,7 @@ the source, and resolves types from other units through their .cmi files.
   type t  variant
     W  no block: [@@unboxed], the value is its field
          A.pair  pointer to float record A.pair, Double_array_tag 254
-  $ lense-ocaml --no-modules -I . b.ml
+  $ lense-ocaml -I . b.ml
   type uses  block, tag 0, size 3
       0  f : A.flag         immediate (constant constructors of A.flag)
       1  p : A.pair         pointer to float record A.pair, Double_array_tag 254

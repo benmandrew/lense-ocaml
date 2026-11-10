@@ -42,7 +42,7 @@ let analyze code opts =
             Lense_model.Text.labels b [ u ];
             Lense_model.Text.collisions b [ u ];
             Buffer.contents b)
-          else Lense_model.Text.render { source = flag opts "source"; modules = not (flag opts "nomodules"); only = [] } [ u ])
+          else Lense_model.Text.render { source = flag opts "source"; only = [] } [ u ])
         ((if str opts "compiler" = "ox" then unit_ox else unit_55) ~file ~intf ~values src)
     with exn -> Error ("lense stopped: " ^ Printexc.to_string exn)
   in

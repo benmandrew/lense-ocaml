@@ -105,9 +105,9 @@ let slot_kind = function
   | Value -> "value" | Module -> "module" | Functor -> "functor"
   | Exception -> "exception" | Extension -> "extension" | Class -> "class" | Primitive -> "external"
 
-let structure (m : structure) =
+let package (m : package) =
   Obj
-    [ ("name", Str m.mname); ("line", Int m.mline); ("functor_params", strs m.functor_params);
+    [ ("name", Str m.pname); ("line", Int m.pline);
       ("size", Int (List.length m.slots));
       ( "fields",
         List
@@ -115,23 +115,6 @@ let structure (m : structure) =
              (fun (s : slot) -> Obj [ ("index", Int s.index); ("item", Str (slot_kind s.item)); ("name", Str s.name); ("word", word s.word) ])
              m.slots) );
       ("no_field", strs m.no_slot) ]
-
-let coercion (c : coercion) =
-  let how = function
-    | Copy -> "copy" | Coerced -> "coerced" | Wrapped_primitive -> "wrapped_primitive"
-    | Realised_alias -> "realised_alias"
-  in
-  Obj
-    [ ("context", Str c.context); ("line", Int c.cline); ("source_size", Int c.src_size);
-      ("functor_wrap", Bool c.functor_wrap);
-      ( "copy",
-        opt
-          (fun ms ->
-            List
-              (List.map
-                 (fun (m : move) -> Obj [ ("to", Int m.dst); ("from", Int m.src); ("name", Str m.name); ("how", Str (how m.how)) ])
-                 ms))
-          c.copy ) ]
 
 let label (l : label_use) = Obj [ ("label", Str l.label); ("hash", Int l.hash); ("file", Str l.file); ("line", Int l.lline) ]
 
@@ -178,7 +161,7 @@ let values (v : values) =
 let compunit (u : compunit) =
   Obj
     ([ ("file", Str u.file); ("unit", Str u.unit_name); ("types", List (List.map decl u.decls));
-       ("modules", List (List.map structure u.modules)); ("coercions", List (List.map coercion u.coercions));
+       ("packages", List (List.map package u.packages));
        ("labels", List (List.map label u.labels)) ]
     @ match u.values with Some v -> [ ("values", values v) ] | None -> [])
 

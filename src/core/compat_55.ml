@@ -32,6 +32,9 @@ let view ty =
   | Tconstr (p, args, _) -> Constr (p, args)
   | Tlink _ | Tsubst _ | Tfield _ | Tnil -> Other
 
+(* The module type that a first-class module type packs. *)
+let package_path ty = match get_desc ty with Tpackage p -> Some p.pack_path | _ -> None
+
 (* OCaml 5.5 has no layouts besides value. *)
 let flat_word (_ : Env.t) (_ : type_expr) : M.word option = None
 

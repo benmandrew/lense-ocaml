@@ -19,22 +19,6 @@ its own section.
   > let mkcp (k : string) = let module X = struct class c = object inherit p val a = 1 method m = k end end in new X.c
   > SRC
   $ lense-ocaml --values v.ml
-  module V  structure block, tag 0, size 14
-       0  val c3     immediate (int)
-       1  val f1     pointer to closure, Closure_tag 247
-       2  val f2     pointer to closure, Closure_tag 247
-       3  val tup    pointer to closure, Closure_tag 247
-       4  val mk     pointer to closure, Closure_tag 247
-       5  val mku    pointer to closure, Closure_tag 247
-       6  val mkrec  pointer to closure, Closure_tag 247
-       7  val opt    pointer to closure, Closure_tag 247
-       8  val lz     pointer to closure, Closure_tag 247
-       9  class p    pointer to class, tag 0
-      10  class kp   pointer to class, tag 0
-      11  class ch   pointer to class, tag 0
-      12  val mko    pointer to closure, Closure_tag 247
-      13  val mkcp   pointer to closure, Closure_tag 247
-  
   closures in native code (Closure, without flambda)
     f1  line 2  Closure_tag 247, size 2, arity 1, no environment
     f2  line 3  Closure_tag 247, size 3, arity 2, no environment

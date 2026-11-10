@@ -39,6 +39,9 @@ let view ty =
   | Tconstr (p, args, _) -> Constr (p, args)
   | Tlink _ | Tsubst _ | Tfield _ | Tnil | Tquote _ | Tsplice _ | Tof_kind _ -> Other
 
+(* The module type that a first-class module type packs. *)
+let package_path ty = match get_desc ty with Tpackage (p, _) -> Some p | _ -> None
+
 (* Bytes of data in one element of a layout; 0 when it has no single size. *)
 let layout_bytes = function
   | "float64" | "bits64" | "word" | "untagged_immediate" -> 8

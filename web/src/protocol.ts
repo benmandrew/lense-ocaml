@@ -7,7 +7,6 @@ export interface Options {
   intf: boolean;
   values: boolean;
   source: boolean;
-  nomodules: boolean;
   labels: boolean;
 }
 

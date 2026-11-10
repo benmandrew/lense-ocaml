@@ -20,17 +20,17 @@ So a record of five fields is a header plus five words, whatever the field types
 
 **Exceptions and extensible variants.** A constant extension constructor is its own *slot*: a block with `Object_tag` (248) holding the name and a unique identifier. A non-constant one is a tag-0 block whose first field points to that slot, followed by the arguments.
 
-**Modules.** At runtime a structure is a block holding its value-bearing items in order: values, submodules, exceptions and classes. Types and module types take no slot. A functor is a closure. Signature ascription can insert a *coercion*, which copies the structure into a new block with fewer fields or a different order. The tool shows that copy field by field, with the size of the new block; existing tooling leaves it invisible.
+**Modules.** At runtime a structure is a block holding its value-bearing items in order: values, submodules, exceptions and classes. Types and module types take no slot. A functor is a closure. A submodule is a pointer to a tag-0 block. A named structure, including the compilation unit itself, is one block for the whole program, so it says nothing about per-instance memory, and the tool does not show it. Declarations inside submodules are still listed under qualified names such as `Inner.point`. A first-class module is a value that can be stored per instance, so the tool shows it. Packing `(module M : S)` *coerces* `M` to `S`: unless `M` already has the items of `S` in the same order, it copies them into a new block in the order of `S`. Every value of type `(module S)` is therefore a tag-0 block whose layout depends on `S` alone, whatever `M` looked like. The tool prints `(module S)` with that block once per module type, at its first use, and `--type S` filters it. Constraints such as `with type t = int` add no field, and a package type whose module type is a functor type is not shown.
 
 **Closures, objects and lazy values.** Closures use `Closure_tag` (247), with a code pointer, a *closinfo* word (arity and the start of the environment) and then the environment. Objects use `Object_tag` with a method table. Lazy values use `Lazy_tag` and `Forward_tag`. These come last, because flambda changes closure shapes, so their layout depends on the compiler configuration as well as the type.
 
 ## Where the information comes from
 
-The compiler's own libraries, `compiler-libs`, play the role of clang LibTooling. The tool can type-check source directly or read `.cmt` and `.cmti` files produced with `-bin-annot`. From the typed declarations it reads `record_representation` (regular, float, unboxed, inlined or extension) and the constructor tags that `Datarepr` assigns. For modules it reads the coercions that `Includemod` computes. This follows the existing lense rule of reading layouts from the compiler's data structures instead of parsing its debug output.
+The compiler's own libraries, `compiler-libs`, play the role of clang LibTooling. The tool can type-check source directly or read `.cmt` and `.cmti` files produced with `-bin-annot`. From the typed declarations it reads `record_representation` (regular, float, unboxed, inlined or extension) and the constructor tags that `Datarepr` assigns. For first-class modules it reads the items of the module type in the package type. This follows the existing lense rule of reading layouts from the compiler's data structures instead of parsing its debug output.
 
 | lense (C++) | OCaml equivalent |
 |---|---|
-| clang LibTooling, `ASTRecordLayout` | `compiler-libs`: `Types.type_declaration`, `record_representation`, `Datarepr` constructor tags, `Includemod` coercions |
+| clang LibTooling, `ASTRecordLayout` | `compiler-libs`: `Types.type_declaration`, `record_representation`, `Datarepr` constructor tags, module type items |
 | Pinned to LLVM 23 | Pinned to OCaml 5.5, because `compiler-libs` changes between releases |
 | Cross-check with `-fdump-record-layouts` | Cross-check with `-dlambda`, which prints `makeblock <tag>` and constant numbering |
 | Fuzz oracle: clang 23 | Runtime introspection with `Obj.is_int`, `Obj.tag` and `Obj.size` |
@@ -52,7 +52,7 @@ The tag numbers and representation rules in this note were first written from me
 
 **Wrong.** The note said a type could have 246 non-constant constructors, because tag 246 is `Lazy_tag`. OCaml 5.5 accepts at most 244, with tags 0 to 243. A type with 245 fails with "Too many non-constant constructors -- maximum is 244 non-constant constructors". OCaml 5 added `Forcing_tag` at 244 (a lazy value being forced) and `Cont_tag` at 245 (an effect continuation), and the note did not account for either.
 
-**Not in the note.** Building the tool found six more rules. An empty float array `[||]` is a shared tag-0 *atom*, so a `float array` field has tag 254 only when the array is not empty. A lazy value built from a constant, or already forced, can be the value itself, so a `Lazy.t` field can be an immediate. A class in a structure takes one field, a tag-0 block of size 3. An `external` takes no field in its structure, and coercing it to a `val` wraps it in a new closure. The last two concern the tooling. Record field types in `compiler-libs` are wrapped in `Tpoly` nodes. Dune's `BUILD_PATH_PREFIX_MAP` rewrites the build directory that a `.cmt` file records, so the tool looks for that directory among the `.cmt` file's ancestors.
+**Not in the note.** Building the tool found six more rules. An empty float array `[||]` is a shared tag-0 *atom*, so a `float array` field has tag 254 only when the array is not empty. A lazy value built from a constant, or already forced, can be the value itself, so a `Lazy.t` field can be an immediate. A class in a structure, and so in a package layout, takes one field, a tag-0 block of size 3. An `external` takes no field in its structure. The last two concern the tooling. Record field types in `compiler-libs` are wrapped in `Tpoly` nodes. Dune's `BUILD_PATH_PREFIX_MAP` rewrites the build directory that a `.cmt` file records, so the tool looks for that directory among the `.cmt` file's ancestors.
 
 ## Stage 3 results
 
@@ -84,7 +84,7 @@ The fuzz oracle builds closures, lazy values and objects and inspects them with 
 
 **Stage 1.** Done. Variants, records, polymorphic variants and `[@@unboxed]`, read from typed `compiler-libs` output, with the `Obj` fuzz oracle from the start.
 
-**Stage 2.** Done. Module structures and signature coercions. A unit with an interface also shows its coercion to the `.mli`, computed with `Includemod.compunit` as the compiler does; `test/unit.t` compares it with `-dlambda`.
+**Stage 2.** Done, and later removed. It showed module structures, signature coercions and the coercion of a unit to its `.mli`, but a named module is one block per program. Only first-class modules remain, checked by `test/packages.t` and the fuzz oracle.
 
 **Stage 3.** Done. OxCaml mixed blocks and the byte map, built against OxCaml's own `compiler-libs` through `src/core/compat_ox.ml`. The fuzz oracle checks native code through `Obj.raw_field` and bytecode through the boxed values.
 

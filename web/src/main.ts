@@ -36,7 +36,6 @@ interface Saved {
   intf: boolean;
   values: boolean;
   source: boolean;
-  modules: boolean;
   labels: boolean;
 }
 
@@ -46,7 +45,6 @@ const kindBox = $<HTMLSelectElement>('kind');
 const compilerBox = $<HTMLSelectElement>('compiler');
 const valuesBox = $<HTMLInputElement>('values');
 const sourceBox = $<HTMLInputElement>('source');
-const modulesBox = $<HTMLInputElement>('modules');
 const labelsBox = $<HTMLInputElement>('labels');
 const statusBox = $<HTMLSpanElement>('status');
 const output = $<HTMLElement>('output');
@@ -91,13 +89,12 @@ function current(): Saved {
     intf: kindBox.value === 'mli',
     values: valuesBox.checked,
     source: sourceBox.checked,
-    modules: modulesBox.checked,
     labels: labelsBox.checked,
   };
 }
 
 const options = (s: Saved): Options => ({
-  compiler: s.compiler, intf: s.intf, values: s.values, source: s.source, nomodules: !s.modules, labels: s.labels,
+  compiler: s.compiler, intf: s.intf, values: s.values, source: s.source, labels: s.labels,
 });
 
 // --- Diagnostics ----------------------------------------------------------
@@ -129,7 +126,7 @@ function kind(s: string): string | null {
   if (/^immediate or pointer/.test(s)) return 'k-any';
   if (/^immediate\b/.test(s)) return 'k-imm';
   if (/^(unboxed|no block|no copy)\b/.test(s)) return 'k-flat';
-  if (/^(pointer|block|flat float block|mixed block|structure block|extension slot|functor body|copies)\b/.test(s)
+  if (/^(pointer|block|flat float block|mixed block|structure block|extension slot)\b/.test(s)
       || /^[A-Z][a-z_]*_tag \d+/.test(s) || /^one [A-Z][a-z_]*_tag \d+ block/.test(s)) return 'k-ptr';
   return null;
 }
@@ -339,13 +336,12 @@ function setCode(code: string) {
 
 async function start() {
   const saved = (location.hash.length > 1 && (await unpack(location.hash.slice(1)))) || null;
-  const s: Saved = { code: SAMPLE, compiler: '5.5', intf: false, values: false, source: false, modules: true, labels: false, ...saved };
+  const s: Saved = { code: SAMPLE, compiler: '5.5', intf: false, values: false, source: false, labels: false, ...saved };
   setCode(s.code);
   kindBox.value = s.intf ? 'mli' : 'ml';
   compilerBox.value = s.compiler;
   valuesBox.checked = s.values;
   sourceBox.checked = s.source;
-  modulesBox.checked = s.modules;
   labelsBox.checked = s.labels;
 
   const edited = new Option('edited', '');
@@ -360,7 +356,7 @@ async function start() {
     setCode(e.code);
     analyze();
   };
-  for (const box of [kindBox, compilerBox, valuesBox, sourceBox, modulesBox, labelsBox]) box.onchange = analyze;
+  for (const box of [kindBox, compilerBox, valuesBox, sourceBox, labelsBox]) box.onchange = analyze;
 
   status('Loading compiler-libs');
   worker.postMessage({ type: 'init', url: new URL('lense/lense_web.js', document.baseURI).href } satisfies ToWorker);

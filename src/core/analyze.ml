@@ -1,6 +1,6 @@
 (* Typed trees to the model. Representations come from the compiler's own
    data: [record_representation] on each declaration, the constructor tags
-   that Datarepr assigns, and the module coercions that Includemod computes.
+   that Datarepr assigns, and the field order of Types.bound_value_identifiers.
    Nothing here re-derives a layout rule the compiler already decided. *)
 
 open Types
@@ -182,7 +182,7 @@ let ext_decl ~env ctx ~keyword (ec : T.extension_constructor) : M.decl =
   { M.name = ctx.prefix ^ name; params = ""; keyword; line = line ec.ext_loc;
     source = Option.map squash (slice ctx ec.ext_loc); kind = Extension case; notes = [] }
 
-(* Module structures (stage 2). *)
+(* The fields of a structure block, for first-class modules. *)
 
 let rec is_functor env mty =
   match Mtype.scrape env mty with
@@ -233,50 +233,11 @@ let slots env (sg : signature) =
     sg;
   (List.rev !slots, List.rev !none)
 
-let slot_names env mty =
-  match Mtype.scrape env mty with
-  | Mty_signature sg -> Array.of_list (Types.bound_value_identifiers sg |> List.map Ident.name)
-  | _ -> [||]
-  | exception _ -> [||]
+type acc = { mutable decls : M.decl list }
 
-let coercion ~env ~context ~cline ~src_mty ~dst_mty (cc : T.module_coercion) : M.coercion option =
-  let src_names = slot_names env src_mty and dst_names = slot_names env dst_mty in
-  let name i names = if i >= 0 && i < Array.length names then names.(i) else "?" in
-  match cc with
-  | Tcoerce_none ->
-      Some { context; cline; src_size = Array.length src_names; copy = None; functor_wrap = false }
-  | Tcoerce_functor _ ->
-      Some { context; cline; src_size = 0; copy = None; functor_wrap = true }
-  | Tcoerce_structure (pos_cc, _) ->
-      let moves =
-        List.mapi
-          (fun dst (src, cc) ->
-            let how : M.move_kind =
-              match (cc : T.module_coercion) with
-              | Tcoerce_none -> Copy
-              | Tcoerce_structure _ | Tcoerce_functor _ -> Coerced
-              | Tcoerce_primitive _ -> Wrapped_primitive
-              | Tcoerce_alias _ -> Realised_alias
-            in
-            { M.dst; src; name = name dst dst_names; how })
-          pos_cc
-      in
-      Some { context; cline; src_size = Array.length src_names; copy = Some moves; functor_wrap = false }
-  | Tcoerce_primitive _ | Tcoerce_alias _ -> None
-
-type acc = {
-  mutable decls : M.decl list;
-  mutable modules : M.structure list;
-  mutable coercions : M.coercion list;
-}
-
-let add_structure acc ~name ~line ~params ~env sg =
-  let slots, no_slot = slots env sg in
-  acc.modules <- { M.mname = name; mline = line; functor_params = params; slots; no_slot } :: acc.modules
-
-let rec structure acc ctx ~name ~line ~params (str : T.structure) =
+(* Declarations inside modules are named by their path, such as [A.B.t]. *)
+let rec structure acc ctx (str : T.structure) =
   let env = !rebuild_env str.str_final_env in
-  add_structure acc ~name ~line ~params ~env str.str_type;
   List.iter (structure_item acc ctx ~env) str.str_items
 
 and structure_item acc ctx ~env (item : T.structure_item) =
@@ -288,63 +249,20 @@ and structure_item acc ctx ~env (item : T.structure_item) =
         te.tyext_constructors
   | Tstr_exception te ->
       acc.decls <- ext_decl ~env ctx ~keyword:"exception" te.tyexn_constructor :: acc.decls
-  | Tstr_module mb -> module_binding acc ctx ~env mb
-  | Tstr_recmodule mbs -> List.iter (module_binding acc ctx ~env) mbs
-  | Tstr_include { incl_mod; _ } -> module_expr acc ctx ~env ~name:None ~params:[] incl_mod
+  | Tstr_module mb -> module_binding acc ctx mb
+  | Tstr_recmodule mbs -> List.iter (module_binding acc ctx) mbs
+  | Tstr_include { incl_mod; _ } -> module_expr acc ctx incl_mod
   | _ -> ()
 
-and module_binding acc ctx ~env (mb : T.module_binding) =
+and module_binding acc ctx (mb : T.module_binding) =
   let name = Option.value mb.mb_name.txt ~default:"_" in
-  module_expr acc ctx ~env ~name:(Some name) ~params:[] mb.mb_expr
+  module_expr acc { ctx with prefix = ctx.prefix ^ name ^ "." } mb.mb_expr
 
-(* Walk a module expression bound to [name] (None for an include, whose items
-   join the enclosing structure). Records the structures it builds and the
-   coercions it applies. *)
-and module_expr acc ctx ~env ~name ~params (me : T.module_expr) =
-  let qualified = Option.map (fun n -> ctx.prefix ^ n) name in
-  let inner = match name with Some n -> { ctx with prefix = ctx.prefix ^ n ^ "." } | None -> ctx in
+and module_expr acc ctx (me : T.module_expr) =
   match me.mod_desc with
-  | Tmod_structure str -> (
-      match qualified with
-      | Some q -> structure acc inner ~name:q ~line:(line me.mod_loc) ~params str
-      | None -> List.iter (structure_item acc inner ~env:(!rebuild_env str.str_final_env)) str.str_items)
-  | Tmod_functor (param, body) ->
-      let p =
-        match param with
-        | Unit -> "()"
-        | Named (_, { txt; _ }, _) -> "(" ^ Option.value txt ~default:"_" ^ ")"
-      in
-      module_expr acc ctx ~env ~name ~params:(params @ [ p ]) body
-  | Tmod_constraint (sub, mty, _, cc) ->
-      let context =
-        match qualified with
-        | Some q -> "module " ^ q ^ String.concat "" params ^ " : " ^ squash (Format.asprintf "%a" Printtyp.modtype mty)
-        | None -> "include at line " ^ string_of_int (line me.mod_loc)
-      in
-      (match coercion ~env:(!rebuild_env me.mod_env) ~context ~cline:(line me.mod_loc) ~src_mty:sub.mod_type ~dst_mty:mty cc with
-      | Some c -> acc.coercions <- c :: acc.coercions
-      | None -> ());
-      module_expr acc ctx ~env ~name ~params sub
-  | Tmod_apply (f, arg, cc) ->
-      module_expr acc ctx ~env ~name:None ~params:[] arg;
-      let fname =
-        match f.mod_desc with
-        | Tmod_ident (p, _) -> Path.name p
-        | _ -> "a functor"
-      in
-      let param_mty =
-        match Mtype.scrape env f.mod_type with
-        | Mty_functor (Named (_, pmty), _) -> Some pmty
-        | _ -> None
-        | exception _ -> None
-      in
-      (match (cc, param_mty) with
-      | T.Tcoerce_none, _ | _, None -> ()
-      | cc, Some dst_mty -> (
-          let context = "argument of " ^ fname ^ " at line " ^ string_of_int (line me.mod_loc) in
-          match coercion ~env:(!rebuild_env me.mod_env) ~context ~cline:(line me.mod_loc) ~src_mty:arg.mod_type ~dst_mty cc with
-          | Some c -> acc.coercions <- c :: acc.coercions
-          | None -> ()))
+  | Tmod_structure str -> structure acc ctx str
+  | Tmod_functor (_, body) | Tmod_constraint (body, _, _, _) -> module_expr acc ctx body
+  | Tmod_apply (_, arg, _) -> module_expr acc ctx arg
   | Tmod_ident _ | Tmod_apply_unit _ | Tmod_unpack _ -> ()
 
 let rec signature acc ctx (sg : T.signature) =
@@ -391,29 +309,53 @@ let labels ~file iter_with =
   iter_with { default_iterator with typ; expr; pat };
   List.rev !found
 
+(* First-class modules. A value of type [(module S)] is a structure block
+   laid out by [S] alone: packing [(module M : S)] coerces [M] to [S], so
+   whatever [M] looks like, the block holds S's value-bearing items in S's
+   order. Constraints such as [with type t = int] add no field. Each module
+   type named in a package type or a [(module M)] expression is shown once,
+   at its first use. *)
+let packages iter_with =
+  let found = ref [] in
+  let add env ty (loc : Location.t) =
+    match Compat.package_path (Word.expand env ty) with
+    | Some p when not (List.exists (fun (q, _, _) -> Path.name q = Path.name p) !found) ->
+        found := (p, env, line loc) :: !found
+    | _ -> ()
+  in
+  let open Tast_iterator in
+  let typ it (ct : T.core_type) =
+    (match ct.ctyp_desc with Ttyp_package _ -> add ct.ctyp_env ct.ctyp_type ct.ctyp_loc | _ -> ());
+    default_iterator.typ it ct
+  in
+  let expr it (e : T.expression) =
+    (match e.exp_desc with Texp_pack _ -> add e.exp_env e.exp_type e.exp_loc | _ -> ());
+    default_iterator.expr it e
+  in
+  iter_with { default_iterator with typ; expr };
+  List.rev !found
+  |> List.filter_map (fun (p, env, l) ->
+         let env = !rebuild_env env in
+         match Mtype.scrape env (Env.find_modtype_expansion p env) with
+         | Mty_signature sg ->
+             let slots, no_slot = slots (Env.add_signature sg env) sg in
+             Some { M.pname = Path.name p; pline = l; slots; no_slot }
+         | _ -> None
+         | exception _ -> None)
+
 type input = Impl of T.structure | Intf of T.signature
 
-(* The coercion that turns a unit's own structure into the block its
-   interface describes: [interface] is (env, interface file, its signature,
-   the coercion Includemod.compunit computed). *)
-let unit_coercion acc ~unit_name (str : T.structure) (env, intf_file, intf_sg, cc) =
-  let context = "unit " ^ unit_name ^ " : " ^ Filename.basename intf_file in
-  match coercion ~env ~context ~cline:1 ~src_mty:(Mty_signature str.str_type) ~dst_mty:(Mty_signature intf_sg) cc with
-  | Some c -> acc.coercions <- c :: acc.coercions
-  | None -> ()
-
-let analyze ?interface ~file ~unit_name ~src input : M.compunit =
-  let acc = { decls = []; modules = []; coercions = [] } in
+let analyze ~file ~unit_name ~src input : M.compunit =
+  let acc = { decls = [] } in
   let ctx = { src; prefix = "" } in
-  let labels =
+  let iter_with =
     match input with
     | Impl str ->
-        structure acc ctx ~name:unit_name ~line:1 ~params:[] str;
-        Option.iter (unit_coercion acc ~unit_name str) interface;
-        labels ~file (fun it -> it.structure it str)
+        structure acc ctx str;
+        fun (it : Tast_iterator.iterator) -> it.structure it str
     | Intf sg ->
         signature acc ctx sg;
-        labels ~file (fun it -> it.signature it sg)
+        fun it -> it.signature it sg
   in
-  { M.file; unit_name; decls = List.rev acc.decls; modules = List.rev acc.modules;
-    coercions = List.rev acc.coercions; labels; values = None }
+  { M.file; unit_name; decls = List.rev acc.decls; packages = packages iter_with;
+    labels = labels ~file iter_with; values = None }

@@ -337,144 +337,64 @@
             "notes": []
           }
         ],
-        "modules": [
-          {
-            "name": "Exceptions",
-            "line": 1,
-            "functor_params": [],
-            "size": 9,
-            "fields": [
-              {
-                "index": 0,
-                "item": "exception",
-                "name": "Empty",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 1,
-                "item": "exception",
-                "name": "Error",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 2,
-                "item": "exception",
-                "name": "Detail",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 3,
-                "item": "exception",
-                "name": "Again",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 4,
-                "item": "extension",
-                "name": "X1",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 5,
-                "item": "extension",
-                "name": "X2",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 6,
-                "item": "extension",
-                "name": "X3",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 7,
-                "item": "extension",
-                "name": "X4",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 8,
-                "item": "extension",
-                "name": "Ok_",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              }
-            ],
-            "no_field": [
-              "type ext",
-              "type res"
-            ]
-          }
-        ],
-        "coercions": [],
+        "packages": [],
         "labels": []
       }
     ],
     "collisions": []
   }
-  ### cases/modules.ml
+  ### cases/packages.ml
   {
     "word_size": 64,
     "units": [
       {
-        "file": "cases/modules.ml",
-        "unit": "Modules",
+        "file": "cases/packages.ml",
+        "unit": "Packages",
         "types": [
           {
-            "name": "t",
+            "name": "entry",
             "params": "",
             "keyword": "type",
-            "line": 4,
-            "kind": "alias",
-            "word": {
-              "kind": "immediate",
-              "why": "int"
+            "line": 10,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 0,
+              "size": 2,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "key",
+                  "type": "int",
+                  "mutable": false,
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  }
+                },
+                {
+                  "kind": "label",
+                  "name": "ops",
+                  "type": "(module ORDERED with type t = int)",
+                  "mutable": false,
+                  "word": {
+                    "kind": "pointer",
+                    "tag": null,
+                    "what": "first-class module"
+                  }
+                }
+              ]
             },
             "notes": []
           },
           {
-            "name": "Stop",
+            "name": "Ints.Unordered",
             "params": "",
             "keyword": "exception",
-            "line": 5,
+            "line": 13,
             "kind": "extension",
             "case": {
-              "name": "Stop",
+              "name": "Unordered",
               "shape": {
                 "kind": "block",
                 "tag": 248,
@@ -486,44 +406,10 @@
             "notes": []
           },
           {
-            "name": "Inner.point",
+            "name": "Ints.t",
             "params": "",
             "keyword": "type",
-            "line": 8,
-            "kind": "record",
-            "shape": {
-              "kind": "block",
-              "tag": 254,
-              "size": 2,
-              "flat_float": true,
-              "fields": [
-                {
-                  "kind": "label",
-                  "name": "x",
-                  "type": "float",
-                  "mutable": false,
-                  "word": {
-                    "kind": "double"
-                  }
-                },
-                {
-                  "kind": "label",
-                  "name": "y",
-                  "type": "float",
-                  "mutable": false,
-                  "word": {
-                    "kind": "double"
-                  }
-                }
-              ]
-            },
-            "notes": []
-          },
-          {
-            "name": "IntOrd.t",
-            "params": "",
-            "keyword": "type",
-            "line": 37,
+            "line": 14,
             "kind": "alias",
             "word": {
               "kind": "immediate",
@@ -532,180 +418,16 @@
             "notes": []
           }
         ],
-        "modules": [
+        "packages": [
           {
-            "name": "Modules",
-            "line": 1,
-            "functor_params": [],
-            "size": 11,
+            "name": "ORDERED",
+            "line": 10,
+            "size": 4,
             "fields": [
               {
                 "index": 0,
                 "item": "value",
-                "name": "answer",
-                "word": {
-                  "kind": "immediate",
-                  "why": "int"
-                }
-              },
-              {
-                "index": 1,
-                "item": "value",
-                "name": "greet",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
-                }
-              },
-              {
-                "index": 2,
-                "item": "exception",
-                "name": "Stop",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 248,
-                  "what": "extension slot"
-                }
-              },
-              {
-                "index": 3,
-                "item": "module",
-                "name": "Inner",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 0,
-                  "what": "structure"
-                }
-              },
-              {
-                "index": 4,
-                "item": "module",
-                "name": "Reordered",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 0,
-                  "what": "structure"
-                }
-              },
-              {
-                "index": 5,
-                "item": "module",
-                "name": "Same",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 0,
-                  "what": "structure"
-                }
-              },
-              {
-                "index": 6,
-                "item": "functor",
-                "name": "Make",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
-                }
-              },
-              {
-                "index": 7,
-                "item": "module",
-                "name": "IntOrd",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 0,
-                  "what": "structure"
-                }
-              },
-              {
-                "index": 8,
-                "item": "module",
-                "name": "M",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 0,
-                  "what": "structure"
-                }
-              },
-              {
-                "index": 9,
-                "item": "module",
-                "name": "Prim",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 0,
-                  "what": "structure"
-                }
-              },
-              {
-                "index": 10,
-                "item": "class",
-                "name": "counter",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 0,
-                  "what": "class"
-                }
-              }
-            ],
-            "no_field": [
-              "external identity",
-              "type t",
-              "module type S",
-              "module type ORD"
-            ]
-          },
-          {
-            "name": "Inner",
-            "line": 7,
-            "functor_params": [],
-            "size": 2,
-            "fields": [
-              {
-                "index": 0,
-                "item": "value",
-                "name": "origin",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 254,
-                  "what": "float record point"
-                }
-              },
-              {
-                "index": 1,
-                "item": "value",
-                "name": "norm",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
-                }
-              }
-            ],
-            "no_field": [
-              "type point"
-            ]
-          },
-          {
-            "name": "Reordered",
-            "line": 18,
-            "functor_params": [],
-            "size": 3,
-            "fields": [
-              {
-                "index": 0,
-                "item": "value",
-                "name": "answer",
-                "word": {
-                  "kind": "immediate",
-                  "why": "int"
-                }
-              },
-              {
-                "index": 1,
-                "item": "value",
-                "name": "unused",
+                "name": "name",
                 "word": {
                   "kind": "pointer",
                   "tag": 252,
@@ -713,84 +435,7 @@
                 }
               },
               {
-                "index": 2,
-                "item": "value",
-                "name": "greet",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
-                }
-              }
-            ],
-            "no_field": []
-          },
-          {
-            "name": "Same",
-            "line": 24,
-            "functor_params": [],
-            "size": 2,
-            "fields": [
-              {
-                "index": 0,
-                "item": "value",
-                "name": "a",
-                "word": {
-                  "kind": "immediate",
-                  "why": "int"
-                }
-              },
-              {
                 "index": 1,
-                "item": "value",
-                "name": "b",
-                "word": {
-                  "kind": "immediate",
-                  "why": "int"
-                }
-              }
-            ],
-            "no_field": []
-          },
-          {
-            "name": "Make",
-            "line": 31,
-            "functor_params": [
-              "(O)"
-            ],
-            "size": 2,
-            "fields": [
-              {
-                "index": 0,
-                "item": "value",
-                "name": "max",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
-                }
-              },
-              {
-                "index": 1,
-                "item": "value",
-                "name": "min",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
-                }
-              }
-            ],
-            "no_field": []
-          },
-          {
-            "name": "IntOrd",
-            "line": 36,
-            "functor_params": [],
-            "size": 2,
-            "fields": [
-              {
-                "index": 0,
                 "item": "value",
                 "name": "compare",
                 "word": {
@@ -800,84 +445,66 @@
                 }
               },
               {
-                "index": 1,
-                "item": "value",
-                "name": "extra",
+                "index": 2,
+                "item": "module",
+                "name": "Sub",
                 "word": {
-                  "kind": "immediate",
-                  "why": "unit"
+                  "kind": "pointer",
+                  "tag": 0,
+                  "what": "structure"
+                }
+              },
+              {
+                "index": 3,
+                "item": "exception",
+                "name": "Unordered",
+                "word": {
+                  "kind": "pointer",
+                  "tag": 248,
+                  "what": "extension slot"
                 }
               }
             ],
             "no_field": [
-              "type t"
+              "type t",
+              "external id"
             ]
           },
           {
-            "name": "Prim",
-            "line": 44,
-            "functor_params": [],
+            "name": "Shapes.SHAPE",
+            "line": 32,
+            "size": 2,
+            "fields": [
+              {
+                "index": 0,
+                "item": "value",
+                "name": "area",
+                "word": {
+                  "kind": "pointer",
+                  "tag": 253,
+                  "what": "boxed float"
+                }
+              },
+              {
+                "index": 1,
+                "item": "functor",
+                "name": "Scale",
+                "word": {
+                  "kind": "pointer",
+                  "tag": 247,
+                  "what": "closure"
+                }
+              }
+            ],
+            "no_field": []
+          },
+          {
+            "name": "EMPTY",
+            "line": 39,
             "size": 0,
             "fields": [],
             "no_field": [
-              "external id"
-            ]
-          }
-        ],
-        "coercions": [
-          {
-            "context": "module Reordered : S",
-            "line": 18,
-            "source_size": 3,
-            "functor_wrap": false,
-            "copy": [
-              {
-                "to": 0,
-                "from": 2,
-                "name": "greet",
-                "how": "copy"
-              },
-              {
-                "to": 1,
-                "from": 0,
-                "name": "answer",
-                "how": "copy"
-              }
-            ]
-          },
-          {
-            "context": "module Same : sig val a : int val b : int end",
-            "line": 24,
-            "source_size": 2,
-            "functor_wrap": false,
-            "copy": null
-          },
-          {
-            "context": "argument of Make at line 42",
-            "line": 42,
-            "source_size": 2,
-            "functor_wrap": false,
-            "copy": [
-              {
-                "to": 0,
-                "from": 0,
-                "name": "compare",
-                "how": "copy"
-              }
-            ]
-          },
-          {
-            "context": "module Prim : sig val id : 'a -> 'a end",
-            "line": 44,
-            "source_size": 0,
-            "functor_wrap": false,
-            "copy": [
-              {
-                "to": 0,
-                "from": -1,
-                "name": "id",
-                "how": "wrapped_primitive"
-              }
+              "type t"
             ]
           }
         ],
@@ -1247,35 +874,7 @@
             "notes": []
           }
         ],
-        "modules": [
-          {
-            "name": "Polyvariants",
-            "line": 1,
-            "functor_params": [],
-            "size": 1,
-            "fields": [
-              {
-                "index": 0,
-                "item": "value",
-                "name": "f",
-                "word": {
-                  "kind": "pointer",
-                  "tag": 247,
-                  "what": "closure"
-                }
-              }
-            ],
-            "no_field": [
-              "type colour",
-              "type event",
-              "type opened",
-              "type sub",
-              "type both",
-              "type nested"
-            ]
-          }
-        ],
-        "coercions": [],
+        "packages": [],
         "labels": [
           {
             "label": "Red",
@@ -1863,30 +1462,7 @@
             "notes": []
           }
         ],
-        "modules": [
-          {
-            "name": "Records",
-            "line": 1,
-            "functor_params": [],
-            "size": 0,
-            "fields": [],
-            "no_field": [
-              "type r",
-              "type point",
-              "type mpoint",
-              "type single_float",
-              "type wrapped",
-              "type id",
-              "type fbox",
-              "type poly",
-              "type cell",
-              "type inline",
-              "type iu",
-              "type uses"
-            ]
-          }
-        ],
-        "coercions": [],
+        "packages": [],
         "labels": []
       }
     ],
@@ -2284,24 +1860,7 @@
             ]
           }
         ],
-        "modules": [
-          {
-            "name": "Variants",
-            "line": 1,
-            "functor_params": [],
-            "size": 0,
-            "fields": [],
-            "no_field": [
-              "type t",
-              "type shape",
-              "type nested",
-              "type tree",
-              "type empty",
-              "type expr"
-            ]
-          }
-        ],
-        "coercions": [],
+        "packages": [],
         "labels": []
       }
     ],

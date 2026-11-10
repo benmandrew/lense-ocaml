@@ -1,7 +1,7 @@
 OxCaml records and constructors with flat fields are mixed blocks: values
 first, then flat data, one word per scalar in native code.
 
-  $ lense-ocaml --compiler ox --no-modules mixed.ml
+  $ lense-ocaml --compiler ox mixed.ml
   type m  mixed block, tag 0, size 5: 2 scanned fields, then 3 flat
          0-7    header
       0  8-15   a : int     immediate (int)

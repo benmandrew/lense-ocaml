@@ -5,7 +5,7 @@ module M = Lense_model.Model
 let usage =
   "lense-ocaml [options] <file.ml | file.mli | file.cmt | file.cmti | -> ...\n\n\
    Prints which constructors become immediates, which tag each block gets,\n\
-   when the compiler drops the block, and how module structures are laid out.\n\
+   when the compiler drops the block, and how first-class modules are laid out.\n\
    Sizes are in words, without the header word.\n\nOptions:"
 
 (* Which compiler's type checker reads the input. *)
@@ -48,7 +48,7 @@ let find_ox_stdlib given =
 let () =
   let values = ref false in
   let compiler = ref None and ox_stdlib = ref (Sys.getenv_opt "LENSE_OX_STDLIB") in
-  let json = ref false and source = ref false and modules = ref true and labels = ref false in
+  let json = ref false and source = ref false and labels = ref false in
   let only = ref [] and includes = ref [] and files = ref [] and intf = ref false in
   let spec =
     Arg.align
@@ -56,7 +56,6 @@ let () =
         ("--json", Arg.Set json, " Print JSON instead of text");
         ("--type", Arg.String (fun s -> only := s :: !only), "NAME Show only the named types (repeatable)");
         ("--source", Arg.Set source, " Print each declaration above its representation");
-        ("--no-modules", Arg.Clear modules, " Leave out module structures and coercions");
         ("--values", Arg.Set values, " Also show closures, lazy values and objects, per backend");
         ("--labels", Arg.Set labels, " List every polymorphic variant label with its hash");
         ("--intf", Arg.Set intf, " Read standard input as an interface (.mli)");
@@ -105,5 +104,5 @@ let () =
     print_string (Buffer.contents b))
   else
     print_string
-      (Lense_model.Text.render { source = !source; modules = !modules; only = List.rev !only } units);
+      (Lense_model.Text.render { source = !source; only = List.rev !only } units);
   exit (if !failed then 1 else 0)
