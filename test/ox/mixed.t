@@ -37,7 +37,7 @@ first, then flat data, one word per scalar in native code.
       note: values first, then flat fields, each in declaration order
       note: native code; bytecode stores one boxed field per declared field, in declaration order
   
-  type v  variant: the 3 constructors with arguments are blocks with tags 0-2
+  type v  variant
     A  mixed block, tag 0, size 3: 2 scanned fields, then 1 flat
             0-7    header
          0  8-15   string            pointer to string, String_tag 252

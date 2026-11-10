@@ -16,7 +16,7 @@ the source, and resolves types from other units through their .cmi files.
       1  p : A.pair         pointer to float record A.pair, Double_array_tag 254
       2  o : A.flag option  immediate or pointer (option)
   
-  type t  variant, unboxed
+  type t  variant
     W  no block: [@@unboxed], the value is its field
          A.pair  pointer to float record A.pair, Double_array_tag 254
   $ lense-ocaml --no-modules -I . b.ml
@@ -25,7 +25,7 @@ the source, and resolves types from other units through their .cmi files.
       1  p : A.pair         pointer to float record A.pair, Double_array_tag 254
       2  o : A.flag option  immediate or pointer (option)
   
-  type t  variant, unboxed
+  type t  variant
     W  no block: [@@unboxed], the value is its field
          A.pair  pointer to float record A.pair, Double_array_tag 254
   $ cp b.ml b.mli; ocamlc -bin-annot -c b.mli
@@ -35,6 +35,6 @@ the source, and resolves types from other units through their .cmi files.
       1  p : A.pair         pointer to float record A.pair, Double_array_tag 254
       2  o : A.flag option  immediate or pointer (option)
   
-  type t  variant, unboxed
+  type t  variant
     W  no block: [@@unboxed], the value is its field
          A.pair  pointer to float record A.pair, Double_array_tag 254

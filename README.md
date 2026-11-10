@@ -6,7 +6,7 @@
 
 ```console
 $ printf 'type t = A | B of int | C | D of string\n' | lense-ocaml --no-modules -
-type t  variant: the 2 constructors without arguments are the immediates 0-1; the 2 constructors with arguments are blocks with tags 0-1
+type t  variant
   A  immediate 0
   B  block, tag 0, size 1
        0  int  immediate (int)

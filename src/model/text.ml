@@ -117,29 +117,10 @@ let cases b (cases : case list) =
       notes b ~indent:(w + 6) c.notes)
     cases
 
-let range = function
-  | [] -> ""
-  | [ x ] -> string_of_int x
-  | x :: rest -> Printf.sprintf "%d-%d" x (List.fold_left max x rest)
-
+(* Each case below the heading gives its own representation, so the heading
+   names only the kind of type. *)
 let variant_summary (cs : case list) =
-  let consts = List.filter_map (fun c -> match c.shape with Constant n -> Some n | _ -> None) cs in
-  let tags = List.filter_map (fun c -> match c.shape with Block { tag; _ } | Mixed { tag; _ } -> Some tag | _ -> None) cs in
-  let unboxed = List.exists (fun c -> match c.shape with Unboxed _ -> true | _ -> false) cs in
-  if unboxed then "variant, unboxed"
-  else if cs = [] then "variant with no constructors: it has no values"
-  else
-    let part xs ~what ~one ~many =
-      match List.length xs with
-      | 0 -> []
-      | 1 -> [ Printf.sprintf "the constructor %s is %s %s" what one (range xs) ]
-      | n -> [ Printf.sprintf "the %d constructors %s are %s %s" n what many (range xs) ]
-    in
-    let parts =
-      part consts ~what:"without arguments" ~one:"the immediate" ~many:"the immediates"
-      @ part tags ~what:"with arguments" ~one:"a block with tag" ~many:"blocks with tags"
-    in
-    "variant: " ^ String.concat "; " parts
+  if cs = [] then "variant with no constructors: it has no values" else "variant"
 
 let decl_head (d : decl) =
   d.keyword ^ " " ^ (if d.params = "" then "" else d.params ^ " ") ^ d.name
