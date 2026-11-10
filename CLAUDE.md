@@ -24,7 +24,7 @@ PATH=$(opam var --switch=5.2.0+ox bin):$PATH ./_build/default/test/fuzz/fuzz.exe
 scripts/vendor-oxcaml.sh OXCAML_SRC              # regenerate vendor/oxcaml after an OxCaml upgrade
 ```
 
-One OCaml 5.5 build serves both compilers: `lense-ocaml --compiler 5.5|ox`. The fuzz executable tests OxCaml when the `ocamlfind` on PATH is OxCaml's. Never put the OxCaml switch first on PATH for `dune` itself: dune would build with it.
+One OCaml 5.5 build serves both compilers: `lense-ocaml --compiler 5.5|ox`. The fuzz executable tests OxCaml when the `ocamlc` on PATH, or `$LENSE_OCAMLC`, is OxCaml's. Never put the OxCaml switch first on PATH for `dune` itself: dune would build with it.
 
 ## Constraints
 

@@ -85,13 +85,16 @@ let constant e = value (fun _ -> e) []
 (* OxCaml: a field of a mixed block, as a leaf or an unboxed tuple of
    leaves. [bits] is the native word expected for a flat leaf, compared
    under [mask]; [boxed] is what bytecode stores instead. *)
-(* Which compiler the oracle runs, read from the ocamlc on PATH. lense
-   type-checks with the matching half of its build. *)
+(* The compilers the oracle runs: those on PATH, unless the environment
+   names others. The checkers use no library, so ocamlfind is not needed. *)
+let tool var default = Option.value (Sys.getenv_opt var) ~default
+let ocamlopt = tool "LENSE_OCAMLOPT" "ocamlopt"
+let ocamlc = tool "LENSE_OCAMLC" "ocamlc"
+
+(* Which compiler the oracle runs, read from [ocamlc]. lense type-checks
+   with the matching half of its build. *)
 let ox =
-  let ic =
-    Unix.open_process_in
-      "ocamlfind ocamlc -version 2>/dev/null || ocamlc -version"
-  in
+  let ic = Unix.open_process_in (ocamlc ^ " -version") in
   let v = try input_line ic with End_of_file -> "" in
   ignore (Unix.close_process_in ic);
   String.ends_with ~suffix:"+ox" v
@@ -2500,8 +2503,6 @@ external v128 : string -> int -> int64x2# = "%caml_string_getu128#"
   Buffer.add_string b "  if !fails > 0 then exit 1\n";
   Buffer.contents b
 
-let run cmd = Sys.command (cmd ^ " > /dev/null 2>&1") = 0
-
 let run_out cmd out =
   Sys.command (Printf.sprintf "%s > %s 2>&1" cmd (Filename.quote out)) = 0
 
@@ -2526,16 +2527,6 @@ let () =
     ]
     (fun _ -> ())
     "fuzz.exe [-seed N] [-rounds N] [-keep DIR] [-no-cmt] [-gen DIR]";
-  let ocamlopt =
-    Option.value
-      (Sys.getenv_opt "LENSE_OCAMLOPT")
-      ~default:"ocamlfind ocamlopt -package unix"
-  in
-  let ocamlc =
-    Option.value
-      (Sys.getenv_opt "LENSE_OCAMLC")
-      ~default:"ocamlfind ocamlc -package unix"
-  in
   if !gen <> "" then (
     ignore (Sys.command ("mkdir -p " ^ Filename.quote !gen));
     for i = 0 to !rounds - 1 do
@@ -2546,8 +2537,6 @@ let () =
         (fun oc -> output_string oc src)
     done;
     exit 0);
-  let ocamlopt = if run "ocamlfind -version" then ocamlopt else "ocamlopt" in
-  let ocamlc = if run "ocamlfind -version" then ocamlc else "ocamlc" in
   let dir =
     if !keep <> "" then !keep
     else Filename.concat (Filename.get_temp_dir_name ()) "lense-fuzz"
