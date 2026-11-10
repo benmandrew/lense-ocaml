@@ -9,3 +9,6 @@ type t : float64
 type i : immediate
 type al = int32#
 type o = int or_null
+type one = #{ one : #(float# * string) }
+type sv = #{ sv : string }
+type wone = { o1 : one; o2 : #(int * sv); o3 : sv }

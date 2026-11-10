@@ -111,6 +111,9 @@ let decl_view env p args decl =
       Constructors (consts, List.length cstrs - consts)
   | Type_record (_, (Record_float | Record_ufloat), _) -> Float_record
   | Type_record _ -> Record
+  | Type_record_unboxed_product ([ { ld_type = arg; _ } ], _, _) ->
+      (* A single-field unboxed record is its field. *)
+      Unboxed_arg arg
   | Type_record_unboxed_product _ -> Unboxed_record
   | Type_open -> Open
   | Type_abstract _ ->
@@ -154,11 +157,27 @@ let element_data (e : unit Lambda.mixed_block_element) =
   | Vec512 -> ("vec512", 64, 8)
   | Product _ -> ("product", 0, 0)
 
+(* The field of a single-field unboxed record, which has the layout of that
+   field: the compiler's paths pass it by. *)
+let single_field env ty =
+  match get_desc (expand env ty) with
+  | Tconstr (p, args, _) -> (
+      match Env.find_type p env with
+      | { type_kind = Type_record_unboxed_product ([ ld ], _, _); _ } as decl ->
+          Some (Ident.name ld.ld_id, instantiate env decl args ld.ld_type)
+      | _ -> None
+      | exception Not_found -> None)
+  | _ -> None
+
 (* The name and type of a part of an unboxed product field, from its path. *)
 let rec part_of env ty path =
-  match path with
-  | [] -> ("", Some ty)
-  | j :: rest -> (
+  match (get_desc ty, single_field env ty, path) with
+  | Tpoly (t, []), _, _ -> part_of env t path
+  | _, Some (name, t), _ ->
+      let s, t' = part_of env t path in
+      ("." ^ name ^ s, t')
+  | _, None, [] -> ("", Some ty)
+  | _, None, j :: rest -> (
       let ty = expand env ty in
       let down name t =
         let s, t' = part_of env t rest in
@@ -183,7 +202,13 @@ let element_word ~word ~env (fields : M.field array) field part_ty
     (e : unit Lambda.mixed_block_element) : M.word =
   match e with
   | Value _ -> (
-      match part_ty with None -> fields.(field).word | Some t -> word env t)
+      match part_ty with
+      | Some t -> word env t
+      | None -> (
+          (* A value part of a product field is not the field's flat word. *)
+          match fields.(field).word with
+          | M.Flat _ -> M.Any "a value part of an unboxed product"
+          | w -> w))
   | Float_boxed _ ->
       M.Flat { layout = "float64, boxed again when read"; bytes = 8 }
   | Float64 -> M.Flat { layout = "float64"; bytes = 8 }

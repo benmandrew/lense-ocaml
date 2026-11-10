@@ -73,3 +73,21 @@ first, then flat data, one word per scalar in native code.
   type al  abbreviation: unboxed bits32, 4 bytes
   
   type o  abbreviation: immediate or pointer (null or int)
+  
+  type one  no block: unboxed record, its fields are kept apart or stored in place
+      one : #(float# * string)  unboxed float64 & value
+  
+  type sv  no block: unboxed record, its fields are kept apart or stored in place
+      sv : string  pointer to string, String_tag 252
+  
+  type wone  mixed block, tag 0, size 5: 4 scanned fields, then 1 flat
+         0-7    header
+      0  8-15   o1.one.1 : string  pointer to string, String_tag 252
+      1  16-23  o2.0 : int         immediate (int)
+      2  24-31  o2.1.sv : string   pointer to string, String_tag 252
+      3  32-39  o3 : sv            pointer to string, String_tag 252
+      4  40-47  o1.one.0 : float#  unboxed float64, 8 bytes
+      note: values first, then flat fields, each in declaration order
+      note: native code; bytecode stores one boxed field per declared field, in declaration order
+      cost: 6 words per value, with headers, in native code
+      not counted: o1 (string), o2 (string), o3 (string)
