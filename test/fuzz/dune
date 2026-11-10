@@ -8,3 +8,11 @@
  (deps fuzz.exe (glob_files ../../vendor/oxcaml/stdlib/cmi/*.cmi))
  (action
   (run %{dep:fuzz.exe} -seed 1 -rounds 20 -ox-stdlib ../../vendor/oxcaml/stdlib/cmi)))
+
+; `dune build @fuzz`: 100 programs from a new seed on every run. (universe)
+; stops dune caching the result. The seed is printed, for -seed N.
+(rule
+ (alias fuzz)
+ (deps fuzz.exe (universe) (glob_files ../../vendor/oxcaml/stdlib/cmi/*.cmi))
+ (action
+  (run %{dep:fuzz.exe} -rounds 100 -ox-stdlib ../../vendor/oxcaml/stdlib/cmi)))
