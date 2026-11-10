@@ -2,8 +2,9 @@
    predicts the shape of a value of every constructor with lense, then
    compiles a checker that builds those values and inspects them with Obj.
    The ground truth is the running program, so no second compiler is needed.
+   Each round also reads the program back from a .cmt (cmt_diff.ml).
 
-   fuzz.exe [-seed N] [-rounds N] [-keep DIR]
+   fuzz.exe [-seed N] [-rounds N] [-keep DIR] [-no-cmt]
    The compilers come from LENSE_OCAMLOPT and LENSE_OCAMLC, or PATH. *)
 
 module M = Lense_model.Model
@@ -2484,18 +2485,21 @@ let run_out cmd out =
 
 let () =
   let seed = ref (int_of_float (Unix.gettimeofday () *. 1000.) land 0xffffff) in
-  let rounds = ref 30 and keep = ref "" in
+  let rounds = ref 30 and keep = ref "" and cmt = ref true in
   Arg.parse
     [
       ("-seed", Arg.Set_int seed, "N First seed");
       ("-rounds", Arg.Set_int rounds, "N Programs to try");
       ("-keep", Arg.Set_string keep, "DIR Keep the programs here");
+      ( "-no-cmt",
+        Arg.Clear cmt,
+        " Do not compare the model read from a .cmt with the source's" );
       ( "-ox-stdlib",
         Arg.String (fun d -> Lense_core_ox.Load.stdlib_dir := Some d),
         "DIR The OxCaml stdlib .cmi files" );
     ]
     (fun _ -> ())
-    "fuzz.exe [-seed N] [-rounds N] [-keep DIR]";
+    "fuzz.exe [-seed N] [-rounds N] [-keep DIR] [-no-cmt]";
   let ocamlopt =
     Option.value
       (Sys.getenv_opt "LENSE_OCAMLOPT")
@@ -2526,6 +2530,12 @@ let () =
           seed msg src;
         incr failures
     | Ok u ->
+        (if !cmt then
+           match Cmt_diff.check ~ox ~ocamlc ~file src u with
+           | None -> ()
+           | Some msg ->
+               Printf.printf "seed %d: %s\n" seed msg;
+               incr failures);
         let prog = checker src s u in
         checks :=
           !checks
