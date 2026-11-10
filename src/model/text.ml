@@ -333,8 +333,18 @@ let selected opts name =
 let compunit opts b (u : compunit) =
   let first = ref true in
   let sep () = if !first then first := false else Buffer.add_char b '\n' in
-  List.iter (fun (d : decl) -> if selected opts d.name then (sep (); decl ~source:opts.source b d)) u.decls;
-  List.iter (fun (m : package) -> if selected opts m.pname then (sep (); package b m)) u.packages;
+  (* Source order: a package sits at its module type's declaration when that
+     is in this file, else at its first use. *)
+  let decls = List.map (fun (d : decl) -> (d.line, `Decl d)) u.decls in
+  let packages =
+    List.map
+      (fun (m : package) -> ((match m.prange with Some r -> r.first_line | None -> m.pline), `Package m))
+      u.packages
+  in
+  List.stable_sort (fun (a, _) (c, _) -> compare a c) (decls @ packages)
+  |> List.iter (function
+       | _, `Decl (d : decl) -> if selected opts d.name then (sep (); decl ~source:opts.source b d)
+       | _, `Package (m : package) -> if selected opts m.pname then (sep (); package b m));
   match u.values with
   | Some v when opts.only = [] -> sep (); values b v
   | _ -> ()

@@ -50,6 +50,13 @@ Every case file, as text with its source.
       0  slot  pointer to extension slot, Object_tag 248
       1  'a    immediate or pointer (type variable 'a)
   ### cases/packages.ml
+  (module ORDERED)  structure block, tag 0, size 4
+      0  val name             pointer to string, String_tag 252
+      1  val compare          pointer to closure, Closure_tag 247
+      2  module Sub           pointer to structure, tag 0
+      3  exception Unordered  pointer to extension slot, Object_tag 248
+    no field: type t, external id
+  
   type entry = { key : int; ops : (module ORDERED with type t = int) }
   type entry  block, tag 0, size 2
       0  key : int                                 immediate (int)
@@ -60,13 +67,6 @@ Every case file, as text with its source.
   
   type t = int
   type Ints.t  abbreviation: immediate (int)
-  
-  (module ORDERED)  structure block, tag 0, size 4
-      0  val name             pointer to string, String_tag 252
-      1  val compare          pointer to closure, Closure_tag 247
-      2  module Sub           pointer to structure, tag 0
-      3  exception Unordered  pointer to extension slot, Object_tag 248
-    no field: type t, external id
   
   (module Shapes.SHAPE)  structure block, tag 0, size 2
       0  val area       pointer to boxed float, Double_tag 253

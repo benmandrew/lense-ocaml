@@ -342,8 +342,8 @@ let labels ~file iter_with =
    laid out by [S] alone: packing [(module M : S)] coerces [M] to [S], so
    whatever [M] looks like, the block holds S's value-bearing items in S's
    order. Constraints such as [with type t = int] add no field. Each module
-   type named in a package type or a [(module M)] expression is shown once,
-   at its first use. Its range is the module type's declaration, when that
+   type named in a package type or a [(module M)] expression is shown once;
+   [pline] is its first use. Its range is the module type's declaration, when that
    is in this file. *)
 let packages ctx iter_with =
   let found = ref [] in

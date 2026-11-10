@@ -23,6 +23,13 @@ program, so they are left out.
   > let entry = { key = 1; ops = (module Ints) }
   > SRC
   $ lense-ocaml p.ml
+  (module S)  structure block, tag 0, size 4
+      0  val name     pointer to string, String_tag 252
+      1  val compare  pointer to closure, Closure_tag 247
+      2  module Sub   pointer to structure, tag 0
+      3  exception E  pointer to extension slot, Object_tag 248
+    no field: type t
+  
   type entry  block, tag 0, size 2
       0  key : int                           immediate (int)
       1  ops : (module S with type t = int)  pointer to first-class module
@@ -30,13 +37,6 @@ program, so they are left out.
   exception Ints.E  extension slot: block, Object_tag 248, size 2 (name, unique id)
   
   type Ints.t  abbreviation: immediate (int)
-  
-  (module S)  structure block, tag 0, size 4
-      0  val name     pointer to string, String_tag 252
-      1  val compare  pointer to closure, Closure_tag 247
-      2  module Sub   pointer to structure, tag 0
-      3  exception E  pointer to extension slot, Object_tag 248
-    no field: type t
 
 The running program agrees, on both backends. Ints has its items in another
 order and two more of them; the packed block has S's four.
