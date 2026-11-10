@@ -144,6 +144,13 @@ let values_of ~values ~unit_name ~src (input : Analyze.input) =
 
 let compunit ?(values = false) ~include_dirs file : M.compunit =
   let ext = Filename.extension file in
+  if ext = ".cmi" then
+    raise
+      (Failed
+         (Printf.sprintf
+            "lense-ocaml: %s holds no typed tree; pass the .cmt or .cmti that \
+             the build writes beside it with -bin-annot"
+            file));
   if ext = ".cmt" || ext = ".cmti" then
     let unit_name, input, src = read_cmt ~include_dirs file in
     let vals = values_of ~values ~unit_name ~src input in

@@ -17,10 +17,11 @@ let compiler_of_string = function
   | "ox" | "oxcaml" -> Ox
   | s -> raise (Arg.Bad ("unknown compiler " ^ s ^ ": use 5.5 or ox"))
 
-(* A .cmt, .cmti or .cmi file names its compiler in its magic number. *)
+(* A .cmt or .cmti file names its compiler in its magic number, which is
+   the .cmi one when the file starts with the unit's interface. *)
 let detect file =
   match Filename.extension file with
-  | ".cmt" | ".cmti" | ".cmi" -> (
+  | ".cmt" | ".cmti" -> (
       try
         let ic = open_in_bin file in
         let magic =

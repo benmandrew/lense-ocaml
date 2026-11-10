@@ -13,3 +13,9 @@ Standard input can also be an interface.
     B  block, tag 0, size 1
          0  int  immediate (int)
          cost: 2 words per value, with headers
+
+A .cmi holds no typed tree, so lense asks for the .cmt or .cmti instead.
+
+  $ printf 'type t = A\n' > c.ml && ocamlc -c c.ml && lense-ocaml c.cmi
+  lense-ocaml: c.cmi holds no typed tree; pass the .cmt or .cmti that the build writes beside it with -bin-annot
+  [1]
