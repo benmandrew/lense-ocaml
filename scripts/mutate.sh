@@ -34,10 +34,11 @@ build() {
   dune build --root . ./test/fuzz/fuzz.exe @vendor/oxcaml/stdlib/cmi/all > build.log 2>&1 ||
     { grep -v "^ld: warning" build.log >&2; return 1; }
 }
-fuzz_55() { ./_build/default/test/fuzz/fuzz.exe -rounds "$rounds" -seed "$seed"; }
+# -stop: one mismatch kills a mutant, so the rest of the rounds can go.
+fuzz_55() { ./_build/default/test/fuzz/fuzz.exe -stop -rounds "$rounds" -seed "$seed"; }
 fuzz_ox() {
   PATH=$(opam var --switch=5.2.0+ox bin):$PATH ./_build/default/test/fuzz/fuzz.exe \
-    -rounds "$rounds" -seed "$seed" -ox-stdlib _build/default/vendor/oxcaml/stdlib/cmi
+    -stop -rounds "$rounds" -seed "$seed" -ox-stdlib _build/default/vendor/oxcaml/stdlib/cmi
 }
 
 echo "building in $work"
@@ -77,10 +78,12 @@ mutant() {
     ox) runs=(fuzz_ox) ;;
     both) runs=(fuzz_55 $([ $ox = 1 ] && echo fuzz_ox)) ;;
   esac
+  # A mutant is killed when either compiler catches it, so a catch on
+  # 5.5 skips the OxCaml run.
   for run in "${runs[@]}"; do
     local log="mutant-$total.log"
-    if ! $run > "$log" 2>&1; then caught=$((caught + 1)); fi
     total=$((total + 1))
+    if ! $run > "$log" 2>&1; then caught=1; break; fi
   done
   mv "$file.orig" "$file"
   if [ $caught -gt 0 ]; then

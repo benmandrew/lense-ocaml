@@ -90,6 +90,7 @@ let constant e = value (fun _ -> e) []
 let tool var default = Option.value (Sys.getenv_opt var) ~default
 let ocamlopt = tool "LENSE_OCAMLOPT" "ocamlopt"
 let ocamlc = tool "LENSE_OCAMLC" "ocamlc"
+let ocamlrun = tool "LENSE_OCAMLRUN" "ocamlrun"
 
 (* Which compiler the oracle runs, read from [ocamlc]. lense type-checks
    with the matching half of its build. *)
@@ -2506,13 +2507,189 @@ external v128 : string -> int -> int64x2# = "%caml_string_getu128#"
 let run_out cmd out =
   Sys.command (Printf.sprintf "%s > %s 2>&1" cmd (Filename.quote out)) = 0
 
+(* One round: the program from [seed], checked on both backends. Returns
+   the report, the failures and the checks. *)
+let round ~dir ~cmt seed =
+  let out = Buffer.create 256 and failures = ref 0 and checks = ref 0 in
+  st := Random.State.make [| seed |];
+  let src, s = program () in
+  let file = Filename.concat dir (Printf.sprintf "prog%d.ml" seed) in
+  (match analyze ~file src with
+  | Error msg ->
+      (* A generator bug, not a lense bug; report it all the same. *)
+      Printf.bprintf out
+        "seed %d: generated program does not type-check\n%s\n%s\n" seed msg src;
+      incr failures
+  | Ok u ->
+      (if cmt then
+         match Cmt_diff.check ~ox ~ocamlc ~file src u with
+         | None -> ()
+         | Some msg ->
+             Printf.bprintf out "seed %d: %s\n" seed msg;
+             incr failures);
+      let prog = checker src s u in
+      checks :=
+        List.length (String.split_on_char '\n' prog)
+        - List.length (String.split_on_char '\n' src);
+      Out_channel.with_open_bin file (fun oc -> output_string oc prog);
+      (* The bytecode runs under [ocamlrun]: macOS scans each new
+         executable on its first launch, which took 0.1 to 0.4 s a round,
+         and ocamlrun is not new. *)
+      List.iter
+        (fun (name, comp, launch) ->
+          let exe =
+            Filename.concat dir (Printf.sprintf "prog%d.%s" seed name)
+          in
+          let log = exe ^ ".log" in
+          if
+            not
+              (run_out
+                 (Printf.sprintf "cd %s && %s -w -a %s -o %s"
+                    (Filename.quote dir) comp (Filename.quote file)
+                    (Filename.quote exe))
+                 log)
+          then (
+            Printf.bprintf out
+              "seed %d (%s): checker does not compile, see %s\n" seed name log;
+            incr failures)
+          else if not (run_out (launch (Filename.quote exe)) log) then (
+            Printf.bprintf out "seed %d (%s): %s\n" seed name
+              (In_channel.with_open_text log In_channel.input_all);
+            incr failures))
+        [
+          ("native", ocamlopt, Fun.id);
+          ("byte", ocamlc, fun exe -> ocamlrun ^ " " ^ exe);
+        ]);
+  (Buffer.contents out, !failures, !checks)
+
+(* Run the rounds in [jobs] worker processes. Worker k takes the rounds
+   k, k + jobs, k + 2 jobs..., in order, so the compiler-libs state that
+   one round leaves behind still meets the next. A worker writes each
+   report to a file and sends "seed failures checks" down a pipe. The
+   reports print in seed order. With [stop], the first failure kills the
+   workers. Returns the rounds run, the failures, the checks and whether
+   the run stopped. *)
+let rounds_in_workers ~dir ~cmt ~jobs ~stop ~seed ~rounds =
+  let report_file sd =
+    Filename.concat dir (Printf.sprintf "prog%d.report" sd)
+  in
+  flush_all ();
+  let workers =
+    List.init jobs (fun k ->
+        let r, w = Unix.pipe ~cloexec:true () in
+        match Unix.fork () with
+        | 0 ->
+            Unix.close r;
+            (* Its own process group, so that [stop] also kills the
+               compilers and checkers it runs. *)
+            ignore (Unix.setsid ());
+            let i = ref k in
+            while !i < rounds do
+              let sd = seed + !i in
+              let report, fails, checks =
+                try round ~dir ~cmt sd
+                with e ->
+                  ( Printf.sprintf "seed %d: fuzz.exe stopped: %s\n" sd
+                      (Printexc.to_string e),
+                    1,
+                    0 )
+              in
+              Out_channel.with_open_bin (report_file sd) (fun oc ->
+                  output_string oc report);
+              let line = Printf.sprintf "%d %d %d\n" sd fails checks in
+              ignore (Unix.write_substring w line 0 (String.length line));
+              i := !i + jobs
+            done;
+            Unix._exit 0
+        | pid ->
+            Unix.close w;
+            (pid, r, Buffer.create 64))
+  in
+  let results = Array.make rounds None and next = ref 0 in
+  let failures = ref 0 and checks = ref 0 and stopped = ref false in
+  let print i =
+    let f = report_file (seed + i) in
+    print_string (In_channel.with_open_bin f In_channel.input_all);
+    Sys.remove f
+  in
+  let print_ready () =
+    while !next < rounds && results.(!next) <> None do
+      print !next;
+      incr next
+    done;
+    flush stdout
+  in
+  let finish (pid, fd, _) =
+    Unix.close fd;
+    ignore (Unix.waitpid [] pid)
+  in
+  let live = ref workers and bytes = Bytes.create 4096 in
+  while !live <> [] && not !stopped do
+    let ready, _, _ =
+      try Unix.select (List.map (fun (_, fd, _) -> fd) !live) [] [] (-1.)
+      with Unix.Unix_error (EINTR, _, _) -> ([], [], [])
+    in
+    List.iter
+      (fun fd ->
+        let ((_, _, buf) as wk) = List.find (fun (_, f, _) -> f = fd) !live in
+        let n = Unix.read fd bytes 0 (Bytes.length bytes) in
+        if n = 0 then (
+          finish wk;
+          live := List.filter (fun (_, f, _) -> f <> fd) !live)
+        else (
+          Buffer.add_subbytes buf bytes 0 n;
+          let lines = String.split_on_char '\n' (Buffer.contents buf) in
+          Buffer.clear buf;
+          let rec go = function
+            | [] -> ()
+            | [ partial ] -> Buffer.add_string buf partial
+            | line :: rest ->
+                Scanf.sscanf line "%d %d %d" (fun sd f c ->
+                    results.(sd - seed) <- Some ();
+                    failures := !failures + f;
+                    checks := !checks + c;
+                    if f > 0 && stop then stopped := true);
+                go rest
+          in
+          go lines))
+      ready;
+    print_ready ()
+  done;
+  if !stopped then
+    List.iter
+      (fun ((pid, _, _) as wk) ->
+        (try Unix.kill (-pid) Sys.sigkill with Unix.Unix_error _ -> ());
+        (try Unix.kill pid Sys.sigkill with Unix.Unix_error _ -> ());
+        finish wk)
+      !live;
+  let ran = ref 0 in
+  Array.iteri
+    (fun i r ->
+      match r with
+      | Some () ->
+          incr ran;
+          if i >= !next then print i
+      | None when not !stopped ->
+          Printf.printf "seed %d: its worker stopped before the round ended\n"
+            (seed + i);
+          incr failures
+      | None -> ())
+    results;
+  (!ran, !failures, !checks, !stopped)
+
 let () =
   let seed = ref (int_of_float (Unix.gettimeofday () *. 1000.) land 0xffffff) in
   let rounds = ref 30 and keep = ref "" and cmt = ref true and gen = ref "" in
+  let jobs = ref (max 1 (Domain.recommended_domain_count () / 2)) in
+  let stop = ref false in
   Arg.parse
     [
       ("-seed", Arg.Set_int seed, "N First seed");
       ("-rounds", Arg.Set_int rounds, "N Programs to try");
+      ( "-j",
+        Arg.Set_int jobs,
+        "N Rounds to run at once (default: half the cores)" );
+      ("-stop", Arg.Set stop, " Stop at the first failure");
       ("-keep", Arg.Set_string keep, "DIR Keep the programs here");
       ( "-gen",
         Arg.Set_string gen,
@@ -2526,7 +2703,8 @@ let () =
         "DIR The OxCaml stdlib .cmi files" );
     ]
     (fun _ -> ())
-    "fuzz.exe [-seed N] [-rounds N] [-keep DIR] [-no-cmt] [-gen DIR]";
+    "fuzz.exe [-seed N] [-rounds N] [-j N] [-stop] [-keep DIR] [-no-cmt] [-gen \
+     DIR]";
   if !gen <> "" then (
     ignore (Sys.command ("mkdir -p " ^ Filename.quote !gen));
     for i = 0 to !rounds - 1 do
@@ -2537,62 +2715,28 @@ let () =
         (fun oc -> output_string oc src)
     done;
     exit 0);
+  (* A directory of its own unless -keep names one, so that two runs, on
+     5.5 and on OxCaml, can go at once. *)
   let dir =
-    if !keep <> "" then !keep
-    else Filename.concat (Filename.get_temp_dir_name ()) "lense-fuzz"
+    if !keep <> "" then (
+      let d =
+        if Filename.is_relative !keep then Filename.concat (Sys.getcwd ()) !keep
+        else !keep
+      in
+      ignore (Sys.command ("mkdir -p " ^ Filename.quote d));
+      d)
+    else Filename.temp_dir "lense-fuzz" ""
   in
-  ignore (Sys.command ("mkdir -p " ^ Filename.quote dir));
-  let failures = ref 0 and checks = ref 0 in
-  for i = 0 to !rounds - 1 do
-    let seed = !seed + i in
-    st := Random.State.make [| seed |];
-    let src, s = program () in
-    let file = Filename.concat dir (Printf.sprintf "prog%d.ml" seed) in
-    match analyze ~file src with
-    | Error msg ->
-        (* A generator bug, not a lense bug; report it all the same. *)
-        Printf.printf "seed %d: generated program does not type-check\n%s\n%s\n"
-          seed msg src;
-        incr failures
-    | Ok u ->
-        (if !cmt then
-           match Cmt_diff.check ~ox ~ocamlc ~file src u with
-           | None -> ()
-           | Some msg ->
-               Printf.printf "seed %d: %s\n" seed msg;
-               incr failures);
-        let prog = checker src s u in
-        checks :=
-          !checks
-          + List.length (String.split_on_char '\n' prog)
-          - List.length (String.split_on_char '\n' src);
-        let oc = open_out file in
-        output_string oc prog;
-        close_out oc;
-        List.iter
-          (fun (name, comp) ->
-            let exe =
-              Filename.concat dir (Printf.sprintf "prog%d.%s" seed name)
-            in
-            let log = exe ^ ".log" in
-            if
-              not
-                (run_out
-                   (Printf.sprintf "cd %s && %s -w -a %s -o %s"
-                      (Filename.quote dir) comp (Filename.quote file)
-                      (Filename.quote exe))
-                   log)
-            then (
-              Printf.printf "seed %d (%s): checker does not compile, see %s\n"
-                seed name log;
-              incr failures)
-            else if not (run_out (Filename.quote exe) log) then (
-              Printf.printf "seed %d (%s): %s\n" seed name
-                (In_channel.with_open_text log In_channel.input_all);
-              incr failures))
-          [ ("native", ocamlopt); ("byte", ocamlc) ]
-  done;
+  let jobs = max 1 (min !jobs !rounds) in
+  let ran, failures, checks, stopped =
+    rounds_in_workers ~dir ~cmt:!cmt ~jobs ~stop:!stop ~seed:!seed
+      ~rounds:!rounds
+  in
   Printf.printf
-    "%d programs from seed %d, about %d checks each way, %d failures\n" !rounds
-    !seed !checks !failures;
-  exit (if !failures > 0 then 1 else 0)
+    "%d programs from seed %d, about %d checks each way, %d failures%s\n" ran
+    !seed checks failures
+    (if stopped then ", stopped at the first" else "");
+  if !keep = "" then
+    if failures = 0 then ignore (Sys.command ("rm -rf " ^ Filename.quote dir))
+    else Printf.printf "the programs are in %s\n" dir;
+  exit (if failures > 0 then 1 else 0)
