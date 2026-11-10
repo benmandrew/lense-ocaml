@@ -15,26 +15,32 @@ the source, and resolves types from other units through their .cmi files.
       0  f : A.flag         immediate (constant constructors of A.flag)
       1  p : A.pair         pointer to float record A.pair, Double_array_tag 254
       2  o : A.flag option  immediate or pointer (option)
+      cost: 7 or 9 words per value, with headers
   
   type t  variant
     W  no block: [@@unboxed], the value is its field
          A.pair  pointer to float record A.pair, Double_array_tag 254
+         cost: 3 words per value, with headers
   $ lense-ocaml -I . b.ml
   type uses  block, tag 0, size 3
       0  f : A.flag         immediate (constant constructors of A.flag)
       1  p : A.pair         pointer to float record A.pair, Double_array_tag 254
       2  o : A.flag option  immediate or pointer (option)
+      cost: 7 or 9 words per value, with headers
   
   type t  variant
     W  no block: [@@unboxed], the value is its field
          A.pair  pointer to float record A.pair, Double_array_tag 254
+         cost: 3 words per value, with headers
   $ cp b.ml b.mli; ocamlc -bin-annot -c b.mli
   $ lense-ocaml b.cmti
   type uses  block, tag 0, size 3
       0  f : A.flag         immediate (constant constructors of A.flag)
       1  p : A.pair         pointer to float record A.pair, Double_array_tag 254
       2  o : A.flag option  immediate or pointer (option)
+      cost: 7 or 9 words per value, with headers
   
   type t  variant
     W  no block: [@@unboxed], the value is its field
          A.pair  pointer to float record A.pair, Double_array_tag 254
+         cost: 3 words per value, with headers

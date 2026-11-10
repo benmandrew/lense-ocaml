@@ -109,7 +109,8 @@ let record_shape ~word:_ ~env:_ decl (kind : T.type_kind) ~field :
           Some
             (Flat_float
                (List.map
-                  (fun (f : M.field) -> { f with word = M.Double })
+                  (fun (f : M.field) ->
+                    { f with word = M.Double; owns = M.zero })
                   fields))
       | Record_unboxed _ ->
           Some
@@ -271,3 +272,55 @@ let closure_backends ~modname str =
       if Config.flambda then None else sets true );
     ("bytecode", "ocamlc without -g", sets false);
   ]
+
+(* Counting words *)
+
+let tuple_types ty =
+  match get_desc ty with Ttuple l -> List.map snd l | _ -> []
+
+let unboxed_tuple_types (_ : type_expr) : type_expr list = []
+
+(* The words of a value of a predefined type that only one compiler has. *)
+let predef_cost p : M.cost option =
+  if Path.same p Predef.path_continuation then Some (M.uncounted "continuation")
+  else None
+
+(* How a declaration lays out its values, for counting the words one takes.
+   Field types are as declared, before applying the type's arguments. *)
+type layout =
+  | No_block of type_expr list
+      (** The value is these, with no block: [@@unboxed]. *)
+  | Blocks of type_expr list option list
+      (** One per constructor: None when constant, or the fields of its block. A
+          record is one constructor. *)
+  | Flat of int  (** A flat float block of this many fields. *)
+  | Not_counted of string
+
+let layout env p args decl =
+  match decl.type_kind with
+  | Type_variant ([ { cd_args = Cstr_tuple [ arg ]; _ } ], Variant_unboxed)
+  | Type_variant
+      ( [ { cd_args = Cstr_record [ { ld_type = arg; _ } ]; _ } ],
+        Variant_unboxed )
+  | Type_record ([ { ld_type = arg; _ } ], Record_unboxed _) ->
+      No_block [ arg ]
+  | Type_variant (cds, _) ->
+      Blocks
+        (List.map
+           (fun cd ->
+             match cd.cd_args with
+             | Cstr_tuple [] -> None
+             | Cstr_tuple tys -> Some tys
+             | Cstr_record lds -> Some (List.map (fun ld -> ld.ld_type) lds))
+           cds)
+  | Type_record (lds, Record_float) -> Flat (List.length lds)
+  | Type_record (lds, _) ->
+      Blocks [ Some (List.map (fun ld -> ld.ld_type) lds) ]
+  | Type_open -> Not_counted ("extensible variant " ^ Path.name p)
+  | Type_abstract _ | Type_external _ -> (
+      match decl_view env p args decl with
+      | Immediate _ -> Blocks [ None ]
+      | _ -> Not_counted ("abstract type " ^ Path.name p))
+
+(* A flat scalar, which owns no block. OCaml 5.5 has none. *)
+let flat_scalar (_ : Env.t) (_ : type_expr) = false

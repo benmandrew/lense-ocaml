@@ -44,6 +44,15 @@ let rec write b ~indent v =
           write b ~indent x)
         kvs;
       Buffer.add_char b '}'
+  (* A list of numbers on one line. *)
+  | List xs when List.for_all (function Int _ -> true | _ -> false) xs ->
+      Buffer.add_char b '[';
+      List.iteri
+        (fun i x ->
+          if i > 0 then Buffer.add_string b ", ";
+          write b ~indent x)
+        xs;
+      Buffer.add_char b ']'
   | List xs ->
       Buffer.add_char b '[';
       List.iteri
@@ -93,6 +102,20 @@ let word = function
   | Flat { layout; bytes } ->
       Obj [ ("kind", Str "flat"); ("layout", Str layout); ("bytes", Int bytes) ]
 
+let rec cost (c : cost) =
+  Obj
+    [
+      ("words", List (List.map (fun n -> Int n) c.words));
+      ("range", Bool c.range);
+      ( "not_counted",
+        List
+          (List.map
+             (fun p ->
+               Obj [ ("what", Str p.what); ("per_node", opt cost p.per_node) ])
+             c.uncounted) );
+      ("nodes", Bool c.nodes);
+    ]
+
 let field (f : field) =
   let kind =
     match f.fkind with
@@ -107,10 +130,11 @@ let field (f : field) =
         ("type", Str f.ty);
         ("mutable", Bool f.mutable_);
         ("word", word f.word);
+        ("owns", cost f.owns);
         ("range", range f.frange);
       ])
 
-let shape = function
+let shape_kvs = function
   | Constant n -> Obj [ ("kind", Str "immediate"); ("value", Int n) ]
   | Block { tag; fields } ->
       Obj
@@ -166,6 +190,12 @@ let shape = function
           ("fields", List (List.map field fields));
           ("slots", List (List.map2 slot slots (mixed_offsets slots)));
         ]
+
+(* Each shape with the words a value of it takes. *)
+let shape s =
+  match shape_kvs s with
+  | Obj kvs -> Obj (kvs @ [ ("cost", opt cost (shape_cost s)) ])
+  | j -> j
 
 let strs l = List (List.map (fun s -> Str s) l)
 

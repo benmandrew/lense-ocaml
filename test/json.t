@@ -19,7 +19,8 @@
                 "kind": "block",
                 "tag": 248,
                 "size": 2,
-                "extension_slot": true
+                "extension_slot": true,
+                "cost": null
               },
               "notes": [],
               "range": {"line": 1, "column": 0, "end_line": 1, "end_column": 15}
@@ -50,6 +51,12 @@
                       "tag": 248,
                       "what": "extension slot"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
+                    },
                     "range": null
                   },
                   {
@@ -59,6 +66,12 @@
                     "word": {
                       "kind": "immediate",
                       "why": "int"
+                    },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
                     },
                     "range": {"line": 2, "column": 19, "end_line": 2, "end_column": 22}
                   },
@@ -71,9 +84,31 @@
                       "tag": 252,
                       "what": "string"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [
+                        {
+                          "what": "string",
+                          "per_node": null
+                        }
+                      ],
+                      "nodes": false
+                    },
                     "range": {"line": 2, "column": 25, "end_line": 2, "end_column": 31}
                   }
-                ]
+                ],
+                "cost": {
+                  "words": [4],
+                  "range": false,
+                  "not_counted": [
+                    {
+                      "what": "string",
+                      "per_node": null
+                    }
+                  ],
+                  "nodes": false
+                }
               },
               "notes": [],
               "range": {"line": 2, "column": 0, "end_line": 2, "end_column": 31}
@@ -104,6 +139,12 @@
                       "tag": 248,
                       "what": "extension slot"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
+                    },
                     "range": null
                   },
                   {
@@ -114,6 +155,12 @@
                     "word": {
                       "kind": "immediate",
                       "why": "int"
+                    },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
                     },
                     "range": {"line": 3, "column": 22, "end_line": 3, "end_column": 33}
                   },
@@ -127,9 +174,31 @@
                       "tag": 252,
                       "what": "string"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [
+                        {
+                          "what": "string",
+                          "per_node": null
+                        }
+                      ],
+                      "nodes": false
+                    },
                     "range": {"line": 3, "column": 34, "end_line": 3, "end_column": 46}
                   }
-                ]
+                ],
+                "cost": {
+                  "words": [4],
+                  "range": false,
+                  "not_counted": [
+                    {
+                      "what": "string",
+                      "per_node": null
+                    }
+                  ],
+                  "nodes": false
+                }
               },
               "notes": [],
               "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 48}
@@ -147,7 +216,8 @@
               "name": "Again",
               "shape": {
                 "kind": "rebind",
-                "of": "Empty"
+                "of": "Empty",
+                "cost": null
               },
               "notes": [],
               "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 23}
@@ -176,7 +246,8 @@
                 "kind": "block",
                 "tag": 248,
                 "size": 2,
-                "extension_slot": true
+                "extension_slot": true,
+                "cost": null
               },
               "notes": [],
               "range": {"line": 7, "column": 12, "end_line": 7, "end_column": 14}
@@ -207,6 +278,12 @@
                       "tag": 248,
                       "what": "extension slot"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
+                    },
                     "range": null
                   },
                   {
@@ -217,9 +294,21 @@
                       "kind": "immediate",
                       "why": "int"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
+                    },
                     "range": {"line": 7, "column": 23, "end_line": 7, "end_column": 26}
                   }
-                ]
+                ],
+                "cost": {
+                  "words": [3],
+                  "range": false,
+                  "not_counted": [],
+                  "nodes": false
+                }
               },
               "notes": [],
               "range": {"line": 7, "column": 15, "end_line": 7, "end_column": 26}
@@ -239,7 +328,8 @@
                 "kind": "block",
                 "tag": 248,
                 "size": 2,
-                "extension_slot": true
+                "extension_slot": true,
+                "cost": null
               },
               "notes": [],
               "range": {"line": 10, "column": 19, "end_line": 10, "end_column": 37}
@@ -270,6 +360,12 @@
                       "tag": 248,
                       "what": "extension slot"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
+                    },
                     "range": null
                   },
                   {
@@ -281,9 +377,31 @@
                       "tag": 252,
                       "what": "string"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [
+                        {
+                          "what": "string",
+                          "per_node": null
+                        }
+                      ],
+                      "nodes": false
+                    },
                     "range": {"line": 10, "column": 47, "end_line": 10, "end_column": 53}
                   }
-                ]
+                ],
+                "cost": {
+                  "words": [3],
+                  "range": false,
+                  "not_counted": [
+                    {
+                      "what": "string",
+                      "per_node": null
+                    }
+                  ],
+                  "nodes": false
+                }
               },
               "notes": [],
               "range": {"line": 10, "column": 38, "end_line": 10, "end_column": 70}
@@ -326,6 +444,12 @@
                     "kind": "immediate",
                     "why": "int"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 15, "column": 15, "end_line": 15, "end_column": 25}
                 },
                 {
@@ -338,9 +462,31 @@
                     "tag": null,
                     "what": "first-class module"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "first-class module",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
                   "range": {"line": 15, "column": 26, "end_line": 15, "end_column": 66}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [3],
+                "range": false,
+                "not_counted": [
+                  {
+                    "what": "first-class module",
+                    "per_node": null
+                  }
+                ],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 15, "column": 0, "end_line": 15, "end_column": 68}
@@ -357,7 +503,8 @@
                 "kind": "block",
                 "tag": 248,
                 "size": 2,
-                "extension_slot": true
+                "extension_slot": true,
+                "cost": null
               },
               "notes": [],
               "range": {"line": 20, "column": 2, "end_line": 20, "end_column": 21}
@@ -514,7 +661,13 @@
                 "name": "`Red",
                 "shape": {
                   "kind": "immediate",
-                  "value": 4100401
+                  "value": 4100401,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 1, "column": 16, "end_line": 1, "end_column": 20}
@@ -523,7 +676,13 @@
                 "name": "`Blue",
                 "shape": {
                   "kind": "immediate",
-                  "value": 737308346
+                  "value": 737308346,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 1, "column": 32, "end_line": 1, "end_column": 37}
@@ -532,7 +691,13 @@
                 "name": "`Green",
                 "shape": {
                   "kind": "immediate",
-                  "value": 756711075
+                  "value": 756711075,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 1, "column": 23, "end_line": 1, "end_column": 29}
@@ -565,6 +730,12 @@
                         "kind": "immediate",
                         "why": "label hash"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": null
                     },
                     {
@@ -576,9 +747,21 @@
                         "tag": 0,
                         "what": "tuple"
                       },
+                      "owns": {
+                        "words": [3],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": null
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [6],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 2, "column": 30, "end_line": 2, "end_column": 49}
@@ -599,6 +782,12 @@
                         "kind": "immediate",
                         "why": "label hash"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": null
                     },
                     {
@@ -609,9 +798,21 @@
                         "kind": "immediate",
                         "why": "char"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": null
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 2, "column": 15, "end_line": 2, "end_column": 27}
@@ -620,7 +821,13 @@
                 "name": "`Quit",
                 "shape": {
                   "kind": "immediate",
-                  "value": 904096751
+                  "value": 904096751,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 2, "column": 52, "end_line": 2, "end_column": 57}
@@ -641,7 +848,13 @@
                 "name": "`A",
                 "shape": {
                   "kind": "immediate",
-                  "value": 65
+                  "value": 65,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": null
@@ -662,6 +875,12 @@
                         "kind": "immediate",
                         "why": "label hash"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": null
                     },
                     {
@@ -672,9 +891,21 @@
                         "kind": "immediate",
                         "why": "int"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": null
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": null
@@ -703,6 +934,12 @@
                     "kind": "immediate",
                     "why": "constant polymorphic variant"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 4, "column": 16, "end_line": 4, "end_column": 27}
                 },
                 {
@@ -714,9 +951,21 @@
                     "kind": "any",
                     "why": "polymorphic variant"
                   },
+                  "owns": {
+                    "words": [0, 3, 6],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 4, "column": 28, "end_line": 4, "end_column": 37}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [3, 6, 9],
+                "range": false,
+                "not_counted": [],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 39}
@@ -733,7 +982,13 @@
                 "name": "`Eric_Cooper",
                 "shape": {
                   "kind": "immediate",
-                  "value": -332323982
+                  "value": -332323982,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 7, "column": 13, "end_line": 7, "end_column": 25}
@@ -766,6 +1021,12 @@
                         "kind": "immediate",
                         "why": "label hash"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": null
                     },
                     {
@@ -776,9 +1037,21 @@
                         "kind": "immediate",
                         "why": "int"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": null
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 8, "column": 15, "end_line": 8, "end_column": 30}
@@ -913,6 +1186,12 @@
                     "kind": "immediate",
                     "why": "int"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 1, "column": 11, "end_line": 1, "end_column": 19}
                 },
                 {
@@ -925,9 +1204,21 @@
                     "tag": 253,
                     "what": "boxed float"
                   },
+                  "owns": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 1, "column": 20, "end_line": 1, "end_column": 29}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [5],
+                "range": false,
+                "not_counted": [],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 1, "column": 0, "end_line": 1, "end_column": 31}
@@ -952,6 +1243,12 @@
                   "word": {
                     "kind": "double"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 2, "column": 15, "end_line": 2, "end_column": 25}
                 },
                 {
@@ -962,9 +1259,21 @@
                   "word": {
                     "kind": "double"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 2, "column": 26, "end_line": 2, "end_column": 43}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [3],
+                "range": false,
+                "not_counted": [],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 2, "column": 0, "end_line": 2, "end_column": 45}
@@ -987,7 +1296,19 @@
                   "tag": 253,
                   "what": "boxed float"
                 },
+                "owns": {
+                  "words": [2],
+                  "range": false,
+                  "not_counted": [],
+                  "nodes": false
+                },
                 "range": {"line": 3, "column": 14, "end_line": 3, "end_column": 23}
+              },
+              "cost": {
+                "words": [2],
+                "range": false,
+                "not_counted": [],
+                "nodes": false
               }
             },
             "notes": [],
@@ -1012,7 +1333,19 @@
                       "kind": "immediate",
                       "why": "int"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
+                    },
                     "range": {"line": 4, "column": 16, "end_line": 4, "end_column": 19}
+                  },
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
                   }
                 },
                 "notes": [],
@@ -1042,7 +1375,19 @@
                       "kind": "immediate",
                       "why": "int"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
+                    },
                     "range": {"line": 5, "column": 18, "end_line": 5, "end_column": 26}
+                  },
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
                   }
                 },
                 "notes": [],
@@ -1100,6 +1445,12 @@
                   "word": {
                     "kind": "double"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 17, "column": 14, "end_line": 17, "end_column": 25}
                 },
                 {
@@ -1110,9 +1461,21 @@
                   "word": {
                     "kind": "double"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 17, "column": 26, "end_line": 17, "end_column": 35}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [3],
+                "range": false,
+                "not_counted": [],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 17, "column": 0, "end_line": 17, "end_column": 37}
@@ -1137,6 +1500,17 @@
                     "kind": "any",
                     "why": "abstract type Opaque.t"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "abstract type Opaque.t",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
                   "range": {"line": 18, "column": 16, "end_line": 18, "end_column": 29}
                 },
                 {
@@ -1149,9 +1523,26 @@
                     "tag": 253,
                     "what": "boxed float"
                   },
+                  "owns": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 18, "column": 30, "end_line": 18, "end_column": 39}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [5],
+                "range": false,
+                "not_counted": [
+                  {
+                    "what": "abstract type Opaque.t",
+                    "per_node": null
+                  }
+                ],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 18, "column": 0, "end_line": 18, "end_column": 41}
@@ -1167,7 +1558,13 @@
                 "name": "I0",
                 "shape": {
                   "kind": "immediate",
-                  "value": 0
+                  "value": 0,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 21, "column": 2, "end_line": 21, "end_column": 6}
@@ -1187,9 +1584,21 @@
                         "kind": "immediate",
                         "why": "int"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 22, "column": 10, "end_line": 22, "end_column": 13}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 22, "column": 2, "end_line": 22, "end_column": 13}
@@ -1210,6 +1619,12 @@
                         "kind": "immediate",
                         "why": "int"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 23, "column": 12, "end_line": 23, "end_column": 21}
                     },
                     {
@@ -1222,9 +1637,21 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
+                      "owns": {
+                        "words": [2],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 23, "column": 22, "end_line": 23, "end_column": 32}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [5],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 23, "column": 2, "end_line": 23, "end_column": 34}
@@ -1246,6 +1673,12 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
+                      "owns": {
+                        "words": [2],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 24, "column": 12, "end_line": 24, "end_column": 23}
                     },
                     {
@@ -1258,9 +1691,21 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
+                      "owns": {
+                        "words": [2],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 24, "column": 24, "end_line": 24, "end_column": 34}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [7],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [
                   "inline record: all fields are float, but inline records are never stored flat"
@@ -1291,6 +1736,12 @@
                     "kind": "any",
                     "why": "inline"
                   },
+                  "owns": {
+                    "words": [0, 2, 5, 7],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 27, "column": 2, "end_line": 27, "end_column": 13}
                 },
                 {
@@ -1301,6 +1752,22 @@
                   "word": {
                     "kind": "any",
                     "why": "list"
+                  },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "id list",
+                        "per_node": {
+                          "words": [3],
+                          "range": false,
+                          "not_counted": [],
+                          "nodes": true
+                        }
+                      }
+                    ],
+                    "nodes": false
                   },
                   "range": {"line": 28, "column": 2, "end_line": 28, "end_column": 16}
                 },
@@ -1314,6 +1781,17 @@
                     "tag": null,
                     "what": "float array (Double_array_tag 254 unless empty)"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "array",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
                   "range": {"line": 29, "column": 2, "end_line": 29, "end_column": 20}
                 },
                 {
@@ -1326,6 +1804,17 @@
                     "tag": 0,
                     "what": "array"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "array",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
                   "range": {"line": 30, "column": 2, "end_line": 30, "end_column": 19}
                 },
                 {
@@ -1336,6 +1825,12 @@
                   "word": {
                     "kind": "any",
                     "why": "option"
+                  },
+                  "owns": {
+                    "words": [0, 2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
                   },
                   "range": {"line": 31, "column": 2, "end_line": 31, "end_column": 19}
                 },
@@ -1349,6 +1844,12 @@
                     "tag": 255,
                     "what": "custom block"
                   },
+                  "owns": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 32, "column": 2, "end_line": 32, "end_column": 14}
                 },
                 {
@@ -1360,6 +1861,12 @@
                     "kind": "immediate",
                     "why": "char"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 33, "column": 2, "end_line": 33, "end_column": 12}
                 },
                 {
@@ -1370,6 +1877,17 @@
                   "word": {
                     "kind": "any",
                     "why": "lazy value"
+                  },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "lazy value",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
                   },
                   "range": {"line": 34, "column": 2, "end_line": 34, "end_column": 18}
                 },
@@ -1383,9 +1901,52 @@
                     "tag": 247,
                     "what": "closure"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "closure",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
                   "range": {"line": 35, "column": 2, "end_line": 35, "end_column": 23}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [13, 15, 17, 18, 20, 22],
+                "range": false,
+                "not_counted": [
+                  {
+                    "what": "id list",
+                    "per_node": {
+                      "words": [3],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": true
+                    }
+                  },
+                  {
+                    "what": "array",
+                    "per_node": null
+                  },
+                  {
+                    "what": "array",
+                    "per_node": null
+                  },
+                  {
+                    "what": "lazy value",
+                    "per_node": null
+                  },
+                  {
+                    "what": "closure",
+                    "per_node": null
+                  }
+                ],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 26, "column": 0, "end_line": 36, "end_column": 1}
@@ -1393,6 +1954,810 @@
         ],
         "packages": [],
         "labels": []
+      }
+    ],
+    "collisions": []
+  }
+  ### cases/recursive.ml
+  {
+    "word_size": 64,
+    "units": [
+      {
+        "file": "cases/recursive.ml",
+        "unit": "Recursive",
+        "types": [
+          {
+            "name": "node",
+            "params": "",
+            "keyword": "type",
+            "line": 1,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 0,
+              "size": 2,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "v",
+                  "type": "int",
+                  "mutable": false,
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
+                  "range": {"line": 1, "column": 14, "end_line": 1, "end_column": 22}
+                },
+                {
+                  "kind": "label",
+                  "name": "next",
+                  "type": "node option",
+                  "mutable": true,
+                  "word": {
+                    "kind": "any",
+                    "why": "option"
+                  },
+                  "owns": {
+                    "words": [0, 2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": true
+                  },
+                  "range": {"line": 1, "column": 23, "end_line": 1, "end_column": 49}
+                }
+              ],
+              "cost": {
+                "words": [3, 5],
+                "range": false,
+                "not_counted": [],
+                "nodes": true
+              }
+            },
+            "notes": [],
+            "range": {"line": 1, "column": 0, "end_line": 1, "end_column": 51}
+          },
+          {
+            "name": "cell",
+            "params": "",
+            "keyword": "type",
+            "line": 2,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "Nil",
+                "shape": {
+                  "kind": "immediate",
+                  "value": 0,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
+                },
+                "notes": [],
+                "range": {"line": 2, "column": 12, "end_line": 2, "end_column": 15}
+              },
+              {
+                "name": "Cons",
+                "shape": {
+                  "kind": "block",
+                  "tag": 0,
+                  "size": 2,
+                  "fields": [
+                    {
+                      "kind": "label",
+                      "name": "v",
+                      "type": "int",
+                      "mutable": false,
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
+                      "range": {"line": 2, "column": 28, "end_line": 2, "end_column": 36}
+                    },
+                    {
+                      "kind": "label",
+                      "name": "next",
+                      "type": "cell",
+                      "mutable": true,
+                      "word": {
+                        "kind": "any",
+                        "why": "cell"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": true
+                      },
+                      "range": {"line": 2, "column": 37, "end_line": 2, "end_column": 56}
+                    }
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": true
+                  }
+                },
+                "notes": [],
+                "range": {"line": 2, "column": 16, "end_line": 2, "end_column": 58}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 2, "column": 0, "end_line": 2, "end_column": 58}
+          },
+          {
+            "name": "expr",
+            "params": "",
+            "keyword": "type",
+            "line": 3,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "Num",
+                "shape": {
+                  "kind": "block",
+                  "tag": 0,
+                  "size": 1,
+                  "fields": [
+                    {
+                      "kind": "arg",
+                      "type": "float",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": 253,
+                        "what": "boxed float"
+                      },
+                      "owns": {
+                        "words": [2],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
+                      "range": {"line": 3, "column": 19, "end_line": 3, "end_column": 24}
+                    }
+                  ],
+                  "cost": {
+                    "words": [4],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
+                },
+                "notes": [],
+                "range": {"line": 3, "column": 12, "end_line": 3, "end_column": 24}
+              },
+              {
+                "name": "Add",
+                "shape": {
+                  "kind": "block",
+                  "tag": 1,
+                  "size": 2,
+                  "fields": [
+                    {
+                      "kind": "arg",
+                      "type": "expr",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": null,
+                        "what": "expr"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": true
+                      },
+                      "range": {"line": 3, "column": 34, "end_line": 3, "end_column": 38}
+                    },
+                    {
+                      "kind": "arg",
+                      "type": "expr",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": null,
+                        "what": "expr"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": true
+                      },
+                      "range": {"line": 3, "column": 41, "end_line": 3, "end_column": 45}
+                    }
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": true
+                  }
+                },
+                "notes": [],
+                "range": {"line": 3, "column": 25, "end_line": 3, "end_column": 45}
+              },
+              {
+                "name": "Neg",
+                "shape": {
+                  "kind": "block",
+                  "tag": 2,
+                  "size": 1,
+                  "fields": [
+                    {
+                      "kind": "arg",
+                      "type": "expr",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": null,
+                        "what": "expr"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": true
+                      },
+                      "range": {"line": 3, "column": 55, "end_line": 3, "end_column": 59}
+                    }
+                  ],
+                  "cost": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": true
+                  }
+                },
+                "notes": [],
+                "range": {"line": 3, "column": 46, "end_line": 3, "end_column": 59}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 59}
+          },
+          {
+            "name": "forest",
+            "params": "",
+            "keyword": "type",
+            "line": 4,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "Tree",
+                "shape": {
+                  "kind": "block",
+                  "tag": 0,
+                  "size": 2,
+                  "fields": [
+                    {
+                      "kind": "arg",
+                      "type": "int",
+                      "mutable": false,
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
+                      "range": {"line": 4, "column": 22, "end_line": 4, "end_column": 25}
+                    },
+                    {
+                      "kind": "arg",
+                      "type": "forest list",
+                      "mutable": false,
+                      "word": {
+                        "kind": "any",
+                        "why": "list"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [
+                          {
+                            "what": "forest list",
+                            "per_node": {
+                              "words": [3],
+                              "range": false,
+                              "not_counted": [],
+                              "nodes": true
+                            }
+                          }
+                        ],
+                        "nodes": true
+                      },
+                      "range": {"line": 4, "column": 28, "end_line": 4, "end_column": 39}
+                    }
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "forest list",
+                        "per_node": {
+                          "words": [3],
+                          "range": false,
+                          "not_counted": [],
+                          "nodes": true
+                        }
+                      }
+                    ],
+                    "nodes": true
+                  }
+                },
+                "notes": [],
+                "range": {"line": 4, "column": 14, "end_line": 4, "end_column": 39}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 39}
+          },
+          {
+            "name": "even",
+            "params": "",
+            "keyword": "type",
+            "line": 6,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "Zero",
+                "shape": {
+                  "kind": "immediate",
+                  "value": 0,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
+                },
+                "notes": [],
+                "range": {"line": 6, "column": 12, "end_line": 6, "end_column": 16}
+              },
+              {
+                "name": "Succ",
+                "shape": {
+                  "kind": "block",
+                  "tag": 0,
+                  "size": 1,
+                  "fields": [
+                    {
+                      "kind": "arg",
+                      "type": "odd",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": 0,
+                        "what": "record odd"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": true
+                      },
+                      "range": {"line": 6, "column": 27, "end_line": 6, "end_column": 30}
+                    }
+                  ],
+                  "cost": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": true
+                  }
+                },
+                "notes": [],
+                "range": {"line": 6, "column": 17, "end_line": 6, "end_column": 30}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 6, "column": 0, "end_line": 6, "end_column": 30}
+          },
+          {
+            "name": "odd",
+            "params": "",
+            "keyword": "type",
+            "line": 7,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 0,
+              "size": 1,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "pred",
+                  "type": "even",
+                  "mutable": false,
+                  "word": {
+                    "kind": "any",
+                    "why": "even"
+                  },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": true
+                  },
+                  "range": {"line": 7, "column": 12, "end_line": 7, "end_column": 23}
+                }
+              ],
+              "cost": {
+                "words": [2],
+                "range": false,
+                "not_counted": [],
+                "nodes": true
+              }
+            },
+            "notes": [],
+            "range": {"line": 7, "column": 0, "end_line": 7, "end_column": 25}
+          },
+          {
+            "name": "seq",
+            "params": "'a",
+            "keyword": "type",
+            "line": 9,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "Seq",
+                "shape": {
+                  "kind": "unboxed",
+                  "field": {
+                    "kind": "arg",
+                    "type": "('a * 'a seq) option",
+                    "mutable": false,
+                    "word": {
+                      "kind": "any",
+                      "why": "option"
+                    },
+                    "owns": {
+                      "words": [0, 5],
+                      "range": false,
+                      "not_counted": [
+                        {
+                          "what": "'a",
+                          "per_node": null
+                        }
+                      ],
+                      "nodes": true
+                    },
+                    "range": {"line": 9, "column": 21, "end_line": 9, "end_column": 41}
+                  },
+                  "cost": {
+                    "words": [0, 5],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "'a",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": true
+                  }
+                },
+                "notes": [],
+                "range": {"line": 9, "column": 14, "end_line": 9, "end_column": 41}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 9, "column": 0, "end_line": 9, "end_column": 53}
+          },
+          {
+            "name": "json",
+            "params": "",
+            "keyword": "type",
+            "line": 10,
+            "kind": "polymorphic_variant",
+            "closed": true,
+            "cases": [
+              {
+                "name": "`Num",
+                "shape": {
+                  "kind": "block",
+                  "tag": 0,
+                  "size": 2,
+                  "fields": [
+                    {
+                      "kind": "hash",
+                      "hash": 3905062,
+                      "type": "int",
+                      "mutable": false,
+                      "word": {
+                        "kind": "immediate",
+                        "why": "label hash"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
+                      "range": null
+                    },
+                    {
+                      "kind": "arg",
+                      "type": "float",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": 253,
+                        "what": "boxed float"
+                      },
+                      "owns": {
+                        "words": [2],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
+                      "range": null
+                    }
+                  ],
+                  "cost": {
+                    "words": [5],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
+                },
+                "notes": [],
+                "range": {"line": 10, "column": 22, "end_line": 10, "end_column": 35}
+              },
+              {
+                "name": "`List",
+                "shape": {
+                  "kind": "block",
+                  "tag": 0,
+                  "size": 2,
+                  "fields": [
+                    {
+                      "kind": "hash",
+                      "hash": 848054398,
+                      "type": "int",
+                      "mutable": false,
+                      "word": {
+                        "kind": "immediate",
+                        "why": "label hash"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
+                      "range": null
+                    },
+                    {
+                      "kind": "arg",
+                      "type": "json list",
+                      "mutable": false,
+                      "word": {
+                        "kind": "any",
+                        "why": "list"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [
+                          {
+                            "what": "json list",
+                            "per_node": {
+                              "words": [3],
+                              "range": false,
+                              "not_counted": [],
+                              "nodes": true
+                            }
+                          }
+                        ],
+                        "nodes": true
+                      },
+                      "range": null
+                    }
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "json list",
+                        "per_node": {
+                          "words": [3],
+                          "range": false,
+                          "not_counted": [],
+                          "nodes": true
+                        }
+                      }
+                    ],
+                    "nodes": true
+                  }
+                },
+                "notes": [],
+                "range": {"line": 10, "column": 38, "end_line": 10, "end_column": 56}
+              },
+              {
+                "name": "`Null",
+                "shape": {
+                  "kind": "immediate",
+                  "value": 870828711,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
+                },
+                "notes": [],
+                "range": {"line": 10, "column": 14, "end_line": 10, "end_column": 19}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 10, "column": 0, "end_line": 10, "end_column": 58}
+          },
+          {
+            "name": "owned",
+            "params": "",
+            "keyword": "type",
+            "line": 12,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 0,
+              "size": 4,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "xs",
+                  "type": "float list",
+                  "mutable": false,
+                  "word": {
+                    "kind": "any",
+                    "why": "list"
+                  },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "float list",
+                        "per_node": {
+                          "words": [5],
+                          "range": false,
+                          "not_counted": [],
+                          "nodes": true
+                        }
+                      }
+                    ],
+                    "nodes": false
+                  },
+                  "range": {"line": 13, "column": 2, "end_line": 13, "end_column": 18}
+                },
+                {
+                  "kind": "label",
+                  "name": "pt",
+                  "type": "(float * float) option",
+                  "mutable": false,
+                  "word": {
+                    "kind": "any",
+                    "why": "option"
+                  },
+                  "owns": {
+                    "words": [0, 9],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
+                  "range": {"line": 14, "column": 2, "end_line": 14, "end_column": 30}
+                },
+                {
+                  "kind": "label",
+                  "name": "big",
+                  "type": "int64",
+                  "mutable": false,
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 255,
+                    "what": "custom block"
+                  },
+                  "owns": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
+                  "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 14}
+                },
+                {
+                  "kind": "label",
+                  "name": "name",
+                  "type": "string",
+                  "mutable": false,
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 252,
+                    "what": "string"
+                  },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "string",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
+                  "range": {"line": 16, "column": 2, "end_line": 16, "end_column": 16}
+                }
+              ],
+              "cost": {
+                "words": [8, 17],
+                "range": false,
+                "not_counted": [
+                  {
+                    "what": "float list",
+                    "per_node": {
+                      "words": [5],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": true
+                    }
+                  },
+                  {
+                    "what": "string",
+                    "per_node": null
+                  }
+                ],
+                "nodes": false
+              }
+            },
+            "notes": [],
+            "range": {"line": 12, "column": 0, "end_line": 17, "end_column": 1}
+          }
+        ],
+        "packages": [],
+        "labels": [
+          {
+            "label": "Null",
+            "hash": 870828711,
+            "file": "cases/recursive.ml",
+            "line": 10
+          },
+          {
+            "label": "Num",
+            "hash": 3905062,
+            "file": "cases/recursive.ml",
+            "line": 10
+          },
+          {
+            "label": "List",
+            "hash": 848054398,
+            "file": "cases/recursive.ml",
+            "line": 10
+          }
+        ]
       }
     ],
     "collisions": []
@@ -1416,7 +2781,13 @@
                 "name": "Point",
                 "shape": {
                   "kind": "immediate",
-                  "value": 0
+                  "value": 0,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 2, "column": 13, "end_line": 2, "end_column": 18}
@@ -1437,9 +2808,21 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
+                      "owns": {
+                        "words": [2],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 2, "column": 31, "end_line": 2, "end_column": 36}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [4],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 2, "column": 19, "end_line": 2, "end_column": 36}
@@ -1461,6 +2844,12 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
+                      "owns": {
+                        "words": [2],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 2, "column": 49, "end_line": 2, "end_column": 59}
                     },
                     {
@@ -1473,9 +2862,21 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
+                      "owns": {
+                        "words": [2],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 2, "column": 60, "end_line": 2, "end_column": 69}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [7],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [
                   "inline record: all fields are float, but inline records are never stored flat"
@@ -1497,7 +2898,13 @@
                 "name": "Red",
                 "shape": {
                   "kind": "immediate",
-                  "value": 0
+                  "value": 0,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 3, "column": 14, "end_line": 3, "end_column": 17}
@@ -1506,7 +2913,13 @@
                 "name": "Green",
                 "shape": {
                   "kind": "immediate",
-                  "value": 1
+                  "value": 1,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 3, "column": 18, "end_line": 3, "end_column": 25}
@@ -1515,7 +2928,13 @@
                 "name": "Blue",
                 "shape": {
                   "kind": "immediate",
-                  "value": 2
+                  "value": 2,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 3, "column": 26, "end_line": 3, "end_column": 32}
@@ -1544,6 +2963,12 @@
                   "word": {
                     "kind": "double"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 4, "column": 13, "end_line": 4, "end_column": 23}
                 },
                 {
@@ -1553,6 +2978,12 @@
                   "mutable": false,
                   "word": {
                     "kind": "double"
+                  },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
                   },
                   "range": {"line": 4, "column": 24, "end_line": 4, "end_column": 34}
                 },
@@ -1564,9 +2995,21 @@
                   "word": {
                     "kind": "double"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 4, "column": 35, "end_line": 4, "end_column": 44}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [4],
+                "range": false,
+                "not_counted": [],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 46}
@@ -1590,7 +3033,19 @@
                       "kind": "immediate",
                       "why": "int"
                     },
+                    "owns": {
+                      "words": [0],
+                      "range": false,
+                      "not_counted": [],
+                      "nodes": false
+                    },
                     "range": {"line": 5, "column": 16, "end_line": 5, "end_column": 19}
+                  },
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
                   }
                 },
                 "notes": [],
@@ -1636,6 +3091,17 @@
                     "tag": 247,
                     "what": "closure"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "closure",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
                   "range": {"line": 16, "column": 17, "end_line": 16, "end_column": 36}
                 },
                 {
@@ -1648,9 +3114,35 @@
                     "tag": 247,
                     "what": "closure"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "closure",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
                   "range": {"line": 16, "column": 37, "end_line": 16, "end_column": 57}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [3],
+                "range": false,
+                "not_counted": [
+                  {
+                    "what": "closure",
+                    "per_node": null
+                  },
+                  {
+                    "what": "closure",
+                    "per_node": null
+                  }
+                ],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 16, "column": 0, "end_line": 16, "end_column": 59}
@@ -1681,7 +3173,13 @@
                 "name": "A",
                 "shape": {
                   "kind": "immediate",
-                  "value": 0
+                  "value": 0,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 1, "column": 9, "end_line": 1, "end_column": 10}
@@ -1701,9 +3199,21 @@
                         "kind": "immediate",
                         "why": "int"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 1, "column": 18, "end_line": 1, "end_column": 21}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 1, "column": 11, "end_line": 1, "end_column": 21}
@@ -1712,7 +3222,13 @@
                 "name": "C",
                 "shape": {
                   "kind": "immediate",
-                  "value": 1
+                  "value": 1,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 1, "column": 22, "end_line": 1, "end_column": 25}
@@ -1733,9 +3249,31 @@
                         "tag": 252,
                         "what": "string"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [
+                          {
+                            "what": "string",
+                            "per_node": null
+                          }
+                        ],
+                        "nodes": false
+                      },
                       "range": {"line": 1, "column": 33, "end_line": 1, "end_column": 39}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "string",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 1, "column": 26, "end_line": 1, "end_column": 39}
@@ -1767,9 +3305,21 @@
                         "tag": 0,
                         "what": "tuple"
                       },
+                      "owns": {
+                        "words": [3],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 2, "column": 20, "end_line": 2, "end_column": 29}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [5],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 2, "column": 14, "end_line": 2, "end_column": 30}
@@ -1789,6 +3339,12 @@
                         "kind": "immediate",
                         "why": "int"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 2, "column": 39, "end_line": 2, "end_column": 42}
                     },
                     {
@@ -1799,9 +3355,21 @@
                         "kind": "immediate",
                         "why": "int"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 2, "column": 45, "end_line": 2, "end_column": 48}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 2, "column": 31, "end_line": 2, "end_column": 48}
@@ -1821,7 +3389,13 @@
                 "name": "Leaf",
                 "shape": {
                   "kind": "immediate",
-                  "value": 0
+                  "value": 0,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 3, "column": 15, "end_line": 3, "end_column": 19}
@@ -1841,6 +3415,12 @@
                         "kind": "any",
                         "why": "tree"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": true
+                      },
                       "range": {"line": 3, "column": 30, "end_line": 3, "end_column": 37}
                     },
                     {
@@ -1850,6 +3430,17 @@
                       "word": {
                         "kind": "any",
                         "why": "type variable 'a"
+                      },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [
+                          {
+                            "what": "'a",
+                            "per_node": null
+                          }
+                        ],
+                        "nodes": false
                       },
                       "range": {"line": 3, "column": 40, "end_line": 3, "end_column": 42}
                     },
@@ -1861,9 +3452,26 @@
                         "kind": "any",
                         "why": "tree"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": true
+                      },
                       "range": {"line": 3, "column": 45, "end_line": 3, "end_column": 52}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [4],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "'a",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": true
+                  }
                 },
                 "notes": [],
                 "range": {"line": 3, "column": 20, "end_line": 3, "end_column": 52}
@@ -1904,9 +3512,21 @@
                         "kind": "immediate",
                         "why": "int"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 7, "column": 10, "end_line": 7, "end_column": 13}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 7, "column": 2, "end_line": 7, "end_column": 25}
@@ -1926,9 +3546,21 @@
                         "kind": "immediate",
                         "why": "bool"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [],
+                        "nodes": false
+                      },
                       "range": {"line": 8, "column": 11, "end_line": 8, "end_column": 15}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [2],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 8, "column": 2, "end_line": 8, "end_column": 28}
@@ -1948,6 +3580,17 @@
                         "kind": "any",
                         "why": "type variable 'a"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [
+                          {
+                            "what": "'a",
+                            "per_node": null
+                          }
+                        ],
+                        "nodes": false
+                      },
                       "range": {"line": 9, "column": 11, "end_line": 9, "end_column": 13}
                     },
                     {
@@ -1959,9 +3602,35 @@
                         "tag": 247,
                         "what": "closure"
                       },
+                      "owns": {
+                        "words": [0],
+                        "range": false,
+                        "not_counted": [
+                          {
+                            "what": "closure",
+                            "per_node": null
+                          }
+                        ],
+                        "nodes": false
+                      },
                       "range": {"line": 9, "column": 17, "end_line": 9, "end_column": 29}
                     }
-                  ]
+                  ],
+                  "cost": {
+                    "words": [3],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "'a",
+                        "per_node": null
+                      },
+                      {
+                        "what": "closure",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  }
                 },
                 "notes": [
                   "existential 'a: stored as uniform values"
@@ -1972,7 +3641,13 @@
                 "name": "Unit",
                 "shape": {
                   "kind": "immediate",
-                  "value": 0
+                  "value": 0,
+                  "cost": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  }
                 },
                 "notes": [],
                 "range": {"line": 10, "column": 2, "end_line": 10, "end_column": 20}
@@ -2057,6 +3732,12 @@
                   "word": {
                     "kind": "double"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 5, "column": 21, "end_line": 5, "end_column": 31}
                 },
                 {
@@ -2067,9 +3748,21 @@
                   "word": {
                     "kind": "double"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 5, "column": 32, "end_line": 5, "end_column": 41}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [3],
+                "range": false,
+                "not_counted": [],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 43}
@@ -2094,6 +3787,17 @@
                     "kind": "any",
                     "why": "abstract type t"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [
+                      {
+                        "what": "abstract type t",
+                        "per_node": null
+                      }
+                    ],
+                    "nodes": false
+                  },
                   "range": {"line": 6, "column": 14, "end_line": 6, "end_column": 20}
                 },
                 {
@@ -2105,9 +3809,26 @@
                     "kind": "immediate",
                     "why": "small [@@immediate]"
                   },
+                  "owns": {
+                    "words": [0],
+                    "range": false,
+                    "not_counted": [],
+                    "nodes": false
+                  },
                   "range": {"line": 6, "column": 21, "end_line": 6, "end_column": 30}
                 }
-              ]
+              ],
+              "cost": {
+                "words": [3],
+                "range": false,
+                "not_counted": [
+                  {
+                    "what": "abstract type t",
+                    "per_node": null
+                  }
+                ],
+                "nodes": false
+              }
             },
             "notes": [],
             "range": {"line": 6, "column": 0, "end_line": 6, "end_column": 32}

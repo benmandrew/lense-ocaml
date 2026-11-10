@@ -15,6 +15,9 @@ type ctx = {
   src : string option;  (** Source text, for spelling types as written. *)
   prefix : string;  (** "A.B." inside module B of module A. *)
   own : string;  (** The file locations name for the unit's source. *)
+  group : Path.t list;
+      (** The recursive group of the types being read, whose values are counted
+          node by node. *)
 }
 
 (* The file the unit's own locations name, read from its first item. *)
@@ -88,6 +91,7 @@ let field ?(fkind = M.Arg) ?(mutable_ = false) ?loc ~env ctx (ct : T.core_type)
     ty = spell ctx ct;
     mutable_;
     word = Word.word env ct.ctyp_type;
+    owns = Cost.owns ~group:ctx.group env ct.ctyp_type;
     frange = range ctx (Option.value loc ~default:ct.ctyp_loc);
   }
 
@@ -145,6 +149,7 @@ let slot_field name =
     ty = "extension slot";
     mutable_ = false;
     word = M.Pointer { tag = Some M.object_tag; what = "extension slot" };
+    owns = M.zero;
     frange = None;
   }
 
@@ -152,7 +157,7 @@ let constructor_shape ~env ~args name desc fields =
   Compat.constructor_shape ~word ~env ~tys:(arg_types args)
     ~slot:(slot_field name) desc fields
 
-let poly_cases ?(where = fun _ -> None) env row : M.case list =
+let poly_cases ?(where = fun _ -> None) ?(group = []) env row : M.case list =
   List.filter_map
     (fun (label, f) ->
       let hash = Btype.hash_variant label in
@@ -164,6 +169,7 @@ let poly_cases ?(where = fun _ -> None) env row : M.case list =
             ty = print_type ty;
             mutable_ = false;
             word = Word.word env ty;
+            owns = Cost.owns ~group env ty;
             frange = None;
           }
         in
@@ -173,6 +179,7 @@ let poly_cases ?(where = fun _ -> None) env row : M.case list =
             ty = "int";
             mutable_ = false;
             word = M.Immediate "label hash";
+            owns = M.zero;
             frange = None;
           }
         in
@@ -259,7 +266,7 @@ let type_decl ~env ctx (td : T.type_declaration) : M.decl =
                     in
                     Polyvariant
                       {
-                        cases = poly_cases ~where env row;
+                        cases = poly_cases ~where ~group:ctx.group env row;
                         closed = Word.row_counts row <> None;
                       }
                 | _ -> Alias (Word.word env ty))
@@ -398,6 +405,9 @@ let slots ctx env (sg : signature) =
 
 type acc = { mutable decls : M.decl list }
 
+let group tds =
+  List.map (fun (td : T.type_declaration) -> Path.Pident td.typ_id) tds
+
 (* Declarations inside modules are named by their path, such as [A.B.t]. *)
 let rec structure acc ctx (str : T.structure) =
   let env = !rebuild_env str.str_final_env in
@@ -406,6 +416,7 @@ let rec structure acc ctx (str : T.structure) =
 and structure_item acc ctx ~env (item : T.structure_item) =
   match item.str_desc with
   | Tstr_type (_, tds) ->
+      let ctx = { ctx with group = group tds } in
       List.iter (fun td -> acc.decls <- type_decl ~env ctx td :: acc.decls) tds
   | Tstr_typext te ->
       List.iter
@@ -438,6 +449,7 @@ let rec signature acc ctx (sg : T.signature) =
     (fun (item : T.signature_item) ->
       match item.sig_desc with
       | Tsig_type (_, tds) ->
+          let ctx = { ctx with group = group tds } in
           List.iter
             (fun td -> acc.decls <- type_decl ~env ctx td :: acc.decls)
             tds
@@ -551,7 +563,7 @@ let analyze ~file ~unit_name ~src input : M.compunit =
     | Impl str -> structure_file str
     | Intf sg -> signature_file sg
   in
-  let ctx = { src; prefix = ""; own } in
+  let ctx = { src; prefix = ""; own; group = [] } in
   let iter_with =
     match input with
     | Impl str ->

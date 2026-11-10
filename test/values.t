@@ -6,6 +6,8 @@ one to show, native code by default.
   type counter  block, tag 0, size 2
       0  next : unit -> int    pointer to closure, Closure_tag 247
       1  reset : unit -> unit  pointer to closure, Closure_tag 247
+      cost: 3 words per value, with headers
+      not counted: next (closure), reset (closure)
   
   closures in native code (Closure, without flambda)
     succ  line 3  Closure_tag 247, size 2, arity 1, no environment

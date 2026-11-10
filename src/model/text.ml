@@ -141,6 +141,77 @@ let mixed b ~indent (fields : field list) (slots : mixed_slot list) =
      in declaration order\n"
     margin
 
+let words_text (c : cost) =
+  match c.words with
+  | [ n ] -> plural n "word" "words"
+  | _ when c.range -> Printf.sprintf "%d to %d words" (least c) (greatest c)
+  | ws -> (
+      match List.rev_map string_of_int ws with
+      | last :: rest ->
+          String.concat ", " (List.rev rest) ^ " or " ^ last ^ " words"
+      | [] -> "no words")
+
+let rec part_text p =
+  match p.per_node with
+  | None -> p.what
+  | Some (c : cost) ->
+      p.what ^ ": " ^ words_text c ^ " per node"
+      ^
+      if c.uncounted = [] then ""
+      else
+        ", not counting " ^ String.concat ", " (List.map part_text c.uncounted)
+
+(* Whether a value of one of these cases can hold further nodes: then each
+   case, a leaf too, is a node. *)
+let recursive (cs : case list) =
+  List.exists
+    (fun c -> match shape_cost c.shape with Some k -> k.nodes | None -> false)
+    cs
+
+(* The words one value takes, and what the count leaves out, by field. *)
+let cost b ~indent ?(node = false) shape =
+  match shape_cost shape with
+  | None -> ()
+  | Some _ when match shape with Constant _ -> true | _ -> false -> ()
+  | Some c when c.words = [ 0 ] && c.uncounted = [] && not c.nodes ->
+      Printf.bprintf b "%scost: 0 words, no blocks\n" (String.make indent ' ')
+  | Some (c : cost) ->
+      let margin = String.make indent ' ' in
+      let mixed = match shape with Mixed _ -> true | _ -> false in
+      Printf.bprintf b "%scost: %s per %s, with headers%s\n" margin
+        (words_text c)
+        (if node || c.nodes then "node" else "value")
+        (if mixed then ", in native code" else "");
+      let fields =
+        match shape with
+        | Block { fields; _ } | Flat_float fields | Mixed { fields; _ } ->
+            fields
+        | Unboxed f -> [ f ]
+        | _ -> []
+      in
+      let parts =
+        List.concat
+          (List.mapi
+             (fun i f ->
+               if f.owns.uncounted = [] then []
+               else
+                 let name =
+                   match (f.fkind, shape) with
+                   | Label l, _ -> l
+                   | _, Unboxed _ -> "the field"
+                   | _, Mixed _ -> "arg " ^ string_of_int i
+                   | _ -> "field " ^ string_of_int i
+                 in
+                 [
+                   name ^ " ("
+                   ^ String.concat ", " (List.map part_text f.owns.uncounted)
+                   ^ ")";
+                 ])
+             fields)
+      in
+      if parts <> [] then
+        Printf.bprintf b "%snot counted: %s\n" margin (String.concat ", " parts)
+
 let shape_rows b ~indent = function
   | Block { fields; _ } | Flat_float fields -> rows b ~indent fields
   | Unboxed f -> rows b ~indent ~index:false [ f ]
@@ -154,6 +225,7 @@ let notes b ~indent ns =
     ns
 
 let cases b (cases : case list) =
+  let node = recursive cases in
   let w =
     List.fold_left (fun w (c : case) -> max w (String.length c.name)) 0 cases
   in
@@ -162,6 +234,7 @@ let cases b (cases : case list) =
       link b [ c.case_range ];
       Printf.bprintf b "  %s  %s\n" (pad w c.name) (shape_summary c.shape);
       shape_rows b ~indent:(w + 6) c.shape;
+      cost b ~indent:(w + 6) ~node c.shape;
       notes b ~indent:(w + 6) c.notes)
     cases
 
@@ -181,7 +254,8 @@ let decl ?(source = false) b (d : decl) =
   (match d.kind with
   | Record shape ->
       Printf.bprintf b "%s  %s\n" head (shape_summary shape);
-      shape_rows b ~indent:4 shape
+      shape_rows b ~indent:4 shape;
+      cost b ~indent:4 shape
   | Variant cs ->
       Printf.bprintf b "%s  %s\n" head (variant_summary cs);
       cases b cs
@@ -192,6 +266,7 @@ let decl ?(source = false) b (d : decl) =
   | Extension c ->
       Printf.bprintf b "%s  %s\n" head (shape_summary c.shape);
       shape_rows b ~indent:4 c.shape;
+      cost b ~indent:4 c.shape;
       notes b ~indent:4 c.notes
   | Alias w -> Printf.bprintf b "%s  abbreviation: %s\n" head (word w)
   | Abstract w -> Printf.bprintf b "%s  abstract: %s\n" head (word w)

@@ -33,6 +33,8 @@ program, so they are left out.
   type entry  block, tag 0, size 2
       0  key : int                           immediate (int)
       1  ops : (module S with type t = int)  pointer to first-class module
+      cost: 3 words per value, with headers
+      not counted: ops (first-class module)
   
   exception Ints.E  extension slot: block, Object_tag 248, size 2 (name, unique id)
   

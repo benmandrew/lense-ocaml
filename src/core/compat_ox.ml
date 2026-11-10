@@ -246,6 +246,20 @@ let mixed ~word ~env ~tys ~tag (shape : Types.mixed_product_shape)
     Array.to_list
       (Array.mapi slot (Mixed_block_shape.flattened_reordered_shape t))
   in
+  (* A field stored only as flat data, such as a float in a record of floats
+     and float#, owns no block in native code. *)
+  let fields =
+    List.mapi
+      (fun i (f : M.field) ->
+        if
+          List.for_all
+            (fun (s : M.mixed_slot) ->
+              s.field <> i || match s.mword with M.Flat _ -> true | _ -> false)
+            slots
+        then { f with owns = M.zero }
+        else f)
+      fields
+  in
   Mixed { tag; fields; scanned = Mixed_block_shape.value_prefix_len t; slots }
 
 (* The shape of a record declaration, or None for other kinds. [field] turns
@@ -259,7 +273,8 @@ let record_shape ~word ~env decl (kind : T.type_kind) ~field : M.shape option =
           Some
             (Flat_float
                (List.map
-                  (fun (f : M.field) -> { f with word = M.Double })
+                  (fun (f : M.field) ->
+                    { f with word = M.Double; owns = M.zero })
                   fields))
       | Record_unboxed ->
           Some
@@ -395,3 +410,83 @@ let closure_backends ~modname str =
       "ocamlc without -g",
       try Some (closure_sets (bytecode_lambda ~modname str)) with _ -> None );
   ]
+
+(* Counting words *)
+
+let tuple_types ty =
+  match get_desc ty with Ttuple l -> List.map snd l | _ -> []
+
+let unboxed_tuple_types ty =
+  match get_desc ty with Tunboxed_tuple l -> List.map snd l | _ -> []
+
+(* The words of a value of a predefined type that only one compiler has. *)
+let predef_cost p : M.cost option =
+  if Path.same p Predef.path_int8 || Path.same p Predef.path_int16 then
+    Some M.zero
+  else if Path.same p Predef.path_float32 then
+    (* A custom block: the operations pointer and one word of data. *)
+    Some (M.fixed 3)
+  else None
+
+(* How a declaration lays out its values, for counting the words one takes.
+   Field types are as declared, before applying the type's arguments. *)
+type layout =
+  | No_block of type_expr list
+      (** The value is these, with no block: [@@unboxed], or the fields of an
+          unboxed record. *)
+  | Blocks of type_expr list option list
+      (** One per constructor: None when constant, or the fields of its block. A
+          record is one constructor. *)
+  | Flat of int  (** A flat float block of this many fields. *)
+  | Not_counted of string
+
+let layout env p args decl =
+  let fields lds = List.map (fun (ld : label_declaration) -> ld.ld_type) lds in
+  match decl.type_kind with
+  | Type_variant
+      ( [ { cd_args = Cstr_tuple [ { ca_type = arg; _ } ]; _ } ],
+        Variant_unboxed,
+        _ )
+  | Type_variant
+      ( [ { cd_args = Cstr_record [ { ld_type = arg; _ } ]; _ } ],
+        Variant_unboxed,
+        _ )
+  | Type_record ([ { ld_type = arg; _ } ], Record_unboxed, _) ->
+      No_block [ arg ]
+  | Type_variant (_, Variant_boxed reprs, _)
+    when Array.exists
+           (function Constructor_mixed _, _ -> true | _ -> false)
+           reprs ->
+      Not_counted ("mixed block " ^ Path.name p)
+  | Type_variant (cds, _, _) ->
+      Blocks
+        (List.map
+           (fun cd ->
+             match cd.cd_args with
+             | Cstr_tuple [] -> None
+             | Cstr_tuple cas ->
+                 Some
+                   (List.map
+                      (fun (ca : constructor_argument) -> ca.ca_type)
+                      cas)
+             | Cstr_record lds -> Some (fields lds))
+           cds)
+  | Type_record (lds, (Record_float | Record_ufloat), _) ->
+      Flat (List.length lds)
+  | Type_record (_, Record_mixed _, _) ->
+      Not_counted ("mixed block " ^ Path.name p)
+  | Type_record (lds, _, _) -> Blocks [ Some (fields lds) ]
+  | Type_record_unboxed_product (lds, _, _) -> No_block (fields lds)
+  | Type_open -> Not_counted ("extensible variant " ^ Path.name p)
+  | Type_abstract _ -> (
+      match decl_view env p args decl with
+      | Immediate _ -> Blocks [ None ]
+      | _ -> Not_counted ("abstract type " ^ Path.name p))
+
+(* A flat scalar, which owns no block: a layout other than value that is not
+   a product. An unboxed product is counted by its parts. *)
+let flat_scalar env ty =
+  match Jkind.get_layout (Ctype.type_jkind env ty) with
+  | Some (Product _) -> false
+  | _ -> Option.is_some (flat_word env ty)
+  | exception _ -> false

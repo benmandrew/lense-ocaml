@@ -385,7 +385,9 @@ let objects ctx (str : T.structure) : M.obj list =
   List.sort (fun (a : M.obj) b -> compare a.oline b.oline) (List.rev !acc)
 
 let values ~modname ~src (str : T.structure) : M.values =
-  let ctx = { Analyze.src; prefix = ""; own = Analyze.structure_file str } in
+  let ctx =
+    { Analyze.src; prefix = ""; own = Analyze.structure_file str; group = [] }
+  in
   {
     backends = closures ctx ~modname str;
     lazies = lazies ctx str;

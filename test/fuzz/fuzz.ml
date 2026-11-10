@@ -31,6 +31,9 @@ let base =
     ("nativeint", "5n");
     ("int list", "[1]");
     ("int list", "[]");
+    ("float list", "[1.5; 2.5]");
+    ("(int * float) list", "[(1, 2.5)]");
+    ("int option list", "[Some 1; None]");
     ("int option", "(Some 1)");
     ("int option", "None");
     ("int * string", "(1, \"a\")");
@@ -48,19 +51,33 @@ let base =
   ]
   |> List.map (fun (ty, expr) -> { ty; expr })
 
+(* The nodes of each list sample, for checking the words per node. *)
+let list_nodes =
+  [
+    ("[1]", 1);
+    ("[]", 0);
+    ("[1.5; 2.5]", 2);
+    ("[(1, 2.5)]", 1);
+    ("[Some 1; None]", 2);
+  ]
+
 let prelude =
   "type fl = float\ntype fstr = { fa : float; fb : float }\ntype ext = ..\n"
 
 (* One value to check: its expression, the expressions of the fields it
    was built from in block order, and a way to rebuild it from other field
-   expressions. *)
+   expressions. [vsubs] are the further nodes of a recursive type that it
+   holds, each with the index in [vfields] of the field that holds it. *)
 type value = {
   vexpr : string;
   vfields : string list;
   vmake : string list -> string;
+  vsubs : (int * string) list;
 }
 
-let value make fields = { vexpr = make fields; vfields = fields; vmake = make }
+let value make fields =
+  { vexpr = make fields; vfields = fields; vmake = make; vsubs = [] }
+
 let constant e = value (fun _ -> e) []
 
 (* OxCaml: a field of a mixed block, as a leaf or an unboxed tuple of
@@ -187,7 +204,10 @@ let rec tree_ty = function
   | Leaf l -> if l.bits = None then "(" ^ l.lty ^ ")" else l.lty
   | Prod ts -> "#(" ^ String.concat " * " (List.map tree_ty ts) ^ ")"
 
+(* Value leaves go through [cp], a copy that shares nothing: OxCaml cannot
+   marshal a mixed block to undo the constants that native code shares. *)
 let rec tree_expr = function
+  | Leaf l when l.bits = None || l.lty = "float" -> "(cp " ^ l.lexpr ^ ")"
   | Leaf l -> l.lexpr
   | Prod ts -> "#(" ^ String.concat ", " (List.map tree_expr ts) ^ ")"
 
@@ -220,6 +240,13 @@ let line s =
 let fresh s prefix =
   s.n <- s.n + 1;
   prefix ^ string_of_int s.n
+
+let contains s sub =
+  let n = String.length sub in
+  let rec go i =
+    i + n <= String.length s && (String.sub s i n = sub || go (i + 1))
+  in
+  go 0
 
 let field_sample s = pick (if s.pool <> [] && chance 0.3 then s.pool else base)
 
@@ -413,6 +440,7 @@ let gen_exn s =
         vexpr = rename tv.vexpr;
         vfields = [ tv.vexpr ];
         vmake = (fun es -> rename (tv.vmake es));
+        vsubs = [];
       })
   else
     let a = if chance 0.4 then None else Some (args s) in
@@ -469,6 +497,7 @@ let gen_mixed s =
             (fun (_, _, t) -> match t with Leaf l -> l.boxed | Prod _ -> "()")
             fs;
         vmake = make;
+        vsubs = [];
       }
     in
     add_value s name "" v;
@@ -521,6 +550,129 @@ let gen_mixed s =
                  ^ " }"));
             Hashtbl.replace s.trees (name, c) (List.map snd fs))
       cases
+
+(* A recursive type: a list, a record linked through an option, a binary
+   tree, or two types that point to each other. Each value holds its further
+   nodes in [vsubs], so the oracle can count each node on its own. *)
+let gen_recursive s =
+  (* The empty array is one shared atom, which reachable_words counts once in
+     a value but once again in each node subtracted from it. *)
+  let rec field_sample s =
+    let x = pick (if s.pool <> [] && chance 0.3 then s.pool else base) in
+    if contains x.expr "[||]" then field_sample s else x
+  in
+  let paren x = "(" ^ x.ty ^ ")" in
+  let tuple es = "(" ^ String.concat ", " es ^ ")" in
+  let samples () = List.init (1 + rand 2) (fun _ -> field_sample s) in
+  let pool name v =
+    s.pool <- { ty = name; expr = "(" ^ v.vexpr ^ ")" } :: s.pool
+  in
+  match rand 4 with
+  | 0 ->
+      let name = fresh s "rl" in
+      let nil = fresh s "Nil" and cons = fresh s "Cons" in
+      let xs = samples () in
+      let n = List.length xs in
+      let make =
+        if chance 0.4 then (
+          let ls = List.map (fun _ -> fresh s "l") xs in
+          Printf.bprintf s.decls
+            "type %s = %s | %s of { %s; mutable next : %s }\n" name nil cons
+            (String.concat "; " (List.map2 (fun l x -> l ^ " : " ^ x.ty) ls xs))
+            name;
+          fun es ->
+            cons ^ " { "
+            ^ String.concat "; "
+                (List.map2 (fun l e -> l ^ " = " ^ e) (ls @ [ "next" ]) es)
+            ^ " }")
+        else (
+          Printf.bprintf s.decls "type %s = %s | %s of %s * %s\n" name nil cons
+            (String.concat " * " (List.map paren xs))
+            name;
+          fun es -> cons ^ " " ^ tuple es)
+      in
+      let es = List.map (fun x -> x.expr) xs in
+      let sub = "(" ^ make (es @ [ nil ]) ^ ")" in
+      let v = { (value make (es @ [ sub ])) with vsubs = [ (n, sub) ] } in
+      add_value s name cons v;
+      add_value s name nil (constant nil);
+      pool name v
+  | 1 ->
+      let name = fresh s "rr" in
+      let fs = List.map (fun x -> (fresh s "f", x)) (samples ()) in
+      let next = fresh s "next" in
+      Printf.bprintf s.decls "type %s = { %s; mutable %s : %s option }\n" name
+        (String.concat "; " (List.map (fun (l, x) -> l ^ " : " ^ x.ty) fs))
+        next name;
+      let make es =
+        "{ "
+        ^ String.concat "; "
+            (List.map2
+               (fun l e -> l ^ " = " ^ e)
+               (List.map fst fs @ [ next ])
+               es)
+        ^ " }"
+      in
+      let es = List.map (fun (_, x) -> x.expr) fs in
+      let leaf = "(" ^ make (es @ [ "None" ]) ^ ")" in
+      let v =
+        if chance 0.3 then value make (es @ [ "None" ])
+        else
+          {
+            (value make (es @ [ "(Some " ^ leaf ^ ")" ])) with
+            vsubs = [ (List.length fs, leaf) ];
+          }
+      in
+      add_value s name "" v;
+      pool name v
+  | 2 ->
+      let name = fresh s "rt" in
+      let leaf = fresh s "Leaf" and node = fresh s "Node" in
+      let x = field_sample s in
+      Printf.bprintf s.decls "type %s = %s | %s of %s * %s * %s\n" name leaf
+        node name (paren x) name;
+      let make es = node ^ " " ^ tuple es in
+      let small = "(" ^ make [ leaf; x.expr; leaf ] ^ ")" in
+      let side () = if chance 0.5 then leaf else small in
+      let l = side () and r = side () in
+      let v =
+        {
+          (value make [ l; x.expr; r ]) with
+          vsubs =
+            List.filter_map
+              (fun (i, e) -> if e = small then Some (i, e) else None)
+              [ (0, l); (2, r) ];
+        }
+      in
+      add_value s name node v;
+      add_value s name leaf (constant leaf);
+      pool name v
+  | _ ->
+      let a = fresh s "ra" and b = fresh s "rb" in
+      let stop = fresh s "Stop" and go = fresh s "Go" in
+      let x = field_sample s and y = field_sample s in
+      let bv = fresh s "bv" and bn = fresh s "bn" in
+      Printf.bprintf s.decls
+        "type %s = %s | %s of %s * %s\nand %s = { %s : %s; %s : %s }\n" a stop
+        go (paren x) b b bv y.ty bn a;
+      let mk_go es = go ^ " " ^ tuple es in
+      let mk_b es =
+        "{ "
+        ^ String.concat "; "
+            (List.map2 (fun l e -> l ^ " = " ^ e) [ bv; bn ] es)
+        ^ " }"
+      in
+      let inner = "(" ^ mk_b [ y.expr; stop ] ^ ")" in
+      let gv =
+        { (value mk_go [ x.expr; inner ]) with vsubs = [ (1, inner) ] }
+      in
+      add_value s a go gv;
+      add_value s a stop (constant stop);
+      let deeper = "(" ^ mk_go [ x.expr; inner ] ^ ")" in
+      add_value s b ""
+        (if chance 0.5 then value mk_b [ y.expr; stop ]
+         else { (value mk_b [ y.expr; deeper ]) with vsubs = [ (1, deeper) ] });
+      pool a gv
 
 (* A module of random items, and a package type of a random subset of
    them in a random order, which the module is packed into. *)
@@ -745,7 +897,8 @@ let program () =
     }
   in
   for _ = 1 to 4 + rand 8 do
-    match rand 15 with
+    match rand 17 with
+    | 15 | 16 -> gen_recursive s
     | (10 | 11 | 12) when ox -> gen_mixed s
     | 10 | 11 | 12 | 13 | 14 -> gen_values s
     | 0 | 1 | 2 -> gen_variant s
@@ -824,8 +977,71 @@ let mixed_checks b ~what ~r ~trees ~tag ~(fields : M.field list) ~scanned
     fields;
   Buffer.add_string b "  end;\n"
 
+(* A check of the words a value takes, by Obj.reachable_words, less those of
+   [subs]: further nodes, or a shared extension slot. *)
+let cost_call what r subs (c : M.cost) =
+  Printf.sprintf "cost %S %s [%s] [%s] %b %b;" what r (String.concat "; " subs)
+    (String.concat "; " (List.map string_of_int c.words))
+    c.range (c.uncounted <> [])
+
+(* The words of [n] nodes, each of cost [c]. *)
+let nodes_cost (c : M.cost) n =
+  M.sum (List.init n (fun _ -> { c with uncounted = []; nodes = false }))
+
+let cost_checks b ~what ~v ~r (shape : M.shape) =
+  let obj e = "(Obj.repr (" ^ e ^ "))" in
+  match M.shape_cost shape with
+  | None | Some { words = [ 0 ]; uncounted = []; _ } -> ()
+  | Some c -> (
+      let slot =
+        match shape with
+        | Block { fields = { fkind = Slot _; _ } :: _; _ }
+        | Mixed { fields = { fkind = Slot _; _ } :: _; _ } ->
+            [ Printf.sprintf "(Obj.field %s 0)" r ]
+        | _ -> []
+      in
+      let subs = slot @ List.map (fun (_, e) -> obj e) v.vsubs in
+      let native = match shape with Mixed _ -> "if native then " | _ -> "" in
+      Printf.bprintf b "  %s%s\n" native (cost_call (what ^ " words") r subs c);
+      match shape with
+      | Block { fields; _ } ->
+          (* Each field against the expression it was built from. *)
+          let k = ref 0 in
+          List.iteri
+            (fun i (f : M.field) ->
+              match f.fkind with
+              | Slot _ | Hash _ -> ()
+              | _ -> (
+                  let j = !k in
+                  incr k;
+                  let fr = Printf.sprintf "(Obj.field %s %d)" r i in
+                  let what = Printf.sprintf "%s field %d words" what i in
+                  let subs =
+                    List.filter_map
+                      (fun (n, e) -> if n = j then Some (obj e) else None)
+                      v.vsubs
+                  in
+                  Printf.bprintf b "  %s\n" (cost_call what fr subs f.owns);
+                  (* A list sample against the words of each of its nodes. *)
+                  match (f.owns, List.nth_opt v.vfields j) with
+                  | ( {
+                        words = [ 0 ];
+                        uncounted = [ { per_node = Some pc; _ } ];
+                        nodes = false;
+                        _;
+                      },
+                      Some e )
+                    when pc.uncounted = [] && List.mem_assoc e list_nodes ->
+                      Printf.bprintf b "  %s\n"
+                        (cost_call (what ^ " per node") fr []
+                           (nodes_cost pc (List.assoc e list_nodes)))
+                  | _ -> ()))
+            fields
+      | _ -> ())
+
 let shape_checks ?(trees = []) b ~what ~v (shape : M.shape) =
   let r = "(Obj.repr (" ^ v.vexpr ^ "))" in
+  cost_checks b ~what ~v ~r shape;
   match shape with
   | Constant n -> Printf.bprintf b "  const %S %s %d;\n" what r n
   | Block { tag; fields } ->
@@ -897,6 +1113,18 @@ let ptr what r tag = if Obj.is_int r || (match tag with Some t -> Obj.tag r <> t
 let dbl what r i x = if Obj.is_int r || Obj.tag r <> Obj.double_array_tag || Obj.double_field r i <> x then fail what "expected a flat double"
 let same what a b = if a != b then fail what ("expected the value itself, got " ^ desc a)
 let native = Sys.backend_type = Sys.Native
+(* A copy that shares nothing, so that constants the compiler shares are
+   counted once per use. OxCaml cannot marshal mixed blocks. *)
+let fresh r = try (Marshal.from_string (Marshal.to_string r [Marshal.No_sharing; Marshal.Closures]) 0 : Obj.t) with Invalid_argument _ -> r
+let rw r = Obj.reachable_words (fresh r)
+let cp (x : 'a) : 'a = Obj.obj (fresh (Obj.repr x))
+let cost what r subs words range open_ =
+  let n = rw r - List.fold_left (fun a s -> a + rw s) 0 subs in
+  let lo = List.hd words and hi = List.nth words (List.length words - 1) in
+  if not (if open_ then n >= lo else if range then lo <= n && n <= hi else List.mem n words) then
+    fail what (Printf.sprintf "expected %s words, got %d"
+      (if open_ then "at least " ^ string_of_int lo else if range then Printf.sprintf "%d to %d" lo hi
+       else String.concat " or " (List.map string_of_int words)) n)
 (* OxCaml takes one bit of the start-of-environment field for a flag. *)
 let startenv_bits = if String.ends_with ~suffix:"+ox" Sys.ocaml_version then 54 else 55
 (* Only read fields when the block has the predicted tag and size. *)

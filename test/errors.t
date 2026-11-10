@@ -12,3 +12,4 @@ Standard input can also be an interface.
     A  immediate 0
     B  block, tag 0, size 1
          0  int  immediate (int)
+         cost: 2 words per value, with headers

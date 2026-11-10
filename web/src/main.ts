@@ -143,7 +143,7 @@ function label(s: string, first: boolean): (Node | string)[] {
 function line(text: string): (Node | string)[] {
   const lead = text.length - text.trimStart().length;
   const rest = text.slice(lead);
-  if (/^(note|no field|then)\b/.test(rest)) return [text.slice(0, lead), el('span', 'k-note', rest)];
+  if (/^(note|no field|then|cost|not counted)\b/.test(rest)) return [text.slice(0, lead), el('span', 'k-note', rest)];
   const out: (Node | string)[] = [text.slice(0, lead)];
   // A label that starts its row, with no index before it, names a constructor.
   let first = true;
