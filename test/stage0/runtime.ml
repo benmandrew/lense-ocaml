@@ -8,7 +8,8 @@ let show name v =
     else Printf.sprintf "[blk tag %d size %d]" (Obj.tag f) (Obj.size f)
   in
   if Obj.is_int r then Printf.printf "%-28s imm %d\n" name (Obj.obj r : int)
-  else if Obj.tag r = Obj.closure_tag then Printf.printf "%-28s closure, tag %d\n" name (Obj.tag r)
+  else if Obj.tag r = Obj.closure_tag then
+    Printf.printf "%-28s closure, tag %d\n" name (Obj.tag r)
   else begin
     Printf.printf "%-28s block tag %d size %d" name (Obj.tag r) (Obj.size r);
     if Obj.tag r < Obj.no_scan_tag then
@@ -51,7 +52,11 @@ let () =
   show "u2" (U 5);
   show "u3" { uf = 1.5 }
 
-type ir = I0 | I1 of int | I2 of { ix : int; iy : float } | I3 of { f1 : float; f2 : float }
+type ir =
+  | I0
+  | I1 of int
+  | I2 of { ix : int; iy : float }
+  | I3 of { f1 : float; f2 : float }
 
 let () =
   show "I2" (I2 { ix = 1; iy = 2. });

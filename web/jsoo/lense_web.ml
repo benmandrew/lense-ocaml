@@ -9,8 +9,11 @@
 open Js_of_ocaml
 module M = Lense_model.Model
 
-let flag opts name = Js.Optdef.case (Js.Unsafe.get opts name) (fun () -> false) Js.to_bool
-let str opts name = Js.Optdef.case (Js.Unsafe.get opts name) (fun () -> "") Js.to_string
+let flag opts name =
+  Js.Optdef.case (Js.Unsafe.get opts name) (fun () -> false) Js.to_bool
+
+let str opts name =
+  Js.Optdef.case (Js.Unsafe.get opts name) (fun () -> "") Js.to_string
 
 (* The same steps for either compiler: type-check, analyse, add values. *)
 let unit_55 ~file ~intf ~values src =
@@ -20,7 +23,11 @@ let unit_55 ~file ~intf ~values src =
   | exception Load.Failed msg -> Error msg
   | unit_name, input ->
       let u = Analyze.analyze ~file ~unit_name ~src:(Some src) input in
-      Ok { u with values = Load.values_of ~values ~unit_name ~src:(Some src) input }
+      Ok
+        {
+          u with
+          values = Load.values_of ~values ~unit_name ~src:(Some src) input;
+        }
 
 let unit_ox ~file ~intf ~values src =
   let open Lense_core_ox in
@@ -29,14 +36,20 @@ let unit_ox ~file ~intf ~values src =
   | exception Load.Failed msg -> Error msg
   | unit_name, input ->
       let u = Analyze.analyze ~file ~unit_name ~src:(Some src) input in
-      Ok { u with values = Load.values_of ~values ~unit_name ~src:(Some src) input }
+      Ok
+        {
+          u with
+          values = Load.values_of ~values ~unit_name ~src:(Some src) input;
+        }
 
 let analyze code opts =
   let src = Js.to_string code in
   let intf = flag opts "intf" in
   let file = if intf then "example.mli" else "example.ml" in
   let values = flag opts "values" in
-  let backend = if str opts "backend" = "bytecode" then "bytecode" else "native code" in
+  let backend =
+    if str opts "backend" = "bytecode" then "bytecode" else "native code"
+  in
   let result =
     try
       Result.map
@@ -47,11 +60,14 @@ let analyze code opts =
             Lense_model.Text.collisions b [ u ];
             (Buffer.contents b, [], "[]"))
           else
-            let topts : Lense_model.Text.options = { source = false; only = [] } in
+            let topts : Lense_model.Text.options =
+              { source = false; only = [] }
+            in
             let text, links = Lense_model.Text.render_linked topts [ u ] in
             (text, links, Lense_model.Diagram.(json (compunit topts u))))
         (Result.map (M.only_backend backend)
-           ((if str opts "compiler" = "ox" then unit_ox else unit_55) ~file ~intf ~values src))
+           ((if str opts "compiler" = "ox" then unit_ox else unit_55)
+              ~file ~intf ~values src))
     with exn -> Error ("lense stopped: " ^ Printexc.to_string exn)
   in
   match result with
@@ -60,7 +76,11 @@ let analyze code opts =
         let open Lense_model.Json in
         let b = Buffer.create 1024 in
         write b ~indent:0
-          (List (List.map (fun (i, rs) -> List [ Int i; List (List.map (fun r -> range (Some r)) rs) ]) links));
+          (List
+             (List.map
+                (fun (i, rs) ->
+                  List [ Int i; List (List.map (fun r -> range (Some r)) rs) ])
+                links));
         Buffer.contents b
       in
       Js.Unsafe.obj
@@ -71,4 +91,5 @@ let analyze code opts =
         |]
   | Error msg -> Js.Unsafe.obj [| ("error", Js.Unsafe.inject (Js.string msg)) |]
 
-let () = Js.Unsafe.set Js.Unsafe.global "lense_analyze" (Js.wrap_callback analyze)
+let () =
+  Js.Unsafe.set Js.Unsafe.global "lense_analyze" (Js.wrap_callback analyze)

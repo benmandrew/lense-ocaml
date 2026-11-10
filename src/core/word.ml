@@ -11,7 +11,9 @@ let path_is p q = Path.same p q
 
 (* Apply a declaration's parameters to [args] in [ty]. Falls back to the
    unsubstituted type, which only loses precision on type variables. *)
-let instantiate env decl args ty = try Ctype.apply env decl.type_params ty args with _ -> ty
+let instantiate env decl args ty =
+  try Ctype.apply env decl.type_params ty args with _ -> ty
+
 let expand env ty = try Ctype.expand_head_opt env ty with _ -> ty
 
 (* The constant and non-constant counts of a polymorphic variant row, or
@@ -37,7 +39,8 @@ let rec word ?(depth = 0) env ty : M.word =
     let ty = expand env ty in
     match Compat.view ty with
     | Poly t -> word ~depth:(depth + 1) env t
-    | _ when Option.is_some (Compat.flat_word env ty) -> Option.get (Compat.flat_word env ty)
+    | _ when Option.is_some (Compat.flat_word env ty) ->
+        Option.get (Compat.flat_word env ty)
     | Var None -> M.Any "type variable"
     | Var (Some v) -> M.Any ("type variable '" ^ v)
     | Arrow -> ptr ~tag:M.closure_tag "closure"
@@ -75,24 +78,31 @@ and constr ~depth env p args =
   else if path_is p Predef.path_bool then M.Immediate "bool"
   else if path_is p Predef.path_unit then M.Immediate "unit"
   else if path_is p Predef.path_float then ptr ~tag:M.double_tag "boxed float"
-  else if path_is p Predef.path_string || path_is p Predef.path_bytes then ptr ~tag:M.string_tag "string"
-  else if path_is p Predef.path_int32 || path_is p Predef.path_int64 || path_is p Predef.path_nativeint then
-    ptr ~tag:M.custom_tag "custom block"
+  else if path_is p Predef.path_string || path_is p Predef.path_bytes then
+    ptr ~tag:M.string_tag "string"
+  else if
+    path_is p Predef.path_int32
+    || path_is p Predef.path_int64
+    || path_is p Predef.path_nativeint
+  then ptr ~tag:M.custom_tag "custom block"
   else if path_is p Predef.path_floatarray then
     (* The empty array is a shared tag-0 atom. *)
     ptr "float array (Double_array_tag 254 unless empty)"
   else if path_is p Predef.path_array || path_is p Predef.path_iarray then
     match elt_is_float () with
     | `No -> ptr ~tag:0 "array"
-    | `Yes when Config.flat_float_array -> ptr "float array (Double_array_tag 254 unless empty)"
+    | `Yes when Config.flat_float_array ->
+        ptr "float array (Double_array_tag 254 unless empty)"
     | `Yes -> ptr ~tag:0 "array"
-    | `Maybe when Config.flat_float_array -> ptr "array (flat if its elements are floats)"
+    | `Maybe when Config.flat_float_array ->
+        ptr "array (flat if its elements are floats)"
     | `Maybe -> ptr ~tag:0 "array"
   else if path_is p Predef.path_lazy_t then
     (* A forced or eagerly built lazy value can be the result itself. *)
     M.Any "lazy value"
   else if path_is p Predef.path_exn then ptr "exception"
-  else if path_is p Predef.path_extension_constructor then ptr ~tag:M.object_tag "extension slot"
+  else if path_is p Predef.path_extension_constructor then
+    ptr ~tag:M.object_tag "extension slot"
   else if Compat.or_null p then
     match args with
     | [ a ] -> (
@@ -110,14 +120,16 @@ and constr ~depth env p args =
         | decl -> (
             let name = Path.name p in
             match Compat.decl_view env p args decl with
-            | Unboxed_arg arg -> word ~depth:(depth + 1) env (instantiate env decl args arg)
+            | Unboxed_arg arg ->
+                word ~depth:(depth + 1) env (instantiate env decl args arg)
             | Constructors (consts, blocks) -> (
                 match (consts, blocks) with
                 | _, 0 -> M.Immediate ("constant constructors of " ^ name)
                 | 0, 1 -> ptr ~tag:0 name
                 | 0, _ -> ptr name
                 | _ -> M.Any name)
-            | Float_record -> ptr ~tag:M.double_array_tag ("float record " ^ name)
+            | Float_record ->
+                ptr ~tag:M.double_array_tag ("float record " ^ name)
             | Record -> ptr ~tag:0 ("record " ^ name)
             | Unboxed_record -> M.Any ("unboxed record " ^ name)
             | Open -> ptr ("extensible variant " ^ name)

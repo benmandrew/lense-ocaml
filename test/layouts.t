@@ -144,7 +144,7 @@ Every case file, as text with its source.
       0  o : Opaque.t  immediate or pointer (abstract type Opaque.t)
       1  h : float     pointer to boxed float, Double_tag 253
   
-  type inline = I0 | I1 of int | I2 of { ix : int; iy : float } | I3 of { f1 : float; f2 : float }
+  type inline = | I0 | I1 of int | I2 of { ix : int; iy : float } | I3 of { f1 : float; f2 : float }
   type inline  variant
     I0  immediate 0
     I1  block, tag 0, size 1

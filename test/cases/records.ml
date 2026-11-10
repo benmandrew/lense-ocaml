@@ -16,7 +16,12 @@ end
 
 type seen = { m : metres; fb : fbox }
 type hidden = { o : Opaque.t; h : float }
-type inline = I0 | I1 of int | I2 of { ix : int; iy : float } | I3 of { f1 : float; f2 : float }
+
+type inline =
+  | I0
+  | I1 of int
+  | I2 of { ix : int; iy : float }
+  | I3 of { f1 : float; f2 : float }
 
 type uses = {
   t : inline;

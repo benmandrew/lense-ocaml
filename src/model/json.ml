@@ -2,7 +2,13 @@
 
 open Model
 
-type t = Null | Bool of bool | Int of int | Str of string | List of t list | Obj of (string * t) list
+type t =
+  | Null
+  | Bool of bool
+  | Int of int
+  | Str of string
+  | List of t list
+  | Obj of (string * t) list
 
 let escape s =
   let b = Buffer.create (String.length s + 2) in
@@ -75,10 +81,17 @@ let range =
 
 let word = function
   | Immediate why -> Obj [ ("kind", Str "immediate"); ("why", Str why) ]
-  | Pointer { tag; what } -> Obj [ ("kind", Str "pointer"); ("tag", opt (fun t -> Int t) tag); ("what", Str what) ]
+  | Pointer { tag; what } ->
+      Obj
+        [
+          ("kind", Str "pointer");
+          ("tag", opt (fun t -> Int t) tag);
+          ("what", Str what);
+        ]
   | Any why -> Obj [ ("kind", Str "any"); ("why", Str why) ]
   | Double -> Obj [ ("kind", Str "double") ]
-  | Flat { layout; bytes } -> Obj [ ("kind", Str "flat"); ("layout", Str layout); ("bytes", Int bytes) ]
+  | Flat { layout; bytes } ->
+      Obj [ ("kind", Str "flat"); ("layout", Str layout); ("bytes", Int bytes) ]
 
 let field (f : field) =
   let kind =
@@ -88,7 +101,14 @@ let field (f : field) =
     | Slot c -> [ ("kind", Str "slot"); ("constructor", Str c) ]
     | Hash h -> [ ("kind", Str "hash"); ("hash", Int h) ]
   in
-  Obj (kind @ [ ("type", Str f.ty); ("mutable", Bool f.mutable_); ("word", word f.word); ("range", range f.frange) ])
+  Obj
+    (kind
+    @ [
+        ("type", Str f.ty);
+        ("mutable", Bool f.mutable_);
+        ("word", word f.word);
+        ("range", range f.frange);
+      ])
 
 let shape = function
   | Constant n -> Obj [ ("kind", Str "immediate"); ("value", Int n) ]
@@ -110,9 +130,20 @@ let shape = function
           ("fields", List (List.map field fields));
         ]
   | Unboxed f -> Obj [ ("kind", Str "unboxed"); ("field", field f) ]
-  | Ext_slot -> Obj [ ("kind", Str "block"); ("tag", Int object_tag); ("size", Int 2); ("extension_slot", Bool true) ]
+  | Ext_slot ->
+      Obj
+        [
+          ("kind", Str "block");
+          ("tag", Int object_tag);
+          ("size", Int 2);
+          ("extension_slot", Bool true);
+        ]
   | Rebind p -> Obj [ ("kind", Str "rebind"); ("of", Str p) ]
-  | Product fs -> Obj [ ("kind", Str "unboxed_product"); ("fields", List (List.map field fs)) ]
+  | Product fs ->
+      Obj
+        [
+          ("kind", Str "unboxed_product"); ("fields", List (List.map field fs));
+        ]
   | Mixed { tag; fields; scanned; slots } ->
       let slot (s : mixed_slot) o =
         Obj
@@ -139,22 +170,38 @@ let shape = function
 let strs l = List (List.map (fun s -> Str s) l)
 
 let case (c : case) =
-  Obj [ ("name", Str c.name); ("shape", shape c.shape); ("notes", strs c.notes); ("range", range c.case_range) ]
+  Obj
+    [
+      ("name", Str c.name);
+      ("shape", shape c.shape);
+      ("notes", strs c.notes);
+      ("range", range c.case_range);
+    ]
 
 let decl (d : decl) =
   let kind =
     match d.kind with
     | Record s -> [ ("kind", Str "record"); ("shape", shape s) ]
-    | Variant cs -> [ ("kind", Str "variant"); ("cases", List (List.map case cs)) ]
+    | Variant cs ->
+        [ ("kind", Str "variant"); ("cases", List (List.map case cs)) ]
     | Polyvariant { cases; closed } ->
-        [ ("kind", Str "polymorphic_variant"); ("closed", Bool closed); ("cases", List (List.map case cases)) ]
+        [
+          ("kind", Str "polymorphic_variant");
+          ("closed", Bool closed);
+          ("cases", List (List.map case cases));
+        ]
     | Extension c -> [ ("kind", Str "extension"); ("case", case c) ]
     | Alias w -> [ ("kind", Str "alias"); ("word", word w) ]
     | Abstract w -> [ ("kind", Str "abstract"); ("word", word w) ]
     | Open -> [ ("kind", Str "open") ]
   in
   Obj
-    ([ ("name", Str d.name); ("params", Str d.params); ("keyword", Str d.keyword); ("line", Int d.line) ]
+    ([
+       ("name", Str d.name);
+       ("params", Str d.params);
+       ("keyword", Str d.keyword);
+       ("line", Int d.line);
+     ]
     @ kind
     @ [ ("notes", strs d.notes); ("range", range d.range) ])
 
@@ -191,7 +238,13 @@ let package (m : package) =
     ]
 
 let label (l : label_use) =
-  Obj [ ("label", Str l.label); ("hash", Int l.hash); ("file", Str l.file); ("line", Int l.lline) ]
+  Obj
+    [
+      ("label", Str l.label);
+      ("hash", Int l.hash);
+      ("file", Str l.file);
+      ("line", Int l.lline);
+    ]
 
 let closure ~native (c : closure) =
   let offs, envstart = closure_offsets ~native c in
@@ -220,7 +273,10 @@ let closure ~native (c : closure) =
              (fun (cv : capture) ->
                Obj
                  [
-                   ("name", Str cv.cvar); ("type", Str cv.cty); ("word", word cv.cword); ("bound_at", range cv.cv_range);
+                   ("name", Str cv.cvar);
+                   ("type", Str cv.cty);
+                   ("word", word cv.cword);
+                   ("bound_at", range cv.cv_range);
                  ])
              c.env) );
     ]
@@ -230,11 +286,20 @@ let backend (bc : backend_closures) =
     [
       ("backend", Str bc.backend);
       ("config", Str bc.config);
-      ("closures", opt (fun cs -> List (List.map (closure ~native:(bc.backend = "native code")) cs)) bc.closures);
+      ( "closures",
+        opt
+          (fun cs ->
+            List (List.map (closure ~native:(bc.backend = "native code")) cs))
+          bc.closures );
     ]
 
 let lazy_value (z : lazy_value) =
-  let kind = match z.zkind with Itself -> "itself" | Forward -> "forward" | Suspended -> "lazy" in
+  let kind =
+    match z.zkind with
+    | Itself -> "itself"
+    | Forward -> "forward"
+    | Suspended -> "lazy"
+  in
   Obj
     [
       ("line", Int z.zline);
@@ -290,13 +355,18 @@ let compunit (u : compunit) =
 
 let render units =
   let collisions =
-    List.map (fun (h, ls) -> Obj [ ("hash", Int h); ("labels", List (List.map label ls)) ]) (Model.collisions units)
+    List.map
+      (fun (h, ls) ->
+        Obj [ ("hash", Int h); ("labels", List (List.map label ls)) ])
+      (Model.collisions units)
   in
   let b = Buffer.create 4096 in
   write b ~indent:0
     (Obj
        [
-         ("word_size", Int Model.word_size); ("units", List (List.map compunit units)); ("collisions", List collisions);
+         ("word_size", Int Model.word_size);
+         ("units", List (List.map compunit units));
+         ("collisions", List collisions);
        ]);
   Buffer.add_char b '\n';
   Buffer.contents b

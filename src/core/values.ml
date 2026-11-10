@@ -18,7 +18,9 @@ let ident_types (str : T.structure) =
   let tbl = Hashtbl.create 64 in
   let pat : 'k. Tast_iterator.iterator -> 'k T.general_pattern -> unit =
    fun sub p ->
-    List.iter (fun (id, ty) -> Hashtbl.replace tbl id (ty, p.pat_env, p.pat_loc)) (Compat.bound_idents p);
+    List.iter
+      (fun (id, ty) -> Hashtbl.replace tbl id (ty, p.pat_env, p.pat_loc))
+      (Compat.bound_idents p);
     Tast_iterator.default_iterator.pat sub p
   in
   let it = { Tast_iterator.default_iterator with pat } in
@@ -30,8 +32,19 @@ let ident_types (str : T.structure) =
 let capture ctx tbl id : M.capture =
   match Hashtbl.find_opt tbl id with
   | Some (ty, env, loc) ->
-      { cvar = Ident.name id; cty = Analyze.print_type ty; cword = Word.word env ty; cv_range = Analyze.range ctx loc }
-  | None -> { cvar = Ident.name id; cty = ""; cword = M.Any "a variable the compiler introduced"; cv_range = None }
+      {
+        cvar = Ident.name id;
+        cty = Analyze.print_type ty;
+        cword = Word.word env ty;
+        cv_range = Analyze.range ctx loc;
+      }
+  | None ->
+      {
+        cvar = Ident.name id;
+        cty = "";
+        cword = M.Any "a variable the compiler introduced";
+        cv_range = None;
+      }
 
 (* Where classes and immediate objects are: the closures inside them are
    the object system's own code, and are left out. *)
@@ -42,7 +55,9 @@ let class_locs (str : T.structure) =
     Tast_iterator.default_iterator.class_expr sub ce
   in
   let expr sub (e : T.expression) =
-    (match e.exp_desc with Texp_object _ -> acc := e.exp_loc :: !acc | _ -> ());
+    (match e.exp_desc with
+    | Texp_object _ -> acc := e.exp_loc :: !acc
+    | _ -> ());
     Tast_iterator.default_iterator.expr sub e
   in
   let it = { Tast_iterator.default_iterator with class_expr; expr } in
@@ -50,7 +65,8 @@ let class_locs (str : T.structure) =
   !acc
 
 let inside (outer : Location.t) (l : Location.t) =
-  outer.loc_start.pos_cnum <= l.loc_start.pos_cnum && l.loc_end.pos_cnum <= outer.loc_end.pos_cnum
+  outer.loc_start.pos_cnum <= l.loc_start.pos_cnum
+  && l.loc_end.pos_cnum <= outer.loc_end.pos_cnum
 
 (* The binding of each function bound by a let, by the function's location:
    a function's own location starts at its parameters, its binding at the
@@ -67,10 +83,14 @@ let binding_locs (str : T.structure) =
   fun l -> Option.value (Hashtbl.find_opt tbl (key l)) ~default:l
 
 let closures ctx ~modname str : M.backend_closures list =
-  let tbl = ident_types str and classes = class_locs str and bound = binding_locs str in
+  let tbl = ident_types str
+  and classes = class_locs str
+  and bound = binding_locs str in
   let prefix = modname ^ "." in
   let name s =
-    if String.starts_with ~prefix s then String.sub s (String.length prefix) (String.length s - String.length prefix)
+    if String.starts_with ~prefix s then
+      String.sub s (String.length prefix)
+        (String.length s - String.length prefix)
     else s
   in
   let fn (f : Compat.lfun) =
@@ -83,12 +103,22 @@ let closures ctx ~modname str : M.backend_closures list =
     }
   in
   let shown ((fns : Compat.lfun list), _) =
-    List.for_all (fun (f : Compat.lfun) -> f.lname <> "" && not (List.exists (fun c -> inside c f.lloc) classes)) fns
+    List.for_all
+      (fun (f : Compat.lfun) ->
+        f.lname <> "" && not (List.exists (fun c -> inside c f.lloc) classes))
+      fns
   in
   List.map
     (fun (backend, config, sets) ->
-      let closure (fns, fv) = { M.fns = List.map fn fns; env = List.map (capture ctx tbl) fv } in
-      { M.backend; config; closures = Option.map (fun s -> List.map closure (List.filter shown s)) sets })
+      let closure (fns, fv) =
+        { M.fns = List.map fn fns; env = List.map (capture ctx tbl) fv }
+      in
+      {
+        M.backend;
+        config;
+        closures =
+          Option.map (fun s -> List.map closure (List.filter shown s)) sets;
+      })
     (Compat.closure_backends ~modname str)
 
 (* Lazy values *)
@@ -101,10 +131,15 @@ let lazies ctx (str : T.structure) =
         let zkind : M.lazy_kind =
           match Typeopt.classify_lazy_argument a with
           | `Constant_or_function | `Identifier `Other -> Itself
-          | `Float_that_cannot_be_shortcut | `Identifier `Forward_value -> Forward
+          | `Float_that_cannot_be_shortcut | `Identifier `Forward_value ->
+              Forward
           | `Other -> Suspended
         in
-        let zsource = match Analyze.slice ctx e.exp_loc with Some s -> Analyze.squash s | None -> "lazy" in
+        let zsource =
+          match Analyze.slice ctx e.exp_loc with
+          | Some s -> Analyze.squash s
+          | None -> "lazy"
+        in
         acc :=
           {
             M.zline = Analyze.line e.exp_loc;
@@ -129,12 +164,17 @@ let class_idents (ce : T.class_expr) =
   let bound = ref Ident.Set.empty and used = ref Ident.Set.empty in
   let pat : 'k. Tast_iterator.iterator -> 'k T.general_pattern -> unit =
    fun sub p ->
-    List.iter (fun (id, _) -> bound := Ident.Set.add id !bound) (Compat.bound_idents p);
+    List.iter
+      (fun (id, _) -> bound := Ident.Set.add id !bound)
+      (Compat.bound_idents p);
     Tast_iterator.default_iterator.pat sub p
   in
   let expr sub (e : T.expression) =
     (match (Compat.expr_ident e, e.exp_desc) with
-    | Some id, _ | None, (Texp_instvar (_, Path.Pident id, _) | Texp_setinstvar (_, Path.Pident id, _, _)) ->
+    | Some id, _
+    | ( None,
+        ( Texp_instvar (_, Path.Pident id, _)
+        | Texp_setinstvar (_, Path.Pident id, _, _) ) ) ->
         used := Ident.Set.add id !used
     | _ -> ());
     Tast_iterator.default_iterator.expr sub e
@@ -147,7 +187,9 @@ let class_idents (ce : T.class_expr) =
 let method_idents (ce : T.class_expr) =
   let used = ref Ident.Set.empty and depth = ref 0 in
   let expr sub (e : T.expression) =
-    (match Compat.expr_ident e with Some id when !depth > 0 -> used := Ident.Set.add id !used | _ -> ());
+    (match Compat.expr_ident e with
+    | Some id when !depth > 0 -> used := Ident.Set.add id !used
+    | _ -> ());
     Tast_iterator.default_iterator.expr sub e
   in
   let class_field sub (f : T.class_field) =
@@ -178,7 +220,8 @@ let ivar ?(param = false) ~where ~from name mutable_ ty env : M.ivar =
    slot, unnamed), its own non-override vals in declaration order, then the slots of
    each inherited class in turn. A named variable that already has a slot
    keeps it. *)
-let rec class_vars ctx classes ~from (ce : T.class_expr) : M.ivar list * string list =
+let rec class_vars ctx classes ~from (ce : T.class_expr) :
+    M.ivar list * string list =
   match ce.cl_desc with
   | Tcl_fun (_, _, vals, cl, _) | Tcl_let (_, _, vals, cl) ->
       (* Translclass binds each one to a new slot with a StrictOpt let, and
@@ -190,7 +233,9 @@ let rec class_vars ctx classes ~from (ce : T.class_expr) : M.ivar list * string 
             (* Methods reach a parameter through Texp_instvar on [id]. *)
             if Ident.Set.mem id used then
               Some
-                (ivar ~param:true ~where:(Analyze.range ctx e.exp_loc) ~from (Ident.name id) false e.exp_type e.exp_env)
+                (ivar ~param:true
+                   ~where:(Analyze.range ctx e.exp_loc)
+                   ~from (Ident.name id) false e.exp_type e.exp_env)
             else None)
           vals
       in
@@ -207,7 +252,10 @@ let rec class_vars ctx classes ~from (ce : T.class_expr) : M.ivar list * string 
                   | Tcfk_virtual ct -> (ct.ctyp_type, ct.ctyp_env)
                   | Tcfk_concrete (_, e) -> (e.exp_type, e.exp_env)
                 in
-                Some (ivar ~where:(Analyze.range ctx f.cf_loc) ~from name.txt (mut = Asttypes.Mutable) ty env)
+                Some
+                  (ivar
+                     ~where:(Analyze.range ctx f.cf_loc)
+                     ~from name.txt (mut = Asttypes.Mutable) ty env)
             | _ -> None)
           str.cstr_fields
       in
@@ -217,7 +265,10 @@ let rec class_vars ctx classes ~from (ce : T.class_expr) : M.ivar list * string 
           | Tcf_inherit (_, cl, _, _, _) ->
               let pv, pu = class_vars ctx classes ~from:(parent_name cl) cl in
               let taken (v : M.ivar) =
-                (not v.vparam) && List.exists (fun (w : M.ivar) -> (not w.vparam) && w.vname = v.vname) vars
+                (not v.vparam)
+                && List.exists
+                     (fun (w : M.ivar) -> (not w.vparam) && w.vname = v.vname)
+                     vars
               in
               let fresh = List.filter (fun v -> not (taken v)) pv in
               (vars @ fresh, unknown @ pu)
@@ -227,12 +278,14 @@ let rec class_vars ctx classes ~from (ce : T.class_expr) : M.ivar list * string 
       match Hashtbl.find_opt classes (Path.name p) with
       | Some ce -> class_vars ctx classes ~from:(Path.name p) ce
       | None -> ([], [ Path.name p ]))
-  | Tcl_apply (cl, _) | Tcl_constraint (cl, _, _, _, _) | Tcl_open (_, cl) -> class_vars ctx classes ~from cl
+  | Tcl_apply (cl, _) | Tcl_constraint (cl, _, _, _, _) | Tcl_open (_, cl) ->
+      class_vars ctx classes ~from cl
 
 and parent_name (ce : T.class_expr) =
   match ce.cl_desc with
   | Tcl_ident (p, _, _) -> Path.name p
-  | Tcl_apply (cl, _) | Tcl_constraint (cl, _, _, _, _) | Tcl_open (_, cl) -> parent_name cl
+  | Tcl_apply (cl, _) | Tcl_constraint (cl, _, _, _, _) | Tcl_open (_, cl) ->
+      parent_name cl
   | _ -> "class"
 
 (* A class at the top of the unit is built once, outside any function. A
@@ -244,9 +297,20 @@ let objects ctx (str : T.structure) : M.obj list =
   let acc = ref [] in
   let add ~top ~locals name (loc : Location.t) (ce : T.class_expr) =
     let ivars, unknown = class_vars ctx classes ~from:name ce in
-    let env_slot = (not top) && not (Ident.Set.is_empty (Ident.Set.inter (method_idents ce) locals)) in
+    let env_slot =
+      (not top)
+      && not (Ident.Set.is_empty (Ident.Set.inter (method_idents ce) locals))
+    in
     acc :=
-      { M.oname = name; oline = Analyze.line loc; env_slot; ivars; unknown; orange = Analyze.range ctx loc } :: !acc
+      {
+        M.oname = name;
+        oline = Analyze.line loc;
+        env_slot;
+        ivars;
+        unknown;
+        orange = Analyze.range ctx loc;
+      }
+      :: !acc
   in
   let class_decls ~top ~locals l =
     List.iter
@@ -258,7 +322,9 @@ let objects ctx (str : T.structure) : M.obj list =
   (* Classes and objects below a top-level item. *)
   let nested locals =
     let structure_item sub (si : T.structure_item) =
-      (match si.str_desc with Tstr_class l -> class_decls ~top:false ~locals l | _ -> ());
+      (match si.str_desc with
+      | Tstr_class l -> class_decls ~top:false ~locals l
+      | _ -> ());
       Tast_iterator.default_iterator.structure_item sub si
     in
     let expr sub (e : T.expression) =
@@ -284,12 +350,16 @@ let objects ctx (str : T.structure) : M.obj list =
       (fun (si : T.structure_item) ->
         match si.str_desc with
         | Tstr_class l -> class_decls ~top:true ~locals:Ident.Set.empty l
-        | Tstr_module { mb_expr = { mod_desc = Tmod_structure s; _ }; _ } -> top_structure s
+        | Tstr_module { mb_expr = { mod_desc = Tmod_structure s; _ }; _ } ->
+            top_structure s
         | _ ->
             let locals = ref Ident.Set.empty in
-            let pat : 'k. Tast_iterator.iterator -> 'k T.general_pattern -> unit =
+            let pat : 'k. Tast_iterator.iterator -> 'k T.general_pattern -> unit
+                =
              fun sub p ->
-              List.iter (fun (id, _) -> locals := Ident.Set.add id !locals) (Compat.bound_idents p);
+              List.iter
+                (fun (id, _) -> locals := Ident.Set.add id !locals)
+                (Compat.bound_idents p);
               Tast_iterator.default_iterator.pat sub p
             in
             let collect = { Tast_iterator.default_iterator with pat } in
@@ -298,10 +368,15 @@ let objects ctx (str : T.structure) : M.obj list =
             let own =
               match si.str_desc with
               | Tstr_value (_, vbs) ->
-                  List.concat_map (fun (vb : T.value_binding) -> List.map fst (Compat.bound_idents vb.vb_pat)) vbs
+                  List.concat_map
+                    (fun (vb : T.value_binding) ->
+                      List.map fst (Compat.bound_idents vb.vb_pat))
+                    vbs
               | _ -> []
             in
-            let locals = List.fold_left (fun s id -> Ident.Set.remove id s) !locals own in
+            let locals =
+              List.fold_left (fun s id -> Ident.Set.remove id s) !locals own
+            in
             let it = nested locals in
             it.structure_item it si)
       str.str_items
@@ -311,4 +386,8 @@ let objects ctx (str : T.structure) : M.obj list =
 
 let values ~modname ~src (str : T.structure) : M.values =
   let ctx = { Analyze.src; prefix = ""; own = Analyze.structure_file str } in
-  { backends = closures ctx ~modname str; lazies = lazies ctx str; objects = objects ctx str }
+  {
+    backends = closures ctx ~modname str;
+    lazies = lazies ctx str;
+    objects = objects ctx str;
+  }

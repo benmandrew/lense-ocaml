@@ -25,7 +25,8 @@ let counter start =
     reset = (fun () -> n := start);
   }
 
-let lazies i v = (lazy 3, lazy 2.5, lazy i, lazy v, lazy (i + 1), lazy (fun x -> x))
+let lazies i v =
+  (lazy 3, lazy 2.5, lazy i, lazy v, lazy (i + 1), lazy (fun x -> x))
 
 class point =
   object
