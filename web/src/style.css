@@ -237,7 +237,9 @@ pre.report {
 /* Cells use the fills of lense's byte map, which carry --on-fill text at
    5.9:1 or more. Rows are 24px with 2px gaps, as there. */
 
-.card .diagram { margin: 10px 0 12px; overflow-x: auto; font: 11px var(--mono); }
+/* overflow-x: auto also clips vertically, so the padding leaves room for the
+   1.5px highlight ring on edge cells; the negative margin cancels it. */
+.card .diagram { margin: 8px -2px 10px; padding: 2px; overflow-x: auto; font: 11px var(--mono); }
 .diagram .title { color: var(--muted); line-height: 18px; white-space: nowrap; }
 .diagram .off { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; line-height: 24px; }
 
