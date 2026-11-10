@@ -120,6 +120,16 @@ let decl_view env p args decl =
       let ty = Btype.newgenty (Tconstr (p, args, ref Mnil)) in
       if try Ctype.is_always_gc_ignorable env ty with _ -> false then
         Immediate ": immediate"
+      else if
+        (* The compiler counts immediate64 as immediate only when it
+           compiles native code; it is immediate on any 64-bit target. *)
+        M.word_size = 64
+        &&
+          try
+            Ctype.check_type_externality env ty
+              Jkind_axis.Externality.External64
+          with _ -> false
+      then Immediate ": immediate64"
       else Abstract
 
 (* The word of an abstract type declared in the file being read. *)

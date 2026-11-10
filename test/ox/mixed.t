@@ -70,6 +70,8 @@ first, then flat data, one word per scalar in native code.
   
   type i  abstract: immediate (i : immediate)
   
+  type i64  abstract: immediate (i64 : immediate64)
+  
   type al  abbreviation: unboxed bits32, 4 bytes
   
   type o  abbreviation: immediate or pointer (null or int)
