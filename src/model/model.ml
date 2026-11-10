@@ -16,6 +16,11 @@ let double_tag = 253
 let double_array_tag = 254
 let custom_tag = 255
 
+(* Where something is written in the unit's source. Lines count from 1,
+   columns from 0, in bytes; the end is exclusive. Things written in another
+   file, such as an interface, have no range. *)
+type range = { first_line : int; first_col : int; last_line : int; last_col : int }
+
 (* What one word holds: a field of a block, or a whole value. *)
 type word =
   | Immediate of string  (** Always an immediate; says why. *)
@@ -38,6 +43,7 @@ type field = {
   ty : string;  (** Spelling of the field's type. *)
   mutable_ : bool;
   word : word;
+  frange : range option;
 }
 
 (* OxCaml: one element of a mixed block, in memory order. *)
@@ -83,6 +89,7 @@ type case = {
   name : string;  (** Constructor name, with a backquote for polymorphic tags. *)
   shape : shape;
   notes : string list;
+  case_range : range option;
 }
 
 type kind =
@@ -102,11 +109,12 @@ type decl = {
   source : string option;  (** The declaration as written, when available. *)
   kind : kind;
   notes : string list;
+  range : range option;
 }
 
 type slot_kind = Value | Module | Functor | Exception | Extension | Class | Primitive
 
-type slot = { index : int; item : slot_kind; name : string; word : word }
+type slot = { index : int; item : slot_kind; name : string; word : word; srange : range option }
 
 (* The block of every value of a first-class module type [(module S)]: tag
    0, its fields the value-bearing items of [S]. *)
@@ -115,6 +123,7 @@ type package = {
   pline : int;  (** Its first use as a package type. *)
   slots : slot list;
   no_slot : string list;  (** Items that take no field, such as types. *)
+  prange : range option;  (** The declaration of [S]. *)
 }
 
 type label_use = { label : string; hash : int; file : string; lline : int }
@@ -122,13 +131,14 @@ type label_use = { label : string; hash : int; file : string; lline : int }
 (* Stage 4: values that are not of a declared type's shape. *)
 
 (* A variable a closure captures. *)
-type capture = { cvar : string; cty : string; cword : word }
+type capture = { cvar : string; cty : string; cword : word; cv_range : range option  (** Where it is bound. *) }
 
 type fn = {
   fname : string;  (** Scope name from the compiler, such as "mk.(fun)". *)
   fline : int;
   arity : int;
   tupled : bool;  (** Takes its arguments as one tuple, unpacked by the caller. *)
+  fn_range : range option;
 }
 
 (* One closure block: a single function, or a set of mutually recursive ones
@@ -167,7 +177,7 @@ type lazy_kind =
   | Forward  (** A Forward_tag block holding the value. *)
   | Suspended  (** A Lazy_tag block holding a closure, until forced. *)
 
-type lazy_value = { zline : int; zsource : string; zkind : lazy_kind; zword : word }
+type lazy_value = { zline : int; zsource : string; zkind : lazy_kind; zword : word; zrange : range option }
 
 type ivar = {
   vname : string;
@@ -176,6 +186,7 @@ type ivar = {
   vparam : bool;  (** A class parameter or class-level let that a method uses. *)
   vword : word;
   vfrom : string;  (** The class that declares it. *)
+  vrange : range option;
 }
 
 type obj = {
@@ -184,6 +195,7 @@ type obj = {
   env_slot : bool;  (** Field 2 holds the local variables the class uses, before the instance variables. *)
   ivars : ivar list;  (** Instance variables in slot order. *)
   unknown : string list;  (** Inherited classes from other units, whose variables follow. *)
+  orange : range option;
 }
 
 type values = { backends : backend_closures list; lazies : lazy_value list; objects : obj list }

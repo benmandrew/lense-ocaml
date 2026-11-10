@@ -11,12 +11,14 @@
 module M = Lense_model.Model
 module T = Typedtree
 
-(* Types of the variables bound anywhere in the structure. *)
+(* Types of the variables bound anywhere in the structure, and where. The
+   iterator reaches the innermost pattern last, so a variable keeps the
+   location of its own name. *)
 let ident_types (str : T.structure) =
   let tbl = Hashtbl.create 64 in
   let pat : 'k. Tast_iterator.iterator -> 'k T.general_pattern -> unit =
    fun sub p ->
-    List.iter (fun (id, ty) -> Hashtbl.replace tbl id (ty, p.pat_env)) (Compat.bound_idents p);
+    List.iter (fun (id, ty) -> Hashtbl.replace tbl id (ty, p.pat_env, p.pat_loc)) (Compat.bound_idents p);
     Tast_iterator.default_iterator.pat sub p
   in
   let it = { Tast_iterator.default_iterator with pat } in
@@ -25,10 +27,11 @@ let ident_types (str : T.structure) =
 
 (* Closures *)
 
-let capture tbl id : M.capture =
+let capture ctx tbl id : M.capture =
   match Hashtbl.find_opt tbl id with
-  | Some (ty, env) -> { cvar = Ident.name id; cty = Analyze.print_type ty; cword = Word.word env ty }
-  | None -> { cvar = Ident.name id; cty = ""; cword = M.Any "a variable the compiler introduced" }
+  | Some (ty, env, loc) ->
+      { cvar = Ident.name id; cty = Analyze.print_type ty; cword = Word.word env ty; cv_range = Analyze.range ctx loc }
+  | None -> { cvar = Ident.name id; cty = ""; cword = M.Any "a variable the compiler introduced"; cv_range = None }
 
 (* Where classes and immediate objects are: the closures inside them are
    the object system's own code, and are left out. *)
@@ -49,19 +52,34 @@ let class_locs (str : T.structure) =
 let inside (outer : Location.t) (l : Location.t) =
   outer.loc_start.pos_cnum <= l.loc_start.pos_cnum && l.loc_end.pos_cnum <= outer.loc_end.pos_cnum
 
-let closures ~modname str : M.backend_closures list =
-  let tbl = ident_types str and classes = class_locs str in
+(* The binding of each function bound by a let, by the function's location:
+   a function's own location starts at its parameters, its binding at the
+   name. *)
+let binding_locs (str : T.structure) =
+  let tbl = Hashtbl.create 16 in
+  let key (l : Location.t) = (l.loc_start.pos_cnum, l.loc_end.pos_cnum) in
+  let value_binding sub (vb : T.value_binding) =
+    Hashtbl.replace tbl (key vb.vb_expr.exp_loc) vb.vb_loc;
+    Tast_iterator.default_iterator.value_binding sub vb
+  in
+  let it = { Tast_iterator.default_iterator with value_binding } in
+  it.structure it str;
+  fun l -> Option.value (Hashtbl.find_opt tbl (key l)) ~default:l
+
+let closures ctx ~modname str : M.backend_closures list =
+  let tbl = ident_types str and classes = class_locs str and bound = binding_locs str in
   let prefix = modname ^ "." in
   let name s = if String.starts_with ~prefix s then String.sub s (String.length prefix) (String.length s - String.length prefix) else s in
   let fn (f : Compat.lfun) =
-    { M.fname = name f.lname; fline = f.lloc.loc_start.pos_lnum; arity = f.nparams; tupled = f.ltupled }
+    { M.fname = name f.lname; fline = f.lloc.loc_start.pos_lnum; arity = f.nparams; tupled = f.ltupled;
+      fn_range = Analyze.range ctx (bound f.lloc) }
   in
   let shown ((fns : Compat.lfun list), _) =
     List.for_all (fun (f : Compat.lfun) -> f.lname <> "" && not (List.exists (fun c -> inside c f.lloc) classes)) fns
   in
   List.map
     (fun (backend, config, sets) ->
-      let closure (fns, fv) = { M.fns = List.map fn fns; env = List.map (capture tbl) fv } in
+      let closure (fns, fv) = { M.fns = List.map fn fns; env = List.map (capture ctx tbl) fv } in
       { M.backend; config; closures = Option.map (fun s -> List.map closure (List.filter shown s)) sets })
     (Compat.closure_backends ~modname str)
 
@@ -79,7 +97,10 @@ let lazies ctx (str : T.structure) =
           | `Other -> Suspended
         in
         let zsource = match Analyze.slice ctx e.exp_loc with Some s -> Analyze.squash s | None -> "lazy" in
-        acc := { M.zline = Analyze.line e.exp_loc; zsource; zkind; zword = Word.word a.exp_env a.exp_type } :: !acc
+        acc :=
+          { M.zline = Analyze.line e.exp_loc; zsource; zkind; zword = Word.word a.exp_env a.exp_type;
+            zrange = Analyze.range ctx e.exp_loc }
+          :: !acc
     | _ -> ());
     Tast_iterator.default_iterator.expr sub e
   in
@@ -128,15 +149,16 @@ let method_idents (ce : T.class_expr) =
   it.class_expr it ce;
   !used
 
-let ivar ?(param = false) ~from name mutable_ ty env : M.ivar =
-  { vname = name; vty = Analyze.print_type ty; vmutable = mutable_; vparam = param; vword = Word.word env ty; vfrom = from }
+let ivar ?(param = false) ~where ~from name mutable_ ty env : M.ivar =
+  { vname = name; vty = Analyze.print_type ty; vmutable = mutable_; vparam = param; vword = Word.word env ty; vfrom = from;
+    vrange = where }
 
 (* Instance variables in slot order. Each class level allocates, in this
    order: the parameters and class-level lets its methods use (always a new
    slot, unnamed), its own non-override vals in declaration order, then the slots of
    each inherited class in turn. A named variable that already has a slot
    keeps it. *)
-let rec class_vars classes ~from (ce : T.class_expr) : M.ivar list * string list =
+let rec class_vars ctx classes ~from (ce : T.class_expr) : M.ivar list * string list =
   match ce.cl_desc with
   | Tcl_fun (_, _, vals, cl, _) | Tcl_let (_, _, vals, cl) ->
       (* Translclass binds each one to a new slot with a StrictOpt let, and
@@ -146,11 +168,12 @@ let rec class_vars classes ~from (ce : T.class_expr) : M.ivar list * string list
         List.filter_map
           (fun (id, (e : T.expression)) ->
             (* Methods reach a parameter through Texp_instvar on [id]. *)
-            if Ident.Set.mem id used then Some (ivar ~param:true ~from (Ident.name id) false e.exp_type e.exp_env)
+            if Ident.Set.mem id used then
+              Some (ivar ~param:true ~where:(Analyze.range ctx e.exp_loc) ~from (Ident.name id) false e.exp_type e.exp_env)
             else None)
           vals
       in
-      let rest, unknown = class_vars classes ~from cl in
+      let rest, unknown = class_vars ctx classes ~from cl in
       (params @ rest, unknown)
   | Tcl_structure str ->
       let own =
@@ -163,7 +186,7 @@ let rec class_vars classes ~from (ce : T.class_expr) : M.ivar list * string list
                   | Tcfk_virtual ct -> (ct.ctyp_type, ct.ctyp_env)
                   | Tcfk_concrete (_, e) -> (e.exp_type, e.exp_env)
                 in
-                Some (ivar ~from name.txt (mut = Asttypes.Mutable) ty env)
+                Some (ivar ~where:(Analyze.range ctx f.cf_loc) ~from name.txt (mut = Asttypes.Mutable) ty env)
             | _ -> None)
           str.cstr_fields
       in
@@ -171,7 +194,7 @@ let rec class_vars classes ~from (ce : T.class_expr) : M.ivar list * string list
         (fun (vars, unknown) (f : T.class_field) ->
           match f.cf_desc with
           | Tcf_inherit (_, cl, _, _, _) ->
-              let pv, pu = class_vars classes ~from:(parent_name cl) cl in
+              let pv, pu = class_vars ctx classes ~from:(parent_name cl) cl in
               let taken (v : M.ivar) = (not v.vparam) && List.exists (fun (w : M.ivar) -> (not w.vparam) && w.vname = v.vname) vars in
               let fresh = List.filter (fun v -> not (taken v)) pv in
               (vars @ fresh, unknown @ pu)
@@ -179,9 +202,9 @@ let rec class_vars classes ~from (ce : T.class_expr) : M.ivar list * string list
         (own, []) str.cstr_fields
   | Tcl_ident (p, _, _) -> (
       match Hashtbl.find_opt classes (Path.name p) with
-      | Some ce -> class_vars classes ~from:(Path.name p) ce
+      | Some ce -> class_vars ctx classes ~from:(Path.name p) ce
       | None -> ([], [ Path.name p ]))
-  | Tcl_apply (cl, _) | Tcl_constraint (cl, _, _, _, _) | Tcl_open (_, cl) -> class_vars classes ~from cl
+  | Tcl_apply (cl, _) | Tcl_constraint (cl, _, _, _, _) | Tcl_open (_, cl) -> class_vars ctx classes ~from cl
 
 and parent_name (ce : T.class_expr) =
   match ce.cl_desc with
@@ -193,19 +216,19 @@ and parent_name (ce : T.class_expr) =
    class or object inside an expression is built under Translobj.oo_wrap:
    it takes an extra slot, allocated by Translclass as [env2], when its
    methods use variables bound in the enclosing top-level item. *)
-let objects (str : T.structure) : M.obj list =
+let objects ctx (str : T.structure) : M.obj list =
   let classes = Hashtbl.create 8 in
   let acc = ref [] in
-  let add ~top ~locals name line (ce : T.class_expr) =
-    let ivars, unknown = class_vars classes ~from:name ce in
+  let add ~top ~locals name (loc : Location.t) (ce : T.class_expr) =
+    let ivars, unknown = class_vars ctx classes ~from:name ce in
     let env_slot = (not top) && not (Ident.Set.is_empty (Ident.Set.inter (method_idents ce) locals)) in
-    acc := { M.oname = name; oline = line; env_slot; ivars; unknown } :: !acc
+    acc := { M.oname = name; oline = Analyze.line loc; env_slot; ivars; unknown; orange = Analyze.range ctx loc } :: !acc
   in
   let class_decls ~top ~locals l =
     List.iter
       (fun ((ci : T.class_declaration), _) ->
         Hashtbl.replace classes (Ident.name ci.ci_id_class) ci.ci_expr;
-        add ~top ~locals ("class " ^ ci.ci_id_name.txt) (Analyze.line ci.ci_loc) ci.ci_expr)
+        add ~top ~locals ("class " ^ ci.ci_id_name.txt) ci.ci_loc ci.ci_expr)
       l
   in
   (* Classes and objects below a top-level item. *)
@@ -219,7 +242,7 @@ let objects (str : T.structure) : M.obj list =
       | Texp_object (cs, _) ->
           let ce = { T.cl_desc = Tcl_structure cs; cl_loc = e.exp_loc; cl_type = Cty_signature cs.cstr_type;
                      cl_env = e.exp_env; cl_attributes = [] } in
-          add ~top:false ~locals "object" (Analyze.line e.exp_loc) ce
+          add ~top:false ~locals "object" e.exp_loc ce
       | _ -> ());
       Tast_iterator.default_iterator.expr sub e
     in
@@ -254,5 +277,5 @@ let objects (str : T.structure) : M.obj list =
   List.sort (fun (a : M.obj) b -> compare a.oline b.oline) (List.rev !acc)
 
 let values ~modname ~src (str : T.structure) : M.values =
-  let ctx = { Analyze.src; prefix = "" } in
-  { backends = closures ~modname str; lazies = lazies ctx str; objects = objects str }
+  let ctx = { Analyze.src; prefix = ""; own = Analyze.structure_file str } in
+  { backends = closures ctx ~modname str; lazies = lazies ctx str; objects = objects ctx str }

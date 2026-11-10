@@ -14,7 +14,24 @@ let rebuild_env : (Env.t -> Env.t) ref = ref Fun.id
 type ctx = {
   src : string option;  (** Source text, for spelling types as written. *)
   prefix : string;  (** "A.B." inside module B of module A. *)
+  own : string;  (** The file locations name for the unit's source. *)
 }
+
+(* The file the unit's own locations name, read from its first item. *)
+let own_file locs =
+  match List.find_opt (fun (l : Location.t) -> l.loc_start.pos_fname <> "") locs with
+  | Some l -> l.loc_start.pos_fname
+  | None -> ""
+
+let structure_file (str : T.structure) = own_file (List.map (fun (i : T.structure_item) -> i.str_loc) str.str_items)
+let signature_file (sg : T.signature) = own_file (List.map (fun (i : T.signature_item) -> i.sig_loc) sg.sig_items)
+
+(* A location in the unit's source as a range; none for one in another
+   file, or one the compiler made up. *)
+let range ctx (loc : Location.t) : M.range option =
+  let a = loc.loc_start and b = loc.loc_end in
+  if ctx.own = "" || a.pos_fname <> ctx.own || a.pos_cnum < 0 || b.pos_cnum < a.pos_cnum then None
+  else Some { first_line = a.pos_lnum; first_col = a.pos_cnum - a.pos_bol; last_line = b.pos_lnum; last_col = b.pos_cnum - b.pos_bol }
 
 let squash s =
   let b = Buffer.create (String.length s) in
@@ -49,11 +66,12 @@ let line (loc : Location.t) = loc.loc_start.pos_lnum
 
 let word env ty = Word.word env ty
 
-let field ?(fkind = M.Arg) ?(mutable_ = false) ~env ctx (ct : T.core_type) : M.field =
-  { fkind; ty = spell ctx ct; mutable_; word = Word.word env ct.ctyp_type }
+let field ?(fkind = M.Arg) ?(mutable_ = false) ?loc ~env ctx (ct : T.core_type) : M.field =
+  { fkind; ty = spell ctx ct; mutable_; word = Word.word env ct.ctyp_type;
+    frange = range ctx (Option.value loc ~default:ct.ctyp_loc) }
 
 let label_field ~env ctx (ld : T.label_declaration) =
-  field ~fkind:(M.Label ld.ld_name.txt) ~mutable_:(Compat.ld_mutable ld) ~env ctx
+  field ~fkind:(M.Label ld.ld_name.txt) ~mutable_:(Compat.ld_mutable ld) ~loc:ld.ld_loc ~env ctx
     ld.ld_type
 
 let arg_fields ~env ctx = function
@@ -95,30 +113,31 @@ let constructor_notes env (desc : Compat.cstr_desc)
 
 let slot_field name =
   { M.fkind = M.Slot name; ty = "extension slot"; mutable_ = false;
-    word = M.Pointer { tag = Some M.object_tag; what = "extension slot" } }
+    word = M.Pointer { tag = Some M.object_tag; what = "extension slot" }; frange = None }
 
 let constructor_shape ~env ~args name desc fields =
   Compat.constructor_shape ~word ~env ~tys:(arg_types args) ~slot:(slot_field name) desc fields
 
-let poly_cases env row : M.case list =
+let poly_cases ?(where = fun _ -> None) env row : M.case list =
   List.filter_map
     (fun (label, f) ->
       let hash = Btype.hash_variant label in
       let name = "`" ^ label in
       let block ty =
-        let arg = { M.fkind = Arg; ty = print_type ty; mutable_ = false; word = Word.word env ty } in
+        let arg = { M.fkind = Arg; ty = print_type ty; mutable_ = false; word = Word.word env ty; frange = None } in
         let h =
-          { M.fkind = Hash hash; ty = "int"; mutable_ = false; word = M.Immediate "label hash" }
+          { M.fkind = Hash hash; ty = "int"; mutable_ = false; word = M.Immediate "label hash"; frange = None }
         in
         M.Block { tag = 0; fields = [ h; arg ] }
       in
+      let case_range = where label in
       match row_field_repr f with
-      | Rpresent None | Reither (true, [], _) -> Some { M.name; shape = Constant hash; notes = [] }
+      | Rpresent None | Reither (true, [], _) -> Some { M.name; shape = Constant hash; notes = []; case_range }
       | Rpresent (Some ty) | Reither (false, [ ty ], _) ->
-          Some { M.name; shape = block ty; notes = [] }
+          Some { M.name; shape = block ty; notes = []; case_range }
       | Reither (_, ty :: _, _) ->
           Some
-            { M.name; shape = block ty;
+            { M.name; shape = block ty; case_range;
               notes = [ "conjunctive type: the value may be constant or carry an argument" ] }
       | Reither (false, [], _) | Rabsent -> None)
     (List.sort (fun (a, _) (b, _) -> compare (Btype.hash_variant a) (Btype.hash_variant b)) (row_fields row))
@@ -145,7 +164,7 @@ let type_decl ~env ctx (td : T.type_declaration) : M.decl =
                let fields = arg_fields ~env ctx cd.cd_args in
                { M.name = cd.cd_name.txt;
                  shape = constructor_shape ~env ~args:cd.cd_args cd.cd_name.txt desc fields;
-                 notes = constructor_notes env desc cd.cd_args })
+                 notes = constructor_notes env desc cd.cd_args; case_range = range ctx cd.cd_loc })
              cds descs)
     | Type_open, _ -> Open
     | _, _ -> (
@@ -153,7 +172,17 @@ let type_decl ~env ctx (td : T.type_declaration) : M.decl =
         | Some ty -> (
             match get_desc (Word.expand env ty) with
             | Tvariant row ->
-                Polyvariant { cases = poly_cases env row; closed = Word.row_counts row <> None }
+                (* Tags written in this declaration, where they are. *)
+                let where l =
+                  match td.typ_manifest with
+                  | Some { ctyp_desc = Ttyp_variant (rfs, _, _); _ } ->
+                      List.find_map
+                        (fun (rf : T.row_field) ->
+                          match rf.rf_desc with Ttag (t, _, _) when t.txt = l -> range ctx rf.rf_loc | _ -> None)
+                        rfs
+                  | _ -> None
+                in
+                Polyvariant { cases = poly_cases ~where env row; closed = Word.row_counts row <> None }
             | _ -> Alias (Word.word env ty))
         | None -> Abstract (Compat.abstract_word ~word env path decl)))
   in
@@ -164,23 +193,23 @@ let type_decl ~env ctx (td : T.type_declaration) : M.decl =
     | _ -> []
   in
   { M.name = ctx.prefix ^ td.typ_name.txt; params = params ctx td; keyword = "type";
-    line = line td.typ_loc; source = Option.map squash (slice ctx td.typ_loc); kind; notes }
+    line = line td.typ_loc; source = Option.map squash (slice ctx td.typ_loc); kind; notes; range = range ctx td.typ_loc }
 
 let ext_decl ~env ctx ~keyword (ec : T.extension_constructor) : M.decl =
   let name = ec.ext_name.txt in
   let case : M.case =
     match ec.ext_kind with
-    | Text_rebind (p, _) -> { name; shape = Rebind (Path.name p); notes = [] }
+    | Text_rebind (p, _) -> { name; shape = Rebind (Path.name p); notes = []; case_range = range ctx ec.ext_loc }
     | Text_decl (_, args, _) ->
         let desc =
           Datarepr.extension_descr ~current_unit:None (Path.Pident ec.ext_id) ec.ext_type
         in
         let fields = arg_fields ~env ctx args in
         { name; shape = constructor_shape ~env ~args name desc fields;
-          notes = constructor_notes env desc args }
+          notes = constructor_notes env desc args; case_range = range ctx ec.ext_loc }
   in
   { M.name = ctx.prefix ^ name; params = ""; keyword; line = line ec.ext_loc;
-    source = Option.map squash (slice ctx ec.ext_loc); kind = Extension case; notes = [] }
+    source = Option.map squash (slice ctx ec.ext_loc); kind = Extension case; notes = []; range = range ctx ec.ext_loc }
 
 (* The fields of a structure block, for first-class modules. *)
 
@@ -196,11 +225,11 @@ let rec is_functor env mty =
 
 (* Mirrors Types.bound_value_identifiers, which decides the field order of a
    structure block, and keeps the kind and word of each item. *)
-let slots env (sg : signature) =
+let slots ctx env (sg : signature) =
   let n = ref 0 in
   let slots = ref [] and none = ref [] in
-  let add item id word =
-    slots := { M.index = !n; item; name = Ident.name id; word } :: !slots;
+  let add ?loc item id word =
+    slots := { M.index = !n; item; name = Ident.name id; word; srange = Option.bind loc (range ctx) } :: !slots;
     incr n
   in
   (* A class also declares a class type and an object type of its name. *)
@@ -213,18 +242,18 @@ let slots env (sg : signature) =
   in
   List.iter
     (function
-      | Sig_value (id, { val_kind = Val_reg; val_type; _ }, _) ->
-          add M.Value id (Word.word env val_type)
+      | Sig_value (id, { val_kind = Val_reg; val_type; val_loc; _ }, _) ->
+          add ~loc:val_loc M.Value id (Word.word env val_type)
       | Sig_value (id, _, _) -> none := ("external " ^ Ident.name id) :: !none
       | Sig_typext (id, ext, _, _) ->
           let item = if Path.same ext.ext_type_path Predef.path_exn then M.Exception else M.Extension in
-          add item id (M.Pointer { tag = Some M.object_tag; what = "extension slot" })
+          add ~loc:ext.ext_loc item id (M.Pointer { tag = Some M.object_tag; what = "extension slot" })
       | Sig_module (id, Mp_present, md, _, _) ->
           if is_functor env md.md_type then
-            add M.Functor id (M.Pointer { tag = Some M.closure_tag; what = "closure" })
-          else add M.Module id (M.Pointer { tag = Some 0; what = "structure" })
+            add ~loc:md.md_loc M.Functor id (M.Pointer { tag = Some M.closure_tag; what = "closure" })
+          else add ~loc:md.md_loc M.Module id (M.Pointer { tag = Some 0; what = "structure" })
       | Sig_module (id, Mp_absent, _, _, _) -> none := ("module alias " ^ Ident.name id) :: !none
-      | Sig_class (id, _, _, _) -> add M.Class id (M.Pointer { tag = Some 0; what = "class" })
+      | Sig_class (id, cd, _, _) -> add ~loc:cd.cty_loc M.Class id (M.Pointer { tag = Some 0; what = "class" })
       | Sig_type (id, _, _, _) when not (hidden id) -> none := ("type " ^ Ident.name id) :: !none
       | Sig_modtype (id, _, _) -> none := ("module type " ^ Ident.name id) :: !none
       | Sig_class_type (id, _, _, _) when not (hidden id) ->
@@ -314,8 +343,9 @@ let labels ~file iter_with =
    whatever [M] looks like, the block holds S's value-bearing items in S's
    order. Constraints such as [with type t = int] add no field. Each module
    type named in a package type or a [(module M)] expression is shown once,
-   at its first use. *)
-let packages iter_with =
+   at its first use. Its range is the module type's declaration, when that
+   is in this file. *)
+let packages ctx iter_with =
   let found = ref [] in
   let add env ty (loc : Location.t) =
     match Compat.package_path (Word.expand env ty) with
@@ -338,8 +368,9 @@ let packages iter_with =
          let env = !rebuild_env env in
          match Mtype.scrape env (Env.find_modtype_expansion p env) with
          | Mty_signature sg ->
-             let slots, no_slot = slots (Env.add_signature sg env) sg in
-             Some { M.pname = Path.name p; pline = l; slots; no_slot }
+             let slots, no_slot = slots ctx (Env.add_signature sg env) sg in
+             let prange = match Env.find_modtype p env with mtd -> range ctx mtd.mtd_loc | exception Not_found -> None in
+             Some { M.pname = Path.name p; pline = l; slots; no_slot; prange }
          | _ -> None
          | exception _ -> None)
 
@@ -347,7 +378,8 @@ type input = Impl of T.structure | Intf of T.signature
 
 let analyze ~file ~unit_name ~src input : M.compunit =
   let acc = { decls = [] } in
-  let ctx = { src; prefix = "" } in
+  let own = match input with Impl str -> structure_file str | Intf sg -> signature_file sg in
+  let ctx = { src; prefix = ""; own } in
   let iter_with =
     match input with
     | Impl str ->
@@ -357,5 +389,5 @@ let analyze ~file ~unit_name ~src input : M.compunit =
         signature acc ctx sg;
         fun it -> it.signature it sg
   in
-  { M.file; unit_name; decls = List.rev acc.decls; packages = packages iter_with;
+  { M.file; unit_name; decls = List.rev acc.decls; packages = packages ctx iter_with;
     labels = labels ~file iter_with; values = None }

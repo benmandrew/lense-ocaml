@@ -25,6 +25,11 @@ let rec write b ~indent v =
   | Str s -> Printf.bprintf b "\"%s\"" (escape s)
   | List [] -> Buffer.add_string b "[]"
   | Obj [] -> Buffer.add_string b "{}"
+  (* An object of numbers, such as a range, on one line. *)
+  | Obj kvs when List.for_all (function _, Int _ -> true | _ -> false) kvs ->
+      Buffer.add_char b '{';
+      List.iteri (fun i (k, x) -> if i > 0 then Buffer.add_string b ", "; Printf.bprintf b "\"%s\": " (escape k); write b ~indent x) kvs;
+      Buffer.add_char b '}'
   | List xs ->
       Buffer.add_char b '[';
       List.iteri (fun i x -> if i > 0 then Buffer.add_char b ','; nl (indent + 2); write b ~indent:(indent + 2) x) xs;
@@ -42,6 +47,11 @@ let rec write b ~indent v =
 
 let opt f = function None -> Null | Some x -> f x
 
+(* Columns count bytes from 0; the end is exclusive. *)
+let range =
+  opt (fun r ->
+      Obj [ ("line", Int r.first_line); ("column", Int r.first_col); ("end_line", Int r.last_line); ("end_column", Int r.last_col) ])
+
 let word = function
   | Immediate why -> Obj [ ("kind", Str "immediate"); ("why", Str why) ]
   | Pointer { tag; what } -> Obj [ ("kind", Str "pointer"); ("tag", opt (fun t -> Int t) tag); ("what", Str what) ]
@@ -57,7 +67,7 @@ let field (f : field) =
     | Slot c -> [ ("kind", Str "slot"); ("constructor", Str c) ]
     | Hash h -> [ ("kind", Str "hash"); ("hash", Int h) ]
   in
-  Obj (kind @ [ ("type", Str f.ty); ("mutable", Bool f.mutable_); ("word", word f.word) ])
+  Obj (kind @ [ ("type", Str f.ty); ("mutable", Bool f.mutable_); ("word", word f.word); ("range", range f.frange) ])
 
 let shape = function
   | Constant n -> Obj [ ("kind", Str "immediate"); ("value", Int n) ]
@@ -82,7 +92,7 @@ let shape = function
 
 let strs l = List (List.map (fun s -> Str s) l)
 
-let case (c : case) = Obj [ ("name", Str c.name); ("shape", shape c.shape); ("notes", strs c.notes) ]
+let case (c : case) = Obj [ ("name", Str c.name); ("shape", shape c.shape); ("notes", strs c.notes); ("range", range c.case_range) ]
 
 let decl (d : decl) =
   let kind =
@@ -99,7 +109,7 @@ let decl (d : decl) =
   Obj
     ([ ("name", Str d.name); ("params", Str d.params); ("keyword", Str d.keyword); ("line", Int d.line) ]
     @ kind
-    @ [ ("notes", strs d.notes) ])
+    @ [ ("notes", strs d.notes); ("range", range d.range) ])
 
 let slot_kind = function
   | Value -> "value" | Module -> "module" | Functor -> "functor"
@@ -112,9 +122,11 @@ let package (m : package) =
       ( "fields",
         List
           (List.map
-             (fun (s : slot) -> Obj [ ("index", Int s.index); ("item", Str (slot_kind s.item)); ("name", Str s.name); ("word", word s.word) ])
+             (fun (s : slot) ->
+               Obj [ ("index", Int s.index); ("item", Str (slot_kind s.item)); ("name", Str s.name); ("word", word s.word);
+                     ("range", range s.srange) ])
              m.slots) );
-      ("no_field", strs m.no_slot) ]
+      ("no_field", strs m.no_slot); ("range", range m.prange) ]
 
 let label (l : label_use) = Obj [ ("label", Str l.label); ("hash", Int l.hash); ("file", Str l.file); ("line", Int l.lline) ]
 
@@ -127,10 +139,13 @@ let closure ~native (c : closure) =
           (List.map2
              (fun (f : fn) off ->
                Obj [ ("name", Str f.fname); ("line", Int f.fline); ("arity", Int f.arity); ("tupled", Bool f.tupled);
-                     ("offset", Int off); ("code_words", Int (code_words ~native f)) ])
+                     ("offset", Int off); ("code_words", Int (code_words ~native f)); ("range", range f.fn_range) ])
              c.fns offs) );
       ( "env",
-        List (List.map (fun (cv : capture) -> Obj [ ("name", Str cv.cvar); ("type", Str cv.cty); ("word", word cv.cword) ]) c.env) ) ]
+        List
+          (List.map
+             (fun (cv : capture) -> Obj [ ("name", Str cv.cvar); ("type", Str cv.cty); ("word", word cv.cword); ("bound_at", range cv.cv_range) ])
+             c.env) ) ]
 
 let backend (bc : backend_closures) =
   Obj
@@ -139,7 +154,7 @@ let backend (bc : backend_closures) =
 
 let lazy_value (z : lazy_value) =
   let kind = match z.zkind with Itself -> "itself" | Forward -> "forward" | Suspended -> "lazy" in
-  Obj [ ("line", Int z.zline); ("source", Str z.zsource); ("kind", Str kind); ("word", word z.zword) ]
+  Obj [ ("line", Int z.zline); ("source", Str z.zsource); ("kind", Str kind); ("word", word z.zword); ("range", range z.zrange) ]
 
 let obj (o : obj) =
   Obj
@@ -149,9 +164,9 @@ let obj (o : obj) =
           (List.map
              (fun (v : ivar) ->
                Obj [ ("name", Str v.vname); ("type", Str v.vty); ("mutable", Bool v.vmutable); ("parameter", Bool v.vparam);
-                     ("from", Str v.vfrom); ("word", word v.vword) ])
+                     ("from", Str v.vfrom); ("word", word v.vword); ("range", range v.vrange) ])
              o.ivars) );
-      ("unknown", strs o.unknown) ]
+      ("unknown", strs o.unknown); ("range", range o.orange) ]
 
 let values (v : values) =
   Obj
