@@ -12,6 +12,7 @@
 
 (executable
  (name oxc)
+ (modes byte_complete exe)
  (flags (-w -a -g))
  (libraries oxfront oxbytecomp)
  (modules oxc))
