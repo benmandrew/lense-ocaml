@@ -14,19 +14,20 @@
       version = "0.1.0";
 
       # What the dune build reads.
-      source = nixpkgs.lib.fileset.toSource {
+      sourceOf = paths: nixpkgs.lib.fileset.toSource {
         root = ./.;
-        fileset = nixpkgs.lib.fileset.unions [
+        fileset = nixpkgs.lib.fileset.unions ([
           ./dune-project
           ./lense-ocaml.opam
-          ./bin
           ./src
-          ./test
           ./vendor
           ./web/dune
           ./web/jsoo
-        ];
+        ] ++ paths);
       };
+      source = sourceOf [ ./bin ./test ];
+      # The JavaScript needs neither, so editing a test does not rebuild it.
+      webSource = sourceOf [ ];
     in
     {
       packages = forAllSystems (pkgs:
@@ -51,7 +52,7 @@
           web-js = pkgs.stdenv.mkDerivation {
             pname = "lense-ocaml-web-js";
             inherit version;
-            src = source;
+            src = webSource;
             nativeBuildInputs = [
               ocamlPackages.ocaml
               ocamlPackages.dune_3
