@@ -368,26 +368,31 @@ let lfun (f : Lambda.lfunction) =
   in
   { lname; lloc; nparams = List.length f.params; ltupled = f.kind = Tupled }
 
-(* Every closure the bytecode allocates: one function, or a recursive set
-   that shares one block, with the variables it captures in Ident order.
-   OxCaml's ocamlc does not split default arguments. *)
+(* Every closure the bytecode allocates per call of a function: one
+   function, or a recursive set that shares one block, with the variables
+   it captures in Ident order. A closure outside every function body is
+   allocated once, when the unit initialises, and is left out. OxCaml's
+   ocamlc does not split default arguments. *)
 let closure_sets (lam : Lambda.lambda) =
   let acc = ref [] in
   let add fs fv = acc := (List.map lfun fs, Ident.Set.elements fv) :: !acc in
-  let rec walk (lam : Lambda.lambda) =
+  let rec walk ~inside (lam : Lambda.lambda) =
     match lam with
     | Lfunction f ->
-        add [ f ] (Lambda.free_variables lam);
-        walk f.body
+        if inside then add [ f ] (Lambda.free_variables lam);
+        walk ~inside:true f.body
     | Lletrec (bs, body) ->
-        add
-          (List.map (fun (b : Lambda.rec_binding) -> b.def) bs)
-          (Lambda.free_variables (Lletrec (bs, Lambda.lambda_unit)));
-        List.iter (fun (b : Lambda.rec_binding) -> walk b.def.body) bs;
-        walk body
-    | _ -> Lambda.shallow_iter ~tail:walk ~non_tail:walk lam
+        if inside then
+          add
+            (List.map (fun (b : Lambda.rec_binding) -> b.def) bs)
+            (Lambda.free_variables (Lletrec (bs, Lambda.lambda_unit)));
+        List.iter
+          (fun (b : Lambda.rec_binding) -> walk ~inside:true b.def.body)
+          bs;
+        walk ~inside body
+    | _ -> Lambda.shallow_iter ~tail:(walk ~inside) ~non_tail:(walk ~inside) lam
   in
-  walk lam;
+  walk ~inside:false lam;
   List.rev !acc
 
 (* The Lambda code that OxCaml's ocamlc compiles, built as its driver

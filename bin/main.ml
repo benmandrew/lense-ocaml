@@ -5,8 +5,10 @@ module M = Lense_model.Model
 let usage =
   "lense-ocaml [options] <file.ml | file.mli | file.cmt | file.cmti | -> ...\n\n\
    Prints which constructors become immediates, which tag each block gets,\n\
-   when the compiler drops the block, and how first-class modules are laid out.\n\
-   Sizes are in words, without the header word.\n\n\
+   when the compiler drops the block, how first-class modules are laid out,\n\
+   and the closures, lazy values and objects the code allocates.\n\
+   Sizes are in words, without the header word. Costs are in words with every\n\
+   header, as Obj.reachable_words counts them.\n\n\
    Options:"
 
 (* Which compiler's type checker reads the input. *)
@@ -63,7 +65,7 @@ let find_ox_stdlib given =
            ^ String.concat " or " candidates
            ^ "; pass --ox-stdlib DIR"))
 
-(* The backend whose closures --values prints, or None for both. *)
+(* The backend whose closures the report shows, or None for both. *)
 let backend_of_string = function
   | "native" -> Some "native code"
   | "bytecode" -> Some "bytecode"
@@ -73,10 +75,10 @@ let backend_of_string = function
         (Arg.Bad ("unknown backend " ^ s ^ ": use native, bytecode or both"))
 
 let () =
-  let values = ref false and backend = ref (Some "native code") in
+  let values = ref true and backend = ref (Some "native code") in
   let compiler = ref None
   and ox_stdlib = ref (Sys.getenv_opt "LENSE_OX_STDLIB") in
-  let json = ref false and source = ref false and labels = ref false in
+  let json = ref false and source = ref false in
   let only = ref []
   and includes = ref []
   and files = ref []
@@ -91,16 +93,12 @@ let () =
         ( "--source",
           Arg.Set source,
           " Print each declaration above its representation" );
-        ( "--values",
-          Arg.Set values,
-          " Also show closures, lazy values and objects" );
+        ( "--no-values",
+          Arg.Clear values,
+          " Leave out closures, lazy values and objects" );
         ( "--backend",
           Arg.String (fun s -> backend := backend_of_string s),
-          "native|bytecode|both Whose closures --values shows (default: native)"
-        );
-        ( "--labels",
-          Arg.Set labels,
-          " List every polymorphic variant label with its hash" );
+          "native|bytecode|both Whose closures to show (default: native)" );
         ("--intf", Arg.Set intf, " Read standard input as an interface (.mli)");
         ( "-",
           Arg.Unit (fun () -> files := "-" :: !files),
@@ -162,11 +160,6 @@ let () =
     | None -> units
   in
   if !json then print_string (Lense_model.Json.render units)
-  else if !labels then (
-    let b = Buffer.create 1024 in
-    Lense_model.Text.labels b units;
-    Lense_model.Text.collisions b units;
-    print_string (Buffer.contents b))
   else
     print_string
       (Lense_model.Text.render

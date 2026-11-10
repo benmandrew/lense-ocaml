@@ -2,8 +2,8 @@
 
 export type Compiler = '5.5' | 'ox';
 
-/** Whose closures the values report shows. */
-export type Backend = 'native' | 'bytecode';
+/** Whose closures the report shows. */
+export type Backend = 'native' | 'bytecode' | 'both';
 
 export interface Options {
   compiler: Compiler;

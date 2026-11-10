@@ -202,6 +202,16 @@ pre.report {
 .card h2 { margin: 0; font: 400 13px/1.6 var(--mono); }
 .card h2 .name { color: var(--ink); font-weight: 700; }
 .card h2 .desc { margin-left: 1.2em; color: var(--syn-type); }
+/* The line a closure, lazy value or object comes from. */
+.card h2 .site {
+  margin-left: 1em;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.card.site { border-style: dashed; }
 
 .card pre {
   margin: 6px 0 0;

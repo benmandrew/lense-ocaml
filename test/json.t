@@ -411,7 +411,18 @@
           }
         ],
         "packages": [],
-        "labels": []
+        "labels": [],
+        "values": {
+          "closures": [
+            {
+              "backend": "native code",
+              "config": "Closure, without flambda",
+              "closures": []
+            }
+          ],
+          "lazy": [],
+          "objects": []
+        }
       }
     ],
     "collisions": []
@@ -636,7 +647,27 @@
             "range": {"line": 72, "column": 0, "end_line": 74, "end_column": 3}
           }
         ],
-        "labels": []
+        "labels": [],
+        "values": {
+          "closures": [
+            {
+              "backend": "native code",
+              "config": "Closure, without flambda",
+              "closures": []
+            }
+          ],
+          "lazy": [],
+          "objects": [
+            {
+              "name": "class drawing",
+              "line": 59,
+              "env_slot": false,
+              "vars": [],
+              "unknown": [],
+              "range": {"line": 59, "column": 4, "end_line": 62, "end_column": 9}
+            }
+          ]
+        }
       }
     ],
     "collisions": []
@@ -1135,7 +1166,18 @@
             "file": "cases/polyvariants.ml",
             "line": 10
           }
-        ]
+        ],
+        "values": {
+          "closures": [
+            {
+              "backend": "native code",
+              "config": "Closure, without flambda",
+              "closures": []
+            }
+          ],
+          "lazy": [],
+          "objects": []
+        }
       }
     ],
     "collisions": [
@@ -1953,7 +1995,18 @@
           }
         ],
         "packages": [],
-        "labels": []
+        "labels": [],
+        "values": {
+          "closures": [
+            {
+              "backend": "native code",
+              "config": "Closure, without flambda",
+              "closures": []
+            }
+          ],
+          "lazy": [],
+          "objects": []
+        }
       }
     ],
     "collisions": []
@@ -2757,7 +2810,18 @@
             "file": "cases/recursive.ml",
             "line": 10
           }
-        ]
+        ],
+        "values": {
+          "closures": [
+            {
+              "backend": "native code",
+              "config": "Closure, without flambda",
+              "closures": []
+            }
+          ],
+          "lazy": [],
+          "objects": []
+        }
       }
     ],
     "collisions": []
@@ -3057,7 +3121,18 @@
           }
         ],
         "packages": [],
-        "labels": []
+        "labels": [],
+        "values": {
+          "closures": [
+            {
+              "backend": "native code",
+              "config": "Closure, without flambda",
+              "closures": []
+            }
+          ],
+          "lazy": [],
+          "objects": []
+        }
       }
     ],
     "collisions": []
@@ -3074,7 +3149,7 @@
             "name": "counter",
             "params": "",
             "keyword": "type",
-            "line": 16,
+            "line": 31,
             "kind": "record",
             "shape": {
               "kind": "block",
@@ -3102,7 +3177,7 @@
                     ],
                     "nodes": false
                   },
-                  "range": {"line": 16, "column": 17, "end_line": 16, "end_column": 36}
+                  "range": {"line": 31, "column": 17, "end_line": 31, "end_column": 36}
                 },
                 {
                   "kind": "label",
@@ -3125,7 +3200,7 @@
                     ],
                     "nodes": false
                   },
-                  "range": {"line": 16, "column": 37, "end_line": 16, "end_column": 57}
+                  "range": {"line": 31, "column": 37, "end_line": 31, "end_column": 57}
                 }
               ],
               "cost": {
@@ -3145,11 +3220,591 @@
               }
             },
             "notes": [],
-            "range": {"line": 16, "column": 0, "end_line": 16, "end_column": 59}
+            "range": {"line": 31, "column": 0, "end_line": 31, "end_column": 59}
           }
         ],
         "packages": [],
-        "labels": []
+        "labels": [],
+        "values": {
+          "closures": [
+            {
+              "backend": "native code",
+              "config": "Closure, without flambda",
+              "closures": [
+                {
+                  "size": 3,
+                  "env_start": 2,
+                  "functions": [
+                    {
+                      "name": "arities.inc",
+                      "line": 8,
+                      "arity": 1,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 2,
+                      "range": {"line": 8, "column": 2, "end_line": 8, "end_column": 19}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "k",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 7, "column": 12, "end_line": 7, "end_column": 13}
+                    }
+                  ]
+                },
+                {
+                  "size": 4,
+                  "env_start": 3,
+                  "functions": [
+                    {
+                      "name": "arities.add",
+                      "line": 9,
+                      "arity": 2,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 3,
+                      "range": {"line": 9, "column": 2, "end_line": 9, "end_column": 25}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "k",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 7, "column": 12, "end_line": 7, "end_column": 13}
+                    }
+                  ]
+                },
+                {
+                  "size": 4,
+                  "env_start": 3,
+                  "functions": [
+                    {
+                      "name": "arities.add_pair",
+                      "line": 10,
+                      "arity": 2,
+                      "tupled": true,
+                      "offset": 0,
+                      "code_words": 3,
+                      "range": {"line": 10, "column": 2, "end_line": 10, "end_column": 33}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "k",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 7, "column": 12, "end_line": 7, "end_column": 13}
+                    }
+                  ]
+                },
+                {
+                  "size": 4,
+                  "env_start": 2,
+                  "functions": [
+                    {
+                      "name": "adder.(fun)",
+                      "line": 13,
+                      "arity": 1,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 2,
+                      "range": {"line": 13, "column": 16, "end_line": 13, "end_column": 34}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "a",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 13, "column": 10, "end_line": 13, "end_column": 11}
+                    },
+                    {
+                      "name": "b",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 13, "column": 12, "end_line": 13, "end_column": 13}
+                    }
+                  ]
+                },
+                {
+                  "size": 3,
+                  "env_start": 2,
+                  "functions": [
+                    {
+                      "name": "scaler.(fun)",
+                      "line": 14,
+                      "arity": 1,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 2,
+                      "range": {"line": 14, "column": 15, "end_line": 14, "end_column": 37}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "a",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 14, "column": 11, "end_line": 14, "end_column": 12}
+                    }
+                  ]
+                },
+                {
+                  "size": 6,
+                  "env_start": 5,
+                  "functions": [
+                    {
+                      "name": "parity.even",
+                      "line": 17,
+                      "arity": 1,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 2,
+                      "range": {"line": 17, "column": 2, "end_line": 17, "end_column": 39}
+                    },
+                    {
+                      "name": "parity.odd",
+                      "line": 17,
+                      "arity": 1,
+                      "tupled": false,
+                      "offset": 3,
+                      "code_words": 2,
+                      "range": {"line": 17, "column": 40, "end_line": 17, "end_column": 74}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "n",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 16, "column": 11, "end_line": 16, "end_column": 12}
+                    }
+                  ]
+                },
+                {
+                  "size": 8,
+                  "env_start": 7,
+                  "functions": [
+                    {
+                      "name": "bumper.bump",
+                      "line": 21,
+                      "arity": 2,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 3,
+                      "range": {"line": 21, "column": 2, "end_line": 21, "end_column": 35}
+                    },
+                    {
+                      "name": "bumper.bump_inner",
+                      "line": 21,
+                      "arity": 2,
+                      "tupled": false,
+                      "offset": 4,
+                      "code_words": 3,
+                      "range": {"line": 21, "column": 2, "end_line": 21, "end_column": 35}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "k",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 20, "column": 11, "end_line": 20, "end_column": 12}
+                    }
+                  ]
+                },
+                {
+                  "size": 3,
+                  "env_start": 2,
+                  "functions": [
+                    {
+                      "name": "counter.(fun)",
+                      "line": 37,
+                      "arity": 1,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 2,
+                      "range": {"line": 37, "column": 6, "end_line": 39, "end_column": 11}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "n",
+                      "type": "int ref",
+                      "word": {
+                        "kind": "pointer",
+                        "tag": 0,
+                        "what": "record Stdlib.ref"
+                      },
+                      "bound_at": {"line": 34, "column": 6, "end_line": 34, "end_column": 7}
+                    }
+                  ]
+                },
+                {
+                  "size": 4,
+                  "env_start": 2,
+                  "functions": [
+                    {
+                      "name": "counter.(fun)",
+                      "line": 40,
+                      "arity": 1,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 2,
+                      "range": {"line": 40, "column": 12, "end_line": 40, "end_column": 34}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "start",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 33, "column": 12, "end_line": 33, "end_column": 17}
+                    },
+                    {
+                      "name": "n",
+                      "type": "int ref",
+                      "word": {
+                        "kind": "pointer",
+                        "tag": 0,
+                        "what": "record Stdlib.ref"
+                      },
+                      "bound_at": {"line": 34, "column": 6, "end_line": 34, "end_column": 7}
+                    }
+                  ]
+                },
+                {
+                  "size": 3,
+                  "env_start": 2,
+                  "functions": [
+                    {
+                      "name": "lazies",
+                      "line": 44,
+                      "arity": 1,
+                      "tupled": false,
+                      "offset": 0,
+                      "code_words": 2,
+                      "range": {"line": 44, "column": 42, "end_line": 44, "end_column": 49}
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "i",
+                      "type": "int",
+                      "word": {
+                        "kind": "immediate",
+                        "why": "int"
+                      },
+                      "bound_at": {"line": 43, "column": 11, "end_line": 43, "end_column": 12}
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "lazy": [
+            {
+              "line": 44,
+              "source": "lazy 3",
+              "kind": "itself",
+              "word": {
+                "kind": "immediate",
+                "why": "int"
+              },
+              "range": {"line": 44, "column": 3, "end_line": 44, "end_column": 9}
+            },
+            {
+              "line": 44,
+              "source": "lazy 2.5",
+              "kind": "forward",
+              "word": {
+                "kind": "pointer",
+                "tag": 253,
+                "what": "boxed float"
+              },
+              "range": {"line": 44, "column": 11, "end_line": 44, "end_column": 19}
+            },
+            {
+              "line": 44,
+              "source": "lazy i",
+              "kind": "itself",
+              "word": {
+                "kind": "immediate",
+                "why": "int"
+              },
+              "range": {"line": 44, "column": 21, "end_line": 44, "end_column": 27}
+            },
+            {
+              "line": 44,
+              "source": "lazy v",
+              "kind": "forward",
+              "word": {
+                "kind": "any",
+                "why": "type variable"
+              },
+              "range": {"line": 44, "column": 29, "end_line": 44, "end_column": 35}
+            },
+            {
+              "line": 44,
+              "source": "lazy (i + 1)",
+              "kind": "lazy",
+              "word": {
+                "kind": "immediate",
+                "why": "int"
+              },
+              "range": {"line": 44, "column": 37, "end_line": 44, "end_column": 49}
+            },
+            {
+              "line": 44,
+              "source": "lazy (fun x -> x)",
+              "kind": "itself",
+              "word": {
+                "kind": "pointer",
+                "tag": 247,
+                "what": "closure"
+              },
+              "range": {"line": 44, "column": 51, "end_line": 44, "end_column": 68}
+            }
+          ],
+          "objects": [
+            {
+              "name": "class point",
+              "line": 46,
+              "env_slot": false,
+              "vars": [
+                {
+                  "name": "x",
+                  "type": "int",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "class point",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": {"line": 48, "column": 4, "end_line": 48, "end_column": 13}
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "class point",
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 252,
+                    "what": "string"
+                  },
+                  "range": {"line": 49, "column": 4, "end_line": 49, "end_column": 18}
+                }
+              ],
+              "unknown": [],
+              "range": {"line": 46, "column": 0, "end_line": 50, "end_column": 5}
+            },
+            {
+              "name": "class labelled",
+              "line": 52,
+              "env_slot": false,
+              "vars": [
+                {
+                  "name": "k",
+                  "type": "int",
+                  "mutable": false,
+                  "parameter": true,
+                  "from": "class labelled",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": null
+                },
+                {
+                  "name": "s",
+                  "type": "string",
+                  "mutable": false,
+                  "parameter": true,
+                  "from": "class labelled",
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 252,
+                    "what": "string"
+                  },
+                  "range": null
+                },
+                {
+                  "name": "v",
+                  "type": "int",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "class labelled",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": {"line": 54, "column": 4, "end_line": 54, "end_column": 13}
+                }
+              ],
+              "unknown": [],
+              "range": {"line": 52, "column": 0, "end_line": 57, "end_column": 5}
+            },
+            {
+              "name": "class point3",
+              "line": 59,
+              "env_slot": false,
+              "vars": [
+                {
+                  "name": "z",
+                  "type": "int",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "class point3",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": {"line": 61, "column": 4, "end_line": 61, "end_column": 13}
+                },
+                {
+                  "name": "w",
+                  "type": "string",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "class point3",
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 252,
+                    "what": "string"
+                  },
+                  "range": {"line": 63, "column": 4, "end_line": 63, "end_column": 15}
+                },
+                {
+                  "name": "x",
+                  "type": "int",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "point",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": {"line": 48, "column": 4, "end_line": 48, "end_column": 13}
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "point",
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 252,
+                    "what": "string"
+                  },
+                  "range": {"line": 49, "column": 4, "end_line": 49, "end_column": 18}
+                }
+              ],
+              "unknown": [],
+              "range": {"line": 59, "column": 0, "end_line": 65, "end_column": 5}
+            },
+            {
+              "name": "object",
+              "line": 68,
+              "env_slot": true,
+              "vars": [
+                {
+                  "name": "a",
+                  "type": "int",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "object",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": {"line": 69, "column": 4, "end_line": 69, "end_column": 13}
+                }
+              ],
+              "unknown": [],
+              "range": {"line": 68, "column": 2, "end_line": 71, "end_column": 5}
+            },
+            {
+              "name": "class c",
+              "line": 75,
+              "env_slot": true,
+              "vars": [
+                {
+                  "name": "a",
+                  "type": "int",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "class c",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": {"line": 78, "column": 8, "end_line": 78, "end_column": 17}
+                },
+                {
+                  "name": "x",
+                  "type": "int",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "point",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": {"line": 48, "column": 4, "end_line": 48, "end_column": 13}
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "mutable": false,
+                  "parameter": false,
+                  "from": "point",
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 252,
+                    "what": "string"
+                  },
+                  "range": {"line": 49, "column": 4, "end_line": 49, "end_column": 18}
+                }
+              ],
+              "unknown": [],
+              "range": {"line": 75, "column": 4, "end_line": 80, "end_column": 9}
+            }
+          ]
+        }
       }
     ],
     "collisions": []
@@ -3660,7 +4315,18 @@
           }
         ],
         "packages": [],
-        "labels": []
+        "labels": [],
+        "values": {
+          "closures": [
+            {
+              "backend": "native code",
+              "config": "Closure, without flambda",
+              "closures": []
+            }
+          ],
+          "lazy": [],
+          "objects": []
+        }
       }
     ],
     "collisions": []

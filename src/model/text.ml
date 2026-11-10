@@ -339,20 +339,34 @@ let rows b ~indent ?links (rs : (string * string * string) list) =
 
 let fn_name f = if f.fname = "" then "(made by the compiler)" else f.fname
 
+(* Whose closinfo a layout shows: one backend's, or both when the two
+   backends lay the block out the same way. *)
+type mode = Native | Bytecode | Both
+
+let native_offsets = function Bytecode -> false | Native | Both -> true
+
+let closinfo ~mode (f : fn) envstart =
+  let arity = if f.tupled then -f.arity else f.arity in
+  match mode with
+  | Native ->
+      Printf.sprintf "closinfo: arity %d, environment from field %d" arity
+        envstart
+  | Bytecode -> Printf.sprintf "closinfo: environment from field %d" envstart
+  | Both ->
+      Printf.sprintf
+        "closinfo: arity %d in native code, 0 in bytecode, environment from \
+         field %d"
+        arity envstart
+
 (* The rows of a closure block, and the range of each: the function a word
    belongs to, or where a captured variable is bound. *)
-let closure_rows ~native c =
+let closure_rows ~mode c =
+  let native = native_offsets mode in
   let offs, envstart = closure_offsets ~native c in
   let many = List.length c.fns > 1 in
   let entry (f : fn) off =
     let who s = if many then fn_name f ^ ": " ^ s else s in
-    let info =
-      if native then
-        let arity = if f.tupled then -f.arity else f.arity in
-        Printf.sprintf "closinfo: arity %d, environment from field %d" arity
-          envstart
-      else Printf.sprintf "closinfo: environment from field %d" envstart
-    in
+    let info = closinfo ~mode f envstart in
     let infix =
       if off = 0 then []
       else
@@ -393,36 +407,144 @@ let closure_rows ~native c =
             cv.cv_range ))
         c.env)
 
-let closure b ~native c =
-  let names = String.concat ", " (List.map fn_name c.fns) in
-  let f = List.hd c.fns in
-  let size = closure_size ~native c in
-  link b (List.map (fun f -> f.fn_range) c.fns);
-  if List.length c.fns = 1 && c.env = [] then
-    Printf.bprintf b "  %s  line %d  %s, size %d, arity %d%s, no environment\n"
-      names f.fline (tag_name closure_tag) size f.arity
-      (if f.tupled then " (tupled)" else "")
-  else begin
-    if List.length c.fns = 1 then
-      Printf.bprintf b "  %s  line %d  %s, size %d\n" names f.fline
-        (tag_name closure_tag) size
-    else
-      Printf.bprintf b "  %s  line %d  one %s block for %d functions, size %d\n"
-        names f.fline (tag_name closure_tag) (List.length c.fns) size;
-    let rs, links = closure_rows ~native c in
-    rows b ~indent:6 ~links rs
-  end
+(* A block of one function with no environment: its heading says it all. *)
+let bare c = match (c.fns, c.env) with [ _ ], [] -> true | _ -> false
 
-let backend b (bc : backend_closures) =
-  match bc.closures with
-  | None ->
-      Printf.bprintf b "closures in %s (%s): not predicted\n" bc.backend
-        bc.config
-  | Some [] ->
-      Printf.bprintf b "closures in %s (%s): none\n" bc.backend bc.config
-  | Some cs ->
-      Printf.bprintf b "closures in %s (%s)\n" bc.backend bc.config;
-      List.iter (closure b ~native:(bc.backend = "native code")) cs
+let layout_desc ~native c =
+  let size = closure_size ~native c in
+  match (c.fns, c.env) with
+  | [ f ], [] ->
+      Printf.sprintf "%s, size %d, arity %d%s, no environment"
+        (tag_name closure_tag) size f.arity
+        (if f.tupled then " (tupled)" else "")
+  | [ _ ], _ -> Printf.sprintf "%s, size %d" (tag_name closure_tag) size
+  | fns, _ ->
+      Printf.sprintf "one %s block for %d functions, size %d"
+        (tag_name closure_tag) (List.length fns) size
+
+let same_layout n b =
+  let names c = List.map (fun f -> f.fname) c.fns
+  and vars c = List.map (fun (cv : capture) -> (cv.cvar, cv.cty)) c.env in
+  closure_offsets ~native:true n = closure_offsets ~native:false b
+  && names n = names b
+  && vars n = vars b
+
+(* A site of the report: [both] when both backends are shown and predicted,
+   so that a block one of them leaves out is marked. *)
+type site = { site : closure_site; both : bool }
+
+(* One block of a site with its rows: [lead] is the line above them, a
+   backend's own line, or [None] for the site's heading. *)
+type layout = { lead : string option; mode : mode; block : closure }
+
+let site_fns s =
+  List.concat_map
+    (fun c -> c.fns)
+    (List.filter_map Fun.id [ s.native; s.bytecode ])
+
+(* The heading of a site, and its layouts. *)
+let site_parts { site = s; both } =
+  let names =
+    List.fold_left
+      (fun acc f -> if List.mem f acc then acc else acc @ [ f ])
+      []
+      (List.map fn_name (site_fns s))
+  in
+  let head desc =
+    Printf.sprintf "fun %s  line %d  %s" (String.concat ", " names)
+      (site_line s) desc
+  in
+  let only name = if both then "  (" ^ name ^ " only)" else "" in
+  match (s.native, s.bytecode) with
+  | Some n, Some b when same_layout n b ->
+      ( head (layout_desc ~native:true n),
+        [ { lead = None; mode = Both; block = n } ] )
+  | Some n, Some b when bare n && bare b ->
+      let arity c =
+        let f = List.hd c.fns in
+        string_of_int f.arity ^ if f.tupled then " (tupled)" else ""
+      in
+      let arities =
+        if arity n = arity b then "arity " ^ arity n
+        else
+          Printf.sprintf "arity %s in native code, %s in bytecode" (arity n)
+            (arity b)
+      in
+      ( head
+          (Printf.sprintf
+             "%s, size %d in native code, %d in bytecode, %s, no environment"
+             (tag_name closure_tag)
+             (closure_size ~native:true n)
+             (closure_size ~native:false b)
+             arities),
+        [] )
+  | Some n, Some b ->
+      ( head
+          (Printf.sprintf "%s, size %d in native code, %d in bytecode"
+             (tag_name closure_tag)
+             (closure_size ~native:true n)
+             (closure_size ~native:false b)),
+        [
+          {
+            lead = Some ("native code: " ^ layout_desc ~native:true n);
+            mode = Native;
+            block = n;
+          };
+          {
+            lead = Some ("bytecode: " ^ layout_desc ~native:false b);
+            mode = Bytecode;
+            block = b;
+          };
+        ] )
+  | Some c, None ->
+      ( head (layout_desc ~native:true c ^ only "native code"),
+        [ { lead = None; mode = Native; block = c } ] )
+  | None, Some c ->
+      ( head (layout_desc ~native:false c ^ only "bytecode"),
+        [ { lead = None; mode = Bytecode; block = c } ] )
+  | None, None -> (head "", [])
+
+let fn_ranges c = List.map (fun f -> f.fn_range) c.fns
+
+(* The rows of a layout, at [indent]. *)
+let layout_rows b ~indent l =
+  if not (bare l.block) then
+    let rs, links = closure_rows ~mode:l.mode l.block in
+    rows b ~indent ~links rs
+
+let closure_site b st =
+  let head, layouts = site_parts st in
+  link b
+    (List.concat_map fn_ranges
+       (List.filter_map Fun.id [ st.site.native; st.site.bytecode ]));
+  Printf.bprintf b "%s\n" head;
+  List.iter
+    (fun l ->
+      match l.lead with
+      | None -> layout_rows b ~indent:4 l
+      | Some lead ->
+          link b (fn_ranges l.block);
+          Printf.bprintf b "    %s\n" lead;
+          layout_rows b ~indent:6 l)
+    layouts
+
+(* How each backend shown was built, once for the unit, when it has a
+   closure or its closures are not predicted. *)
+let closure_config b (v : values) =
+  if
+    closure_sites v <> []
+    || List.exists (fun bc -> bc.closures = None) v.backends
+  then (
+    List.iter
+      (fun bc ->
+        match bc.closures with
+        | None ->
+            Printf.bprintf b "closures in %s: not predicted (%s)\n" bc.backend
+              bc.config
+        | Some _ -> Printf.bprintf b "closures in %s: %s\n" bc.backend bc.config)
+      v.backends;
+    true)
+  else false
 
 let lazy_value b (z : lazy_value) =
   let what =
@@ -486,29 +608,6 @@ let obj b (o : obj) =
         u)
     o.unknown
 
-let values b (v : values) =
-  let first = ref true in
-  let sep () = if !first then first := false else Buffer.add_char b '\n' in
-  List.iter
-    (fun bc ->
-      sep ();
-      backend b bc)
-    v.backends;
-  if v.lazies <> [] then begin
-    sep ();
-    Buffer.add_string b "lazy values\n";
-    List.iter
-      (fun z ->
-        Buffer.add_string b "  ";
-        lazy_value b z)
-      v.lazies
-  end;
-  List.iter
-    (fun o ->
-      sep ();
-      obj b o)
-    v.objects
-
 type options = { source : bool; only : string list }
 
 let selected opts name =
@@ -521,34 +620,68 @@ let selected opts name =
          n > k && String.sub name (n - k - 1) (k + 1) = "." ^ o)
        opts.only
 
-let compunit opts b (u : compunit) =
-  let first = ref true in
-  let sep () = if !first then first := false else Buffer.add_char b '\n' in
-  (* Source order: a package sits at its module type's declaration when that
-     is in this file, else at its first use. *)
-  let decls = List.map (fun (d : decl) -> (d.line, `Decl d)) u.decls in
+(* An entry of the report. Declarations and packages hold for every value
+   of a type; closures, lazy values and objects for one place in the code. *)
+type item =
+  | Decl of decl
+  | Package of package
+  | Site of site
+  | Lazy of lazy_value
+  | Object of obj
+
+(* The entries [opts] selects, in source order. A package sits at its
+   module type's declaration when that is in this file, else at its first
+   use. Values are left out when [opts] names types. *)
+let items opts (u : compunit) =
+  let decls =
+    List.filter_map
+      (fun (d : decl) ->
+        if selected opts d.name then Some (d.line, Decl d) else None)
+      u.decls
+  in
   let packages =
-    List.map
+    List.filter_map
       (fun (m : package) ->
-        ( (match m.prange with Some r -> r.first_line | None -> m.pline),
-          `Package m ))
+        if selected opts m.pname then
+          Some
+            ( (match m.prange with Some r -> r.first_line | None -> m.pline),
+              Package m )
+        else None)
       u.packages
   in
-  List.stable_sort (fun (a, _) (c, _) -> compare a c) (decls @ packages)
-  |> List.iter (function
-    | _, `Decl (d : decl) ->
-        if selected opts d.name then (
-          sep ();
-          decl ~source:opts.source b d)
-    | _, `Package (m : package) ->
-        if selected opts m.pname then (
-          sep ();
-          package b m));
-  match u.values with
-  | Some v when opts.only = [] ->
-      sep ();
-      values b v
-  | _ -> ()
+  let values =
+    match u.values with
+    | Some v when opts.only = [] ->
+        let both = predicted "native code" v && predicted "bytecode" v in
+        List.map
+          (fun s -> (site_line s, Site { site = s; both }))
+          (closure_sites v)
+        @ List.map (fun (z : lazy_value) -> (z.zline, Lazy z)) v.lazies
+        @ List.map (fun (o : obj) -> (o.oline, Object o)) v.objects
+    | _ -> []
+  in
+  List.stable_sort (fun (a, _) (c, _) -> compare a c) (decls @ packages @ values)
+  |> List.map snd
+
+let item ~source b = function
+  | Decl d -> decl ~source b d
+  | Package m -> package b m
+  | Site s -> closure_site b s
+  | Lazy z -> lazy_value b z
+  | Object o -> obj b o
+
+let compunit opts b (u : compunit) =
+  let first =
+    ref
+      (match u.values with
+      | Some v when opts.only = [] -> not (closure_config b v)
+      | _ -> true)
+  in
+  List.iter
+    (fun i ->
+      if !first then first := false else Buffer.add_char b '\n';
+      item ~source:opts.source b i)
+    (items opts u)
 
 let collisions b units =
   List.iter
@@ -560,29 +693,6 @@ let collisions b units =
               ls))
         h)
     (Model.collisions units)
-
-let labels b (units : compunit list) =
-  let all = List.concat_map (fun u -> u.labels) units in
-  let seen = Hashtbl.create 64 in
-  let uniq =
-    List.filter
-      (fun l ->
-        if Hashtbl.mem seen l.label then false
-        else (
-          Hashtbl.add seen l.label ();
-          true))
-      all
-    |> List.sort (fun a b -> compare a.label b.label)
-  in
-  let w =
-    List.fold_left (fun w l -> max w (String.length l.label + 1)) 0 uniq
-  in
-  List.iter
-    (fun l ->
-      Printf.bprintf b "%s  %11d  %s:%d\n"
-        (pad w ("`" ^ l.label))
-        l.hash l.file l.lline)
-    uniq
 
 let render_into b opts units =
   let many = List.length units > 1 in

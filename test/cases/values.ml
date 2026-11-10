@@ -1,8 +1,15 @@
-(* Closures, lazy values and objects, shown with "closures, lazy values and objects". *)
+(* Closures, lazy values and objects. A function at the top of the unit,
+   such as succ, is one closure for the whole program and is not shown, so
+   the closures here are made inside functions. *)
 let scale = 3
 let succ x = x + 1
-let add x y = x + y
-let add_pair (x, y) = x + y
+
+let arities k =
+  let inc x = x + k in
+  let add x y = x + y + k in
+  let add_pair (x, y) = x + y + k in
+  (inc, add, add_pair)
+
 let adder a b = fun x -> x + a + b
 let scaler a = fun x -> x * a * scale
 
@@ -10,7 +17,15 @@ let parity n =
   let rec even x = x = n || odd (x - 1) and odd x = x <> n && even (x - 1) in
   (even, odd)
 
-let bump ?(by = 1) x = x + by
+let bumper k =
+  let bump ?(by = 1) x = x + by + k in
+  bump
+
+(* In native code, a block whose environment Closure does not need is one
+   constant for the program: k is known, and g is called directly. *)
+let known () =
+  let k = 3 and g y = y + 1 in
+  ((fun x -> x + k), fun x -> g x)
 
 (* Two closures that capture the same variable each have their own environment. *)
 type counter = { next : unit -> int; reset : unit -> unit }

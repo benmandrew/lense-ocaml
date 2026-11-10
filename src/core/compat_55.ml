@@ -206,19 +206,24 @@ let split ~native (bs : Lambda.rec_binding list) =
             ~loc)
         bs
 
-(* Every closure the code allocates: one function, or a recursive set that
-   shares one block, with the variables it captures in Ident order. *)
-let closure_sets ~native (lam : Lambda.lambda) =
+(* Every closure the code allocates per call of a function: one function,
+   or a recursive set that shares one block, with the variables it captures
+   in Ident order. A closure outside every function body is allocated once,
+   when the unit initialises, and is left out. In native code, [allocated]
+   says whether Closure allocates the set's block at all: it compiles a
+   block whose environment it does not need as a constant. *)
+let closure_sets ~native ?(allocated = fun _ -> true) (lam : Lambda.lambda) =
   let acc = ref [] in
-  let add bs =
+  let add ~depth bs =
     let bs = split ~native bs in
     let fv = Lambda.free_variables (Lletrec (bs, Lambda.lambda_unit)) in
-    acc :=
-      ( List.map (fun (b : Lambda.rec_binding) -> lfun ~id:b.id b.def) bs,
-        Ident.Set.elements fv )
-      :: !acc
+    let fns =
+      List.map (fun (b : Lambda.rec_binding) -> lfun ~id:b.id b.def) bs
+    in
+    if depth > 0 && List.exists allocated fns then
+      acc := (fns, Ident.Set.elements fv) :: !acc
   in
-  let rec walk (lam : Lambda.lambda) =
+  let rec walk ~depth (lam : Lambda.lambda) =
     match lam with
     | Lfunction f ->
         (* Named after its scope, so a split-off inner function reads as "f_inner". *)
@@ -228,21 +233,23 @@ let closure_sets ~native (lam : Lambda.lambda) =
           | Some i -> String.sub scope (i + 1) (String.length scope - i - 1)
           | None -> scope
         in
-        add
+        add ~depth
           [
             {
               id = Ident.create_local (if last = "" then "fun" else last);
               def = f;
             };
           ];
-        walk f.body
+        walk ~depth:(depth + 1) f.body
     | Lletrec (bs, body) ->
-        add bs;
-        List.iter (fun (b : Lambda.rec_binding) -> walk b.def.body) bs;
-        walk body
-    | _ -> Lambda.shallow_iter ~tail:walk ~non_tail:walk lam
+        add ~depth bs;
+        List.iter
+          (fun (b : Lambda.rec_binding) -> walk ~depth:(depth + 1) b.def.body)
+          bs;
+        walk ~depth body
+    | _ -> Lambda.shallow_iter ~tail:(walk ~depth) ~non_tail:(walk ~depth) lam
   in
-  walk lam;
+  walk ~depth:0 lam;
   List.rev !acc
 
 (* The Lambda code that ocamlopt (without flambda) or ocamlc compiles, built
@@ -256,13 +263,93 @@ let lambda ~native ~modname (str : T.structure) =
          else Translmod.transl_implementation)
           modname (str, T.Tcoerce_none)
       in
-      Simplif.simplify_lambda p.code)
+      { p with code = Simplif.simplify_lambda p.code })
+
+(* The backend that ocamlopt gives Closure (Optmaindriver.Backend). *)
+module Backend = struct
+  let symbol_for_global' = Compilenv.symbol_for_global'
+  let closure_symbol = Compilenv.closure_symbol
+  let really_import_approx = Import_approx.really_import_approx
+  let import_symbol = Import_approx.import_symbol
+  let size_int = Arch.size_int
+  let big_endian = Arch.big_endian
+  let max_sensible_number_of_arguments = Proc.max_arguments_for_tailcalls - 1
+end
+
+(* Where the functions are whose blocks Closure allocates at run time, by
+   line and column: those of a Uclosure with an environment. Cmmgen makes a
+   Uclosure without one a constant. Closure runs as Optcompile.clambda runs
+   it; a missing .cmx only costs it approximations, so its warning is off. *)
+let allocated_functions ~modname (p : Lambda.program) =
+  let found = Hashtbl.create 16 in
+  let rec walk (u : Clambda.ulambda) =
+    match u with
+    | Uclosure (fs, env) ->
+        List.iter
+          (fun (f : Clambda.ufunction) ->
+            (match f.dbg with
+            | d :: _ when env <> [] ->
+                Hashtbl.replace found (d.dinfo_line, d.dinfo_char_start) ()
+            | _ -> ());
+            walk f.body)
+          fs;
+        List.iter walk env
+    | Uvar _ | Uconst _ | Uunreachable -> ()
+    | Udirect_apply (_, us, _) | Uprim (_, us, _) | Ustaticfail (_, us) ->
+        List.iter walk us
+    | Ugeneric_apply (u, us, _) ->
+        walk u;
+        List.iter walk us
+    | Uoffset (u, _) | Uphantom_let (_, _, u) | Uassign (_, u) -> walk u
+    | Ulet (_, _, _, a, b)
+    | Ucatch (_, _, a, b)
+    | Utrywith (a, _, b)
+    | Usequence (a, b)
+    | Uwhile (a, b) ->
+        walk a;
+        walk b
+    | Uifthenelse (a, b, c) | Ufor (_, a, b, _, c) ->
+        walk a;
+        walk b;
+        walk c
+    | Uswitch (u, sw, _) ->
+        walk u;
+        Array.iter walk sw.us_actions_consts;
+        Array.iter walk sw.us_actions_blocks
+    | Ustringswitch (u, cases, default) ->
+        walk u;
+        List.iter (fun (_, u) -> walk u) cases;
+        Option.iter walk default
+    | Usend (_, a, b, us, _) ->
+        walk a;
+        walk b;
+        List.iter walk us
+  in
+  Misc.protect_refs
+    [ Misc.R (Clflags.native_code, true) ]
+    (fun () ->
+      Clflags.use_inlining_arguments_set Clflags.classic_arguments;
+      Compilenv.reset modname;
+      Warnings.without_warnings (fun () ->
+          walk
+            (Closure.intro
+               ~backend:(module Backend : Backend_intf.S)
+               ~size:p.main_module_block_size p.code));
+      Compilenv.clear_structured_constants ());
+  fun (f : lfun) ->
+    let s = f.lloc.loc_start in
+    Hashtbl.mem found (s.pos_lnum, s.pos_cnum - s.pos_bol)
 
 (* For each backend: its name, its configuration, and the closures, or None
    when the layout is not predicted. *)
 let closure_backends ~modname str =
   let sets native =
-    try Some (closure_sets ~native (lambda ~native ~modname str))
+    try
+      let p = lambda ~native ~modname str in
+      let allocated =
+        if native then Some (allocated_functions ~modname p) else None
+      in
+      Some (closure_sets ~native ?allocated p.code)
     with _ -> None
   in
   [

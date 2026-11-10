@@ -374,6 +374,53 @@ type compunit = {
       (** Closures, lazy values and objects; only when asked for. *)
 }
 
+(* One function of the source, as each backend allocates it: [None] when
+   that backend is not shown, its layout is not predicted, or it allocates
+   no block of its own for the function. *)
+type closure_site = { native : closure option; bytecode : closure option }
+
+let site_line s =
+  match (s.native, s.bytecode) with
+  | Some c, _ | None, Some c -> (List.hd c.fns).fline
+  | None, None -> 0
+
+(* Whether [name]'s closures are shown and predicted. *)
+let predicted name (v : values) =
+  List.exists (fun bc -> bc.backend = name && bc.closures <> None) v.backends
+
+(* The closures of both backends, one site per function block, in source
+   order. A block of one backend pairs with the block of the other whose
+   first function has the same name and binding: a default-argument split
+   in native code puts the inner function in the wrapper's block. *)
+let closure_sites (v : values) =
+  let get name =
+    match List.find_opt (fun bc -> bc.backend = name) v.backends with
+    | Some { closures = Some cs; _ } -> cs
+    | _ -> []
+  in
+  let key c =
+    let f = List.hd c.fns in
+    (f.fname, f.fline, f.fn_range)
+  in
+  let sites =
+    List.fold_left
+      (fun sites b ->
+        let rec pair = function
+          | ({ native = Some n; bytecode = None } as s) :: rest
+            when key n = key b ->
+              { s with bytecode = Some b } :: rest
+          | s :: rest -> s :: pair rest
+          | [] -> raise Not_found
+        in
+        try pair sites
+        with Not_found -> sites @ [ { native = None; bytecode = Some b } ])
+      (List.map
+         (fun c -> { native = Some c; bytecode = None })
+         (get "native code"))
+      (get "bytecode")
+  in
+  List.stable_sort (fun a b -> compare (site_line a) (site_line b)) sites
+
 (* The unit with the closures of one backend only, "native code" or "bytecode". *)
 let only_backend name (u : compunit) =
   let keep (v : values) =

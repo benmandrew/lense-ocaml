@@ -227,8 +227,9 @@ type state = {
 
 (* A Stage 4 value, found in the prediction by the line its definition starts on. *)
 and vcheck =
-  | Vclosure of { values : (string * int) list }
-      (** Each function of one block: the value, its line. *)
+  | Vclosure of { values : (string * int) list; again : string }
+      (** Each function of one block: the value, its line. [again] makes the
+          first value again, with a second call. *)
   | Vlazy of { v : string; line : int; ident : string option }
   | Vobj of { v : string; line : int }
 
@@ -735,9 +736,13 @@ let gen_closure s =
     if used = [] then ""
     else "ignore (Sys.opaque_identity (" ^ String.concat ", " used ^ ")); "
   in
+  (* At least one parameter, so that the closure is made per call: a
+     function at the top of the unit is one block for the program. *)
   let params =
-    String.concat " "
-      (List.map (fun (c, x) -> "(" ^ c ^ " : " ^ x.ty ^ ")") caps)
+    if caps = [] then "()"
+    else
+      String.concat " "
+        (List.map (fun (c, x) -> "(" ^ c ^ " : " ^ x.ty ^ ")") caps)
   in
   Printf.bprintf s.decls "let %s %s =\n" f params;
   Option.iter
@@ -746,7 +751,10 @@ let gen_closure s =
         x.ty x.expr)
     local;
   let v = fresh s "fv" in
-  let args = String.concat " " (List.map (fun (_, x) -> x.expr) caps) in
+  let args =
+    if caps = [] then "()"
+    else String.concat " " (List.map (fun (_, x) -> x.expr) caps)
+  in
   match rand 4 with
   | 0 ->
       let l = line s in
@@ -755,17 +763,20 @@ let gen_closure s =
         (String.concat " " (List.init n (Printf.sprintf "(x%d : int)")))
         use;
       Printf.bprintf s.decls "let %s = %s %s\n" v f args;
-      s.vchecks <- Vclosure { values = [ (v, l) ] } :: s.vchecks
+      s.vchecks <-
+        Vclosure { values = [ (v, l) ]; again = f ^ " " ^ args } :: s.vchecks
   | 1 ->
       let l = line s in
       Printf.bprintf s.decls "  fun (x0, x1) -> %s(x0 : int) + x1\n" use;
       Printf.bprintf s.decls "let %s = %s %s\n" v f args;
-      s.vchecks <- Vclosure { values = [ (v, l) ] } :: s.vchecks
+      s.vchecks <-
+        Vclosure { values = [ (v, l) ]; again = f ^ " " ^ args } :: s.vchecks
   | 2 ->
       let l = line s in
       Printf.bprintf s.decls "  fun ?(o = 1) (x0 : int) -> %so + x0\n" use;
       Printf.bprintf s.decls "let %s = %s %s\n" v f args;
-      s.vchecks <- Vclosure { values = [ (v, l) ] } :: s.vchecks
+      s.vchecks <-
+        Vclosure { values = [ (v, l) ]; again = f ^ " " ^ args } :: s.vchecks
   | _ ->
       let arity2 = chance 0.5 in
       let l1 = line s in
@@ -778,7 +789,13 @@ let gen_closure s =
         use;
       let v2 = fresh s "fv" in
       Printf.bprintf s.decls "let (%s, %s) = %s %s\n" v v2 f args;
-      s.vchecks <- Vclosure { values = [ (v, l1); (v2, l2) ] } :: s.vchecks
+      s.vchecks <-
+        Vclosure
+          {
+            values = [ (v, l1); (v2, l2) ];
+            again = "fst (" ^ f ^ " " ^ args ^ ")";
+          }
+        :: s.vchecks
 
 let gen_lazy s =
   let v = fresh s "lz" in
@@ -1221,7 +1238,7 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
           (fun (bc : M.backend_closures) -> bc.backend = name)
           vals.backends
       in
-      let closure_checks ~native values =
+      let closure_checks ~native ~again values =
         let c = Buffer.create 256 in
         (match backend (if native then "native code" else "bytecode") with
         | Some { closures = Some cs; _ } -> (
@@ -1232,9 +1249,20 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
                   List.exists (fun (f : M.fn) -> f.fline = l0) cl.fns)
                 cs
             with
+            (* No block predicted: native code makes it a constant, so two
+               calls give the same one. *)
+            | None when native ->
+                Printf.bprintf c
+                  "    if Obj.repr %s != Obj.repr (%s) then fail %S \"no \
+                   closure predicted, but each call makes one\";\n"
+                  v0 again v0
             | None ->
                 Printf.bprintf c "    fail %S \"no closure predicted\";\n" v0
             | Some cl ->
+                Printf.bprintf c
+                  "    if Obj.repr %s == Obj.repr (%s) then fail %S \"closure \
+                   predicted, but calls share one block\";\n"
+                  v0 again v0;
                 let offs, envstart = M.closure_offsets ~native cl in
                 let size = M.closure_size ~native cl in
                 List.iter
@@ -1293,13 +1321,13 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
       in
       List.iter
         (function
-          | Vclosure { values } ->
+          | Vclosure { values; again } ->
               Printf.bprintf b
                 "  if native then begin\n\
                  %s    () end else begin\n\
                  %s    () end;\n"
-                (closure_checks ~native:true values)
-                (closure_checks ~native:false values)
+                (closure_checks ~native:true ~again values)
+                (closure_checks ~native:false ~again values)
           | Vlazy { v; line; ident } -> (
               let r = "(Obj.repr " ^ v ^ ")" in
               match

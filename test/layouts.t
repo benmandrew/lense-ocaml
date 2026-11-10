@@ -71,6 +71,10 @@ Every case file, as text with its source.
       1  class drawing  pointer to class, tag 0
       2  functor Scale  pointer to closure, Closure_tag 247
   
+  class drawing  line 59  Object_tag 248, size 2
+      0  method table  pointer to the class's method table
+      1  object id     immediate (int)
+  
   (module EMPTY)  structure block, size 0: no item takes a field
   ### cases/polyvariants.ml
   type colour = [ `Red | `Green | `Blue ]
@@ -303,12 +307,123 @@ Every case file, as text with its source.
           int  immediate (int)
           cost: 0 words, no blocks
   ### cases/values.ml
+  closures in native code: Closure, without flambda
+  
+  fun arities.inc  line 8  Closure_tag 247, size 3
+      0  code pointer
+      1  closinfo: arity 1, environment from field 2
+      2  k : int  immediate (int)
+  
+  fun arities.add  line 9  Closure_tag 247, size 4
+      0  code pointer: partial application
+      1  closinfo: arity 2, environment from field 3
+      2  code pointer: the function itself
+      3  k : int  immediate (int)
+  
+  fun arities.add_pair  line 10  Closure_tag 247, size 4
+      0  code pointer: takes the tuple apart
+      1  closinfo: arity -2, environment from field 3
+      2  code pointer: the function itself
+      3  k : int  immediate (int)
+  
+  fun adder.(fun)  line 13  Closure_tag 247, size 4
+      0  code pointer
+      1  closinfo: arity 1, environment from field 2
+      2  a : int  immediate (int)
+      3  b : int  immediate (int)
+  
+  fun scaler.(fun)  line 14  Closure_tag 247, size 3
+      0  code pointer
+      1  closinfo: arity 1, environment from field 2
+      2  a : int  immediate (int)
+  
+  fun parity.even, parity.odd  line 17  one Closure_tag 247 block for 2 functions, size 6
+      0  parity.even: code pointer
+      1  parity.even: closinfo: arity 1, environment from field 5
+      2  parity.odd: Infix_tag 249 header: a pointer to parity.odd points to the next field
+      3  parity.odd: code pointer
+      4  parity.odd: closinfo: arity 1, environment from field 5
+      5  n : int  immediate (int)
+  
+  fun bumper.bump, bumper.bump_inner  line 21  one Closure_tag 247 block for 2 functions, size 8
+      0  bumper.bump: code pointer: partial application
+      1  bumper.bump: closinfo: arity 2, environment from field 7
+      2  bumper.bump: code pointer: the function itself
+      3  bumper.bump_inner: Infix_tag 249 header: a pointer to bumper.bump_inner points to the next field
+      4  bumper.bump_inner: code pointer: partial application
+      5  bumper.bump_inner: closinfo: arity 2, environment from field 7
+      6  bumper.bump_inner: code pointer: the function itself
+      7  k : int  immediate (int)
+  
   type counter = { next : unit -> int; reset : unit -> unit }
   type counter  block, tag 0, size 2
       0  next : unit -> int    pointer to closure, Closure_tag 247
       1  reset : unit -> unit  pointer to closure, Closure_tag 247
       cost: 3 words per value, with headers
       not counted: next (closure), reset (closure)
+  
+  fun counter.(fun)  line 37  Closure_tag 247, size 3
+      0  code pointer
+      1  closinfo: arity 1, environment from field 2
+      2  n : int ref  pointer to record Stdlib.ref, tag 0
+  
+  fun counter.(fun)  line 40  Closure_tag 247, size 4
+      0  code pointer
+      1  closinfo: arity 1, environment from field 2
+      2  start : int  immediate (int)
+      3  n : int ref  pointer to record Stdlib.ref, tag 0
+  
+  fun lazies  line 44  Closure_tag 247, size 3
+      0  code pointer
+      1  closinfo: arity 1, environment from field 2
+      2  i : int  immediate (int)
+  
+  lazy 3  line 44  no block: the value itself, immediate (int)
+  
+  lazy 2.5  line 44  Forward_tag 250 block, size 1, holding the value: pointer to boxed float, Double_tag 253
+  
+  lazy i  line 44  no block: the value itself, immediate (int)
+  
+  lazy v  line 44  Forward_tag 250 block, size 1, holding the value: immediate or pointer (type variable)
+  
+  lazy (i + 1)  line 44  Lazy_tag 246 block, size 1, holding a closure; forcing it makes it a Forward_tag 250 block holding the result
+  
+  lazy (fun x -> x)  line 44  no block: the value itself, pointer to closure, Closure_tag 247
+  
+  class point  line 46  Object_tag 248, size 4
+      0  method table   pointer to the class's method table
+      1  object id      immediate (int)
+      2  x : int        immediate (int)
+      3  name : string  pointer to string, String_tag 252
+  
+  class labelled  line 52  Object_tag 248, size 5
+      0  method table  pointer to the class's method table
+      1  object id     immediate (int)
+      2  k : int       immediate (int)  (parameter)
+      3  s : string    pointer to string, String_tag 252  (parameter)
+      4  v : int       immediate (int)
+  
+  class point3  line 59  Object_tag 248, size 6
+      0  method table   pointer to the class's method table
+      1  object id      immediate (int)
+      2  z : int        immediate (int)
+      3  w : string     pointer to string, String_tag 252
+      4  x : int        immediate (int)  (from point)
+      5  name : string  pointer to string, String_tag 252  (from point)
+  
+  object  line 68  Object_tag 248, size 4
+      0  method table  pointer to the class's method table
+      1  object id     immediate (int)
+      2  environment   pointer to a block of the local variables the class uses, tag 0
+      3  a : int       immediate (int)
+  
+  class c  line 75  Object_tag 248, size 6
+      0  method table   pointer to the class's method table
+      1  object id      immediate (int)
+      2  environment    pointer to a block of the local variables the class uses, tag 0
+      3  a : int        immediate (int)
+      4  x : int        immediate (int)  (from point)
+      5  name : string  pointer to string, String_tag 252  (from point)
   ### cases/variants.ml
   type t = A | B of int | C | D of string
   type t  variant
@@ -388,23 +503,6 @@ Every case file, as text with its source.
       0  val encode   pointer to closure, Closure_tag 247
       1  val default  immediate or pointer (abstract type v)
     no field: type v
-
-Polymorphic variant labels and their hashes.
-
-  $ lense-ocaml --labels cases/polyvariants.ml
-  `A                     65  cases/polyvariants.ml:3
-  `B                     66  cases/polyvariants.ml:3
-  `Bar              3303859  cases/polyvariants.ml:10
-  `Blue           737308346  cases/polyvariants.ml:1
-  `Click         -611587032  cases/polyvariants.ml:2
-  `Eric_Cooper   -332323982  cases/polyvariants.ml:7
-  `Foo              3505894  cases/polyvariants.ml:10
-  `Green          756711075  cases/polyvariants.ml:1
-  `Key              3752319  cases/polyvariants.ml:2
-  `Quit           904096751  cases/polyvariants.ml:2
-  `Red              4100401  cases/polyvariants.ml:1
-  `azdwbie       -332323982  cases/polyvariants.ml:8
-  hash collision: `Eric_Cooper (cases/polyvariants.ml:7), `azdwbie (cases/polyvariants.ml:8) all hash to -332323982
 
 A name filter matches the last component.
 

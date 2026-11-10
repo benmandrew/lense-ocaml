@@ -35,9 +35,8 @@ lense-ocaml [options] <file.ml | file.mli | file.cmt | file.cmti | -> ...
 | `--json` | Print JSON instead of text |
 | `--type NAME` | Show only the named types |
 | `--source` | Print each declaration above its representation |
-| `--labels` | List polymorphic variant labels with their hashes, and report collisions |
-| `--values` | Also show closures, lazy values and objects |
-| `--backend native\|bytecode\|both` | Whose closures `--values` shows (default: native) |
+| `--no-values` | Leave out closures, lazy values and objects |
+| `--backend native\|bytecode\|both` | Whose closures to show (default: native) |
 | `--intf` | Read standard input as an `.mli` |
 | `-I DIR` | Add `DIR` to the load path for `.cmi` files |
 | `--compiler 5.5\|ox` | Read the input as OCaml 5.5 or OxCaml |

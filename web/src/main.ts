@@ -65,7 +65,7 @@ function current(): Saved {
     compiler: compilerBox.value === 'ox' ? 'ox' : '5.5',
     intf: kindBox.value === 'mli',
     values: valuesBox.checked,
-    backend: backendBox.value === 'bytecode' ? 'bytecode' : 'native',
+    backend: backendBox.value === 'bytecode' || backendBox.value === 'both' ? backendBox.value : 'native',
   };
 }
 
@@ -339,8 +339,19 @@ function render(text: string, links: [number, Range[]][] = [], diagrams: Diagram
     const head = lines[0].trim();
     const cut = head.indexOf('  ');
     const h = link(el('h2'), ranges.get(para[0].index));
-    if (cut > 0) h.append(el('span', 'name', head.slice(0, cut)), el('span', 'desc', head.slice(cut).trimStart()));
-    else h.append(el('span', 'name', head));
+    if (cut > 0) {
+      let desc = head.slice(cut).trimStart();
+      h.append(el('span', 'name', head.slice(0, cut)));
+      // A closure, lazy value or object is one place in the code, not a
+      // type: its heading names the line, which gets a badge.
+      const site = /^(line \d+) {2,}/.exec(desc);
+      if (site) {
+        card.classList.add('site');
+        h.append(el('span', 'site', site[1]));
+        desc = desc.slice(site[0].length);
+      }
+      h.append(el('span', 'desc', desc));
+    } else h.append(el('span', 'name', head));
     card.append(h);
     // A diagram keyed by the heading belongs to the whole card, one keyed by
     // a body line to the rows below it: those up to the next line indented
@@ -505,8 +516,14 @@ function syncExample(code: string) {
   exampleBox.value = examples.find((e) => e.code === code)?.name ?? '';
 }
 
+// An interface allocates nothing, so the values controls are off for one.
+const NO_VALUES = 'An interface allocates no closures, lazy values or objects';
+
 async function analyze() {
-  backendBox.disabled = !valuesBox.checked;
+  const intf = kindBox.value === 'mli';
+  valuesBox.disabled = intf;
+  backendBox.disabled = intf || !valuesBox.checked;
+  for (const box of [valuesBox, backendBox]) box.closest('label')!.title = intf ? NO_VALUES : '';
   const s = current();
   syncExample(s.code);
   send({ type: 'analyze', id: ++seq, code: s.code, options: options(s) });
@@ -559,7 +576,7 @@ function setCode(code: string) {
 
 async function start() {
   const saved = (location.hash.length > 1 && (await unpack(location.hash.slice(1)))) || null;
-  const s: Saved = { code: sample.code, compiler: '5.5', intf: false, values: false, backend: 'native', ...saved };
+  const s: Saved = { code: sample.code, compiler: '5.5', intf: false, values: true, backend: 'native', ...saved };
   setCode(s.code);
   kindBox.value = s.intf ? 'mli' : 'ml';
   compilerBox.value = s.compiler;
@@ -575,7 +592,6 @@ async function start() {
     if (!e) return;
     kindBox.value = e.intf ? 'mli' : 'ml';
     compilerBox.value = e.ox ? 'ox' : '5.5';
-    valuesBox.checked = e.values;
     setCode(e.code);
     analyze();
   };

@@ -12,8 +12,8 @@ function read(): Buffer {
 }
 
 // Serves the script at lense/lense_web.js in development and copies it into
-// the build. Vite must not bundle it: it is a classic script, 54 MB from a
-// dev build of lense_web and 6.1 MB from --profile release.
+// the build. Vite must not bundle it: it is a classic script, 55 MB from a
+// dev build of lense_web and 6.2 MB from --profile release.
 function lenseScript(): Plugin {
   return {
     name: 'lense-script',
@@ -34,11 +34,6 @@ function lenseScript(): Plugin {
 // test directory elsewhere.
 const examplesDir = resolve(import.meta.dirname, process.env.LENSE_EXAMPLES_DIR ?? '../test');
 const exampleDirs = [{ dir: 'cases', ox: false }, { dir: 'ox', ox: true }];
-// Examples that need a checkbox on to show what they are about.
-const exampleOptions: Record<string, { values?: boolean }> = {
-  'values.ml': { values: true },
-};
-
 function examples(): Plugin {
   const id = 'virtual:examples';
   return {
@@ -49,8 +44,7 @@ function examples(): Plugin {
       const list = exampleDirs.flatMap(({ dir, ox }) => readdirSync(resolve(examplesDir, dir)).filter((f) => /\.mli?$/.test(f)).sort().map((f) => {
         const path = resolve(examplesDir, dir, f);
         this.addWatchFile(path);
-        const { values = false } = exampleOptions[f] ?? {};
-        return { name: f, intf: f.endsWith('.mli'), ox, values, code: readFileSync(path, 'utf8') };
+        return { name: f, intf: f.endsWith('.mli'), ox, code: readFileSync(path, 'utf8') };
       }));
       return `export default ${JSON.stringify(list)};`;
     },

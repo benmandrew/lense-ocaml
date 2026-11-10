@@ -5,8 +5,10 @@
      each slot a cell spanning its bytes;
    - any other block, as a column of words with arrows to the blocks they
      point to;
+   - the block of a first-class module type, as such a column;
    - a closure block with an environment or several functions, as such a
-     column, with the pointers that enter it on the left.
+     column, with the pointers that enter it on the left. When the two
+     backends lay it out differently, each layout gets its own column.
 
    Each diagram carries the line of the text report it belongs to, with runs
    of spaces collapsed, so the page can put it in the right card. Diagrams
@@ -221,109 +223,143 @@ let decl (d : decl) =
         cs
   | Alias _ | Abstract _ | Open -> []
 
-(* --- Closures ----------------------------------------------------------- *)
+(* --- First-class modules ------------------------------------------------ *)
 
-(* Labels as in Text.closure_rows, but for the function's name: the pointer
-   coming in names it. *)
-let closure ~native (c : closure) =
-  if List.length c.fns = 1 && c.env = [] then []
+(* A package's block, a word per value-bearing item. *)
+let package (m : package) =
+  if m.slots = [] then []
   else
-    let print b = Text.closure b ~native c in
-    let rows = rows_of print in
-    let offs, envstart = closure_offsets ~native c in
-    let entry (f : fn) off =
-      let meta ?incoming index elabel =
-        {
-          index;
-          elabel;
-          ekind = "meta";
-          desc = "";
-          incoming;
-          target = None;
-          ranges = some [ f.fn_range ];
-        }
-      in
-      let ptr = Text.fn_name f in
-      let infix =
-        if off = 0 then []
-        else [ meta (off - 1) (Text.tag_name infix_tag ^ " header") ]
-      in
-      let arity = if f.tupled then -f.arity else f.arity in
-      let info =
-        if native then
-          Printf.sprintf "closinfo: arity %d, environment from field %d" arity
-            envstart
-        else Printf.sprintf "closinfo: environment from field %d" envstart
-      in
-      let code =
-        if code_words ~native f = 3 then
-          [
-            meta ~incoming:ptr off
-              (if f.tupled then "code pointer: takes the tuple apart"
-               else "code pointer: partial application");
-            meta (off + 1) info;
-            meta (off + 2) "code pointer: the function itself";
-          ]
-        else [ meta ~incoming:ptr off "code pointer"; meta (off + 1) info ]
-      in
-      infix @ code
-    in
-    let env =
-      List.mapi
-        (fun i (cv : capture) ->
-          let label =
-            if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty
-          in
-          {
-            index = envstart + i;
-            elabel = cell_label label cv.cty cv.cword;
-            ekind = word_kind cv.cword;
-            desc = "";
-            incoming = None;
-            target = target_of cv.cword;
-            ranges = some [ cv.cv_range ];
-          })
-        c.env
-    in
-    let entries = List.concat (List.map2 entry c.fns offs) @ env in
-    (* Each word reads as its text row, without the index. *)
-    let without_index row =
-      match String.index_opt row ' ' with
-      | Some i -> String.sub row (i + 1) (String.length row - i - 1)
-      | None -> row
-    in
+    let print b = Text.package b m in
     let entries =
-      List.map2 (fun e row -> { e with desc = without_index row }) entries rows
+      List.map
+        (fun (s : slot) ->
+          let label = Text.item_name s in
+          {
+            index = s.index;
+            elabel = label;
+            ekind = word_kind s.word;
+            desc = label ^ ", " ^ Text.word s.word;
+            incoming = None;
+            target = target_of s.word;
+            ranges = some [ s.srange ];
+          })
+        m.slots
     in
+    let all = List.for_all (fun (s : slot) -> drawn s.word) m.slots in
     let title =
-      Printf.sprintf "%s, size %d"
-        (Text.tag_name closure_tag)
-        (closure_size ~native c)
+      Printf.sprintf "%s, size %d" (Text.tag_name 0) (List.length m.slots)
     in
-    let all = List.for_all (fun (cv : capture) -> drawn cv.cword) c.env in
     [
       {
         key = head_line print;
         shape = Column { title; entries };
-        replaces = (if all then rows else []);
+        replaces =
+          (if all then
+             List.filter
+               (fun l -> not (String.starts_with ~prefix:"no field:" l))
+               (rows_of print)
+           else []);
       };
     ]
 
-let values (v : values) =
-  List.concat_map
-    (fun (bc : backend_closures) ->
-      match bc.closures with
-      | Some cs ->
-          List.concat_map (closure ~native:(bc.backend = "native code")) cs
-      | None -> [])
-    v.backends
+(* --- Closures ----------------------------------------------------------- *)
+
+(* One layout of a closure site, under the line [key]. Labels are as in
+   Text.closure_rows, but for the function's name: the pointer coming in
+   names it. *)
+let layout ~key (l : Text.layout) =
+  let c = l.block and mode = l.mode in
+  let native = Text.native_offsets mode in
+  let rows =
+    printed (fun b -> Text.layout_rows b ~indent:0 l)
+    |> List.filter (fun r -> r <> "")
+  in
+  let offs, envstart = closure_offsets ~native c in
+  let entry (f : fn) off =
+    let meta ?incoming index elabel =
+      {
+        index;
+        elabel;
+        ekind = "meta";
+        desc = "";
+        incoming;
+        target = None;
+        ranges = some [ f.fn_range ];
+      }
+    in
+    let ptr = Text.fn_name f in
+    let infix =
+      if off = 0 then []
+      else [ meta (off - 1) (Text.tag_name infix_tag ^ " header") ]
+    in
+    let info = Text.closinfo ~mode f envstart in
+    let code =
+      if code_words ~native f = 3 then
+        [
+          meta ~incoming:ptr off
+            (if f.tupled then "code pointer: takes the tuple apart"
+             else "code pointer: partial application");
+          meta (off + 1) info;
+          meta (off + 2) "code pointer: the function itself";
+        ]
+      else [ meta ~incoming:ptr off "code pointer"; meta (off + 1) info ]
+    in
+    infix @ code
+  in
+  let env =
+    List.mapi
+      (fun i (cv : capture) ->
+        let label = if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty in
+        {
+          index = envstart + i;
+          elabel = cell_label label cv.cty cv.cword;
+          ekind = word_kind cv.cword;
+          desc = "";
+          incoming = None;
+          target = target_of cv.cword;
+          ranges = some [ cv.cv_range ];
+        })
+      c.env
+  in
+  let entries = List.concat (List.map2 entry c.fns offs) @ env in
+  (* Each word reads as its text row, without the index. *)
+  let without_index row =
+    match String.index_opt row ' ' with
+    | Some i -> String.sub row (i + 1) (String.length row - i - 1)
+    | None -> row
+  in
+  let entries =
+    List.map2 (fun e row -> { e with desc = without_index row }) entries rows
+  in
+  let title =
+    Printf.sprintf "%s, size %d"
+      (Text.tag_name closure_tag)
+      (closure_size ~native c)
+  in
+  let all = List.for_all (fun (cv : capture) -> drawn cv.cword) c.env in
+  {
+    key;
+    shape = Column { title; entries };
+    replaces = (if all then rows else []);
+  }
+
+let site (s : Text.site) =
+  let head, layouts = Text.site_parts s in
+  List.filter_map
+    (fun (l : Text.layout) ->
+      if Text.bare l.block then None
+      else Some (layout ~key:(squeeze (Option.value l.lead ~default:head)) l))
+    layouts
 
 (* The diagrams for what Text.render prints with these options, in its order. *)
 let compunit (opts : Text.options) (u : compunit) =
   List.concat_map
-    (fun (d : decl) -> if Text.selected opts d.name then decl d else [])
-    u.decls
-  @ match u.values with Some v when opts.only = [] -> values v | _ -> []
+    (function
+      | Text.Decl d -> decl d
+      | Package m -> package m
+      | Site s -> site s
+      | Lazy _ | Object _ -> [])
+    (Text.items opts u)
 
 (* --- JSON --------------------------------------------------------------- *)
 

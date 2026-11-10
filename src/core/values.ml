@@ -108,18 +108,29 @@ let closures ctx ~modname str : M.backend_closures list =
         f.lname <> "" && not (List.exists (fun c -> inside c f.lloc) classes))
       fns
   in
-  List.map
-    (fun (backend, config, sets) ->
-      let closure (fns, fv) =
-        { M.fns = List.map fn fns; env = List.map (capture ctx tbl) fv }
-      in
-      {
-        M.backend;
-        config;
-        closures =
-          Option.map (fun s -> List.map closure (List.filter shown s)) sets;
-      })
-    (Compat.closure_backends ~modname str)
+  let bcs =
+    List.map
+      (fun (backend, config, sets) ->
+        let closure (fns, fv) =
+          { M.fns = List.map fn fns; env = List.map (capture ctx tbl) fv }
+        in
+        {
+          M.backend;
+          config;
+          closures =
+            Option.map (fun s -> List.map closure (List.filter shown s)) sets;
+        })
+      (Compat.closure_backends ~modname str)
+  in
+  (* A backend can only drop a block the source asks for, so when a
+     predicted backend allocates none, the others allocate none either. *)
+  if List.exists (fun (bc : M.backend_closures) -> bc.closures = Some []) bcs
+  then
+    List.map
+      (fun (bc : M.backend_closures) ->
+        if bc.closures = None then { bc with closures = Some [] } else bc)
+      bcs
+  else bcs
 
 (* Lazy values *)
 
