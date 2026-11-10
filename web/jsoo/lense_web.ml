@@ -1,7 +1,8 @@
 (* The browser entry point. It sets globalThis.lense_analyze, which the web
    worker calls with the source text and an options object, and which
-   returns { text, diagrams } or { error }; diagrams is Diagram.json's
-   string. The option "compiler" is "5.5" (the default) or "ox"; each has
+   returns { text, links, diagrams } or { error }. links is a JSON list of
+   [line, ranges] pairs: the source ranges of each line of text, counting
+   lines from 0. diagrams is Diagram.json's string. The option "compiler" is "5.5" (the default) or "ox"; each has
    its stdlib .cmi files embedded under /static. *)
 
 open Js_of_ocaml
@@ -42,17 +43,24 @@ let analyze code opts =
             let b = Buffer.create 1024 in
             Lense_model.Text.labels b [ u ];
             Lense_model.Text.collisions b [ u ];
-            (Buffer.contents b, "[]"))
+            (Buffer.contents b, [], "[]"))
           else
-            let topts : Lense_model.Text.options = { source = flag opts "source"; only = [] } in
-            (Lense_model.Text.render topts [ u ], Lense_model.Diagram.(json (compunit topts u))))
+            let topts : Lense_model.Text.options = { source = false; only = [] } in
+            let text, links = Lense_model.Text.render_linked topts [ u ] in
+            (text, links, Lense_model.Diagram.(json (compunit topts u))))
         ((if str opts "compiler" = "ox" then unit_ox else unit_55) ~file ~intf ~values src)
     with exn -> Error ("lense stopped: " ^ Printexc.to_string exn)
   in
   match result with
-  | Ok (text, diagrams) ->
+  | Ok (text, links, diagrams) ->
+      let links =
+        let open Lense_model.Json in
+        let b = Buffer.create 1024 in
+        write b ~indent:0 (List (List.map (fun (i, rs) -> List [ Int i; List (List.map (fun r -> range (Some r)) rs) ]) links));
+        Buffer.contents b
+      in
       Js.Unsafe.obj
-        [| ("text", Js.Unsafe.inject (Js.string text));
+        [| ("text", Js.Unsafe.inject (Js.string text)); ("links", Js.Unsafe.inject (Js.string links));
            ("diagrams", Js.Unsafe.inject (Js.string diagrams)) |]
   | Error msg -> Js.Unsafe.obj [| ("error", Js.Unsafe.inject (Js.string msg)) |]
 

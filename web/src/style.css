@@ -307,5 +307,13 @@ pre.report {
   border-right: 0;
 }
 
+/* --- Links to the source: what the pointer is over, and what it contains -- */
+
+.card pre .row { display: block; }
+.card .linked { cursor: pointer; }
+.card h2.hl, .card pre .row.hl { background: var(--hl-bg); box-shadow: inset 2px 0 var(--muted); }
+.card.hovering .seg:not(.hl) { opacity: 0.3; }
+.diagram .seg.hl { box-shadow: 0 0 0 1.5px var(--ink); }
+
 /* Text for screen readers only. */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

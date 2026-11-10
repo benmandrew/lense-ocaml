@@ -1,10 +1,12 @@
 import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
 import { oCaml } from '@codemirror/legacy-modes/mode/mllike';
 import { type Diagnostic, lintGutter, setDiagnostics } from '@codemirror/lint';
+import { StateEffect, StateField, type Text as Doc } from '@codemirror/state';
+import { Decoration, type DecorationSet } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { basicSetup, EditorView } from 'codemirror';
 import EXAMPLES from 'virtual:examples';
-import type { Compiler, Diagram, FromWorker, Kind, Options, Shape, ToWorker } from './protocol';
+import type { Compiler, Diagram, FromWorker, Kind, Options, Range, Shape, ToWorker } from './protocol';
 import './style.css';
 
 const SAMPLE = `(* Edit the code: the representations update as you type. *)
@@ -35,7 +37,6 @@ interface Saved {
   compiler: Compiler;
   intf: boolean;
   values: boolean;
-  source: boolean;
   labels: boolean;
 }
 
@@ -44,7 +45,6 @@ const exampleBox = $<HTMLSelectElement>('example');
 const kindBox = $<HTMLSelectElement>('kind');
 const compilerBox = $<HTMLSelectElement>('compiler');
 const valuesBox = $<HTMLInputElement>('values');
-const sourceBox = $<HTMLInputElement>('source');
 const labelsBox = $<HTMLInputElement>('labels');
 const statusBox = $<HTMLSpanElement>('status');
 const output = $<HTMLElement>('output');
@@ -88,13 +88,12 @@ function current(): Saved {
     compiler: compilerBox.value === 'ox' ? 'ox' : '5.5',
     intf: kindBox.value === 'mli',
     values: valuesBox.checked,
-    source: sourceBox.checked,
     labels: labelsBox.checked,
   };
 }
 
 const options = (s: Saved): Options => ({
-  compiler: s.compiler, intf: s.intf, values: s.values, source: s.source, labels: s.labels,
+  compiler: s.compiler, intf: s.intf, values: s.values, labels: s.labels,
 });
 
 // --- Diagnostics ----------------------------------------------------------
@@ -200,6 +199,63 @@ function legend(): HTMLElement {
 
 const squeeze = (s: string) => s.trim().replace(/ +/g, ' ');
 
+// --- Links to the source ----------------------------------------------------
+
+// Rows, headings and cells carry the source ranges of what they stand for.
+// Hovering one marks its ranges in the editor and highlights everything in
+// its card written inside them: the rows and cells of a field, or all of a
+// declaration from its heading. Clicking one moves the cursor there.
+
+const linkedRanges = new WeakMap<Element, Range[]>();
+
+function link<E extends HTMLElement>(e: E, ranges: Range[] | undefined): E {
+  if (ranges?.length) {
+    linkedRanges.set(e, ranges);
+    e.classList.add('linked');
+  }
+  return e;
+}
+
+const before = (a: Range, line: number, column: number) => a.line < line || (a.line === line && a.column <= column);
+const after = (a: Range, line: number, column: number) => a.end_line > line || (a.end_line === line && a.end_column >= column);
+const within = (q: Range, p: Range) => before(p, q.line, q.column) && after(p, q.end_line, q.end_column);
+
+let lit: Element[] = [];
+
+function unlight() {
+  for (const e of lit) e.classList.remove('hl');
+  lit = [];
+  document.querySelector('.card.hovering')?.classList.remove('hovering');
+}
+
+output.addEventListener('pointerover', (ev) => {
+  const target = (ev.target as Element).closest('.linked');
+  const card = target?.closest('.card');
+  unlight();
+  if (!target || !card) {
+    mark([]);
+    return;
+  }
+  const ps = linkedRanges.get(target)!;
+  card.classList.add('hovering');
+  for (const e of card.querySelectorAll('.linked')) {
+    if (e === target || linkedRanges.get(e)!.some((q) => ps.some((p) => within(q, p)))) {
+      e.classList.add('hl');
+      lit.push(e);
+    }
+  }
+  mark(ps);
+});
+output.addEventListener('pointerleave', () => {
+  unlight();
+  mark([]);
+});
+output.addEventListener('click', (ev) => {
+  const target = (ev.target as Element).closest('.linked');
+  const r = target && linkedRanges.get(target)?.[0];
+  if (r) locate(r);
+});
+
 /** Diagrams by the text line they belong to, each list in report order. */
 function byKey(diagrams: Diagram[]): Map<string, Diagram[]> {
   const m = new Map<string, Diagram[]>();
@@ -242,7 +298,7 @@ function byteMap(d: Extract<Shape, { type: 'bytes' }>): HTMLElement {
     const row = el('div', 'row');
     const cells = el('div', 'cells');
     for (const c of r.cells) {
-      const s = seg(c.label, c.kind);
+      const s = link(seg(c.label, c.kind), c.ranges);
       s.style.gridColumn = `span ${c.bytes}`;
       cells.append(s);
     }
@@ -264,7 +320,7 @@ function column(d: Extract<Shape, { type: 'column' }>): HTMLElement {
   for (const e of d.entries) {
     // The arrows and the boxes at their ends repeat what desc says.
     if (left) g.append(hidden(e.incoming ? el('span', 'incoming', e.incoming) : el('span')), hidden(el('span', e.incoming ? 'arrow' : '')));
-    g.append(el('span', 'off', String(e.index)), seg(e.label, e.kind, e.desc),
+    g.append(el('span', 'off', String(e.index)), link(seg(e.label, e.kind, e.desc), e.ranges),
              hidden(el('span', e.target ? 'arrow' : '')), hidden(e.target ? el('span', 'target', e.target) : el('span')));
   }
   return g;
@@ -276,19 +332,36 @@ function diagram(d: Shape): HTMLElement {
   return box;
 }
 
+/** The report's paragraphs: runs of lines that are not blank, each line
+ *  with its index in the report. */
+function paragraphs(text: string): { text: string; index: number }[][] {
+  const paras: { text: string; index: number }[][] = [];
+  let para: { text: string; index: number }[] = [];
+  text.split('\n').forEach((l, index) => {
+    if (l.trim()) para.push({ text: l.trimEnd(), index });
+    else if (para.length) {
+      paras.push(para);
+      para = [];
+    }
+  });
+  if (para.length) paras.push(para);
+  return paras;
+}
+
 /** One card per paragraph of the text report. The first line is the
  *  heading: its name, then the description after two spaces. A diagram
  *  follows the text of the card that holds its line. */
-function render(text: string, diagrams: Diagram[] = []) {
+function render(text: string, links: [number, Range[]][] = [], diagrams: Diagram[] = []) {
   const pending = byKey(diagrams);
+  const ranges = new Map(links);
+  unlight();
   output.replaceChildren(legend());
-  for (const para of text.split(/\n\s*\n/)) {
-    const lines = para.replace(/\s+$/, '').split('\n');
-    if (!lines[0]) continue;
+  for (const para of paragraphs(text)) {
+    const lines = para.map((l) => l.text);
     const card = el('article', 'card');
     const head = lines[0].trim();
     const cut = head.indexOf('  ');
-    const h = el('h2');
+    const h = link(el('h2'), ranges.get(para[0].index));
     if (cut > 0) h.append(el('span', 'name', head.slice(0, cut)), el('span', 'desc', head.slice(cut).trimStart()));
     else h.append(el('span', 'name', head));
     card.append(h);
@@ -303,8 +376,10 @@ function render(text: string, diagrams: Diagram[] = []) {
     const whole = first && open(first, -1);
     // Strip the indent the body shares, so it starts at the card's edge.
     const body = lines.slice(1);
+    const at = para.slice(1).map((l) => l.index);
     const indent = Math.min(...body.filter((l) => l.trim()).map((l) => l.length - l.trimStart().length));
     const depth = (l: string) => l.length - l.trimStart().length;
+    // Rows are blocks, so the pre needs no newlines between them.
     let pre = el('pre');
     const flush = () => {
       if (pre.childNodes.length) card.append(pre);
@@ -317,7 +392,7 @@ function render(text: string, diagrams: Diagram[] = []) {
       sc.placed = true;
     };
     let held: Scope | undefined;
-    for (const l of body) {
+    body.forEach((l, n) => {
       if (held && l.trim() && depth(l) <= held.depth) {
         place(held);
         held = undefined;
@@ -327,12 +402,14 @@ function render(text: string, diagrams: Diagram[] = []) {
       if (owner) {
         owner.drop.delete(k);
         place(owner);
-        continue;
+        return;
       }
-      pre.append(...(pre.childNodes.length ? ['\n'] : []), ...line(l.slice(indent)));
+      const row = link(el('span', 'row'), ranges.get(at[n]));
+      row.append(...line(l.slice(indent)));
+      pre.append(row);
       const d = take(l);
       if (d) held = open(d, depth(l));
-    }
+    });
     flush();
     if (held) place(held);
     if (whole) place(whole);
@@ -361,13 +438,31 @@ const theme = EditorView.theme({
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection':
     { backgroundColor: 'var(--selection) !important' },
   '.cm-tooltip': { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--ink-2)' },
+  // The selection colour, which every syntax colour reaches 4.5:1 on. It is
+  // close to --code-bg, so an underline carries the mark.
+  '.cm-linked': { backgroundColor: 'var(--hl-bg)', boxShadow: 'inset 0 -1.5px var(--muted)' },
 }, { dark: true });
+
+// The source of what the pointer is over in the report.
+const setLinked = StateEffect.define<{ from: number; to: number }[]>();
+const linkedMark = Decoration.mark({ class: 'cm-linked' });
+const linked = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(set, tr) {
+    set = set.map(tr.changes);
+    for (const e of tr.effects) {
+      if (e.is(setLinked)) set = Decoration.set(e.value.map((r) => linkedMark.range(r.from, r.to)), true);
+    }
+    return set;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
 
 let timer = 0;
 const view = new EditorView({
   parent: $('editor'),
   extensions: [
-    basicSetup, StreamLanguage.define(oCaml), syntaxHighlighting(highlight), theme, lintGutter(),
+    basicSetup, StreamLanguage.define(oCaml), syntaxHighlighting(highlight), theme, lintGutter(), linked,
     EditorView.updateListener.of((u) => {
       if (!u.docChanged) return;
       clearTimeout(timer);
@@ -375,6 +470,40 @@ const view = new EditorView({
     }),
   ],
 });
+
+/** A line from 1 and a column in UTF-8 bytes from 0, as the compiler counts
+ *  them, as a document position: CodeMirror counts UTF-16 units. */
+function position(doc: Doc, line: number, column: number): number {
+  const l = doc.line(Math.min(Math.max(line, 1), doc.lines));
+  const bytes = new TextEncoder().encode(l.text).subarray(0, Math.max(column, 0));
+  return l.from + Math.min(new TextDecoder().decode(bytes).length, l.length);
+}
+
+/** Marks the ranges, a span per line, without the indentation or a
+ *  trailing separator: a field's location includes its semicolon. */
+function mark(ranges: Range[]) {
+  const doc = view.state.doc;
+  const spans: { from: number; to: number }[] = [];
+  for (const r of ranges) {
+    const from = position(doc, r.line, r.column), to = position(doc, r.end_line, r.end_column);
+    for (let n = doc.lineAt(from).number; from < to && n <= doc.lineAt(to).number; n++) {
+      const l = doc.line(n);
+      const text = l.text;
+      let a = Math.max(from, l.from) - l.from, b = Math.min(to, l.to) - l.from;
+      while (a < b && /\s/.test(text[a])) a++;
+      while (b > a && /[\s;]/.test(text[b - 1])) b--;
+      if (a < b) spans.push({ from: l.from + a, to: l.from + b });
+    }
+  }
+  spans.sort((a, b) => a.from - b.from);
+  if (spans.length || view.state.field(linked).size) view.dispatch({ effects: setLinked.of(spans) });
+}
+
+function locate(r: Range) {
+  const pos = position(view.state.doc, r.line, r.column);
+  view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'center' }) });
+  view.focus();
+}
 
 // --- Worker ---------------------------------------------------------------
 
@@ -435,7 +564,7 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
         status('error', true);
       } else {
         view.dispatch(setDiagnostics(view.state, []));
-        render(r.text, r.diagrams);
+        render(r.text, r.links, r.diagrams);
         status(`${Math.round(m.ms)} ms`);
       }
     }
@@ -452,12 +581,11 @@ function setCode(code: string) {
 
 async function start() {
   const saved = (location.hash.length > 1 && (await unpack(location.hash.slice(1)))) || null;
-  const s: Saved = { code: SAMPLE, compiler: '5.5', intf: false, values: false, source: false, labels: false, ...saved };
+  const s: Saved = { code: SAMPLE, compiler: '5.5', intf: false, values: false, labels: false, ...saved };
   setCode(s.code);
   kindBox.value = s.intf ? 'mli' : 'ml';
   compilerBox.value = s.compiler;
   valuesBox.checked = s.values;
-  sourceBox.checked = s.source;
   labelsBox.checked = s.labels;
 
   const edited = new Option('edited', '');
@@ -472,7 +600,7 @@ async function start() {
     setCode(e.code);
     analyze();
   };
-  for (const box of [kindBox, compilerBox, valuesBox, sourceBox, labelsBox]) box.onchange = analyze;
+  for (const box of [kindBox, compilerBox, valuesBox, labelsBox]) box.onchange = analyze;
 
   status('Loading compiler-libs');
   worker.postMessage({ type: 'init', url: new URL('lense/lense_web.js', document.baseURI).href } satisfies ToWorker);

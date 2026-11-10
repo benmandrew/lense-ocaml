@@ -23,7 +23,9 @@ open Model
    closinfo, and "pad" for unused bytes. *)
 type kind = string
 
-type piece = { plabel : string; pkind : kind; bytes : int }
+(* Each cell carries the source ranges of what it stands for, so the page
+   can link it to the source and to the text rows. *)
+type piece = { plabel : string; pkind : kind; bytes : int; pranges : range list }
 
 type entry = {
   index : int;
@@ -32,6 +34,7 @@ type entry = {
   desc : string;  (** The text row, for screen readers: the fill and arrows say the rest. *)
   incoming : string option;  (** A pointer that enters the block here. *)
   target : string option;  (** The block this word points to. *)
+  ranges : range list;
 }
 
 type shape =
@@ -68,6 +71,8 @@ let rows_of f =
   | _ :: rest -> List.filter (fun l -> l <> "" && not (String.starts_with ~prefix:"note:" l)) rest
   | [] -> []
 
+let some = List.filter_map Fun.id
+
 let word_kind = function Immediate _ -> "imm" | Pointer _ -> "ptr" | Any _ -> "any" | Double | Flat _ -> "flat"
 
 let target_of = function
@@ -89,6 +94,7 @@ let cell_label label ty = function Immediate why when why <> ty -> label ^ " (" 
    next rows. Cells name the field only: the rows above give the types. *)
 let bytes (fields : field list) (slots : mixed_slot list) =
   let fields = Array.of_list fields in
+  let ranges (s : mixed_slot) = some [ fields.(s.field).frange ] in
   let label (s : mixed_slot) =
     let f = fields.(s.field) in
     match f.fkind with
@@ -106,11 +112,13 @@ let bytes (fields : field list) (slots : mixed_slot list) =
                let lo = w * word_bytes in
                let used = max 0 (min word_bytes (data - lo)) in
                ( o + lo,
-                 (if used > 0 then [ { plabel = label s; pkind = word_kind s.mword; bytes = used } ] else [])
-                 @ if used < word_bytes then [ { plabel = "unused"; pkind = "pad"; bytes = word_bytes - used } ] else [] )))
+                 (if used > 0 then [ { plabel = label s; pkind = word_kind s.mword; bytes = used; pranges = ranges s } ] else [])
+                 @
+                 if used < word_bytes then [ { plabel = "unused"; pkind = "pad"; bytes = word_bytes - used; pranges = [] } ]
+                 else [] )))
          slots (mixed_offsets slots))
   in
-  Bytes { word = word_bytes; rows = (0, [ { plabel = "header"; pkind = "meta"; bytes = word_bytes } ]) :: rows }
+  Bytes { word = word_bytes; rows = (0, [ { plabel = "header"; pkind = "meta"; bytes = word_bytes; pranges = [] } ]) :: rows }
 
 (* An ordinary block, a word per field. *)
 let block ~title (fields : field list) =
@@ -119,7 +127,7 @@ let block ~title (fields : field list) =
       (fun index (f : field) ->
         let label = Text.field_label f in
         { index; elabel = cell_label label f.ty f.word; ekind = word_kind f.word; desc = label ^ ", " ^ Text.word f.word;
-          incoming = None; target = target_of f.word })
+          incoming = None; target = target_of f.word; ranges = some [ f.frange ] })
       fields
   in
   Column { title; entries }
@@ -157,7 +165,9 @@ let closure ~native (c : closure) =
     let rows = rows_of print in
     let offs, envstart = closure_offsets ~native c in
     let entry (f : fn) off =
-      let meta ?incoming index elabel = { index; elabel; ekind = "meta"; desc = ""; incoming; target = None } in
+      let meta ?incoming index elabel =
+        { index; elabel; ekind = "meta"; desc = ""; incoming; target = None; ranges = some [ f.fn_range ] }
+      in
       let ptr = Text.fn_name f in
       let infix = if off = 0 then [] else [ meta (off - 1) (Text.tag_name infix_tag ^ " header") ] in
       let arity = if f.tupled then -f.arity else f.arity in
@@ -178,7 +188,7 @@ let closure ~native (c : closure) =
         (fun i (cv : capture) ->
           let label = if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty in
           { index = envstart + i; elabel = cell_label label cv.cty cv.cword; ekind = word_kind cv.cword; desc = "";
-            incoming = None; target = target_of cv.cword })
+            incoming = None; target = target_of cv.cword; ranges = some [ cv.cv_range ] })
         c.env
     in
     let entries = List.concat (List.map2 entry c.fns offs) @ env in
@@ -205,6 +215,7 @@ let compunit (opts : Text.options) (u : compunit) =
 let json (ds : t list) =
   let open Json in
   let opt = function None -> Null | Some s -> Str s in
+  let ranges rs = List (List.map (fun r -> range (Some r)) rs) in
   let strs l = List (List.map (fun s -> Str s) l) in
   let shape = function
     | Bytes { word; rows } ->
@@ -217,7 +228,11 @@ let json (ds : t list) =
                      Obj
                        [ ("offset", Int o);
                          ( "cells",
-                           List (List.map (fun p -> Obj [ ("label", Str p.plabel); ("kind", Str p.pkind); ("bytes", Int p.bytes) ]) ps) ) ])
+                           List
+                             (List.map
+                                (fun p ->
+                                  Obj [ ("label", Str p.plabel); ("kind", Str p.pkind); ("bytes", Int p.bytes); ("ranges", ranges p.pranges) ])
+                                ps) ) ])
                    rows) ) ]
     | Column { title; entries } ->
         Obj
@@ -228,7 +243,7 @@ let json (ds : t list) =
                    (fun e ->
                      Obj
                        [ ("index", Int e.index); ("label", Str e.elabel); ("kind", Str e.ekind); ("desc", Str e.desc);
-                         ("incoming", opt e.incoming); ("target", opt e.target) ])
+                         ("incoming", opt e.incoming); ("target", opt e.target); ("ranges", ranges e.ranges) ])
                    entries) ) ]
   in
   let b = Buffer.create 4096 in

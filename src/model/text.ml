@@ -17,6 +17,16 @@ let tag_name t =
   else if t = forcing_tag then "Forcing_tag 244"
   else "tag " ^ string_of_int t
 
+(* The source ranges of the lines written, for render_linked: each mark is
+   the buffer offset at which a line's text is written, and its ranges.
+   Only the buffer being recorded gets marks. *)
+let recording : (Buffer.t * (int * range list) list ref) option ref = ref None
+
+let link b rs =
+  match (!recording, List.filter_map Fun.id rs) with
+  | Some (rb, marks), (_ :: _ as rs) when rb == b -> marks := (Buffer.length b, rs) :: !marks
+  | _ -> ()
+
 let plural n one many = string_of_int n ^ " " ^ if n = 1 then one else many
 
 let word = function
@@ -47,6 +57,7 @@ let rows b ~indent ?(index = true) (fields : field list) =
   List.iteri
     (fun i ((f : field), l) ->
       let idx = if index then lpad iw (string_of_int i) ^ "  " else "" in
+      link b [ f.frange ];
       Printf.bprintf b "%s%s%s  %s\n" (String.make indent ' ') idx (pad w l) (word f.word))
     (List.combine fields labels)
 
@@ -93,8 +104,10 @@ let mixed b ~indent (fields : field list) (slots : mixed_slot list) =
   let iw = String.length (string_of_int (List.length slots - 1)) in
   Printf.bprintf b "%s%s  %s  header\n" margin (String.make iw ' ') (pad rw (range 0 word_bytes));
   List.iteri
-    (fun i (r, l, w) -> Printf.bprintf b "%s%s  %s  %s  %s\n" margin (lpad iw (string_of_int i)) (pad rw r) (pad lw l) w)
-    rows;
+    (fun i ((r, l, w), s) ->
+      link b [ fields.(s.field).frange ];
+      Printf.bprintf b "%s%s  %s  %s  %s\n" margin (lpad iw (string_of_int i)) (pad rw r) (pad lw l) w)
+    (List.combine rows slots);
   let reordered = List.exists (fun (i, s) -> s.field <> i || s.part <> "") (List.mapi (fun i s -> (i, s)) slots) in
   if reordered then Printf.bprintf b "%snote: values first, then flat fields, each in declaration order\n" margin;
   Printf.bprintf b "%snote: native code; bytecode stores one boxed field per declared field, in declaration order\n" margin
@@ -112,6 +125,7 @@ let cases b (cases : case list) =
   let w = List.fold_left (fun w (c : case) -> max w (String.length c.name)) 0 cases in
   List.iter
     (fun (c : case) ->
+      link b [ c.case_range ];
       Printf.bprintf b "  %s  %s\n" (pad w c.name) (shape_summary c.shape);
       shape_rows b ~indent:(w + 6) c.shape;
       notes b ~indent:(w + 6) c.notes)
@@ -128,6 +142,7 @@ let decl_head (d : decl) =
 let decl ?(source = false) b (d : decl) =
   if source then Option.iter (fun s -> Printf.bprintf b "%s\n" s) d.source;
   let head = decl_head d in
+  link b [ d.range ];
   (match d.kind with
   | Record shape ->
       Printf.bprintf b "%s  %s\n" head (shape_summary shape);
@@ -164,31 +179,38 @@ let shorten s = if String.length s <= 72 then s else String.sub s 0 69 ^ "..."
 (* The block of every value of type [(module S)]. *)
 let package b (m : package) =
   let n = List.length m.slots in
+  link b [ m.prange ];
   if n = 0 then Printf.bprintf b "(module %s)  structure block, size 0: no item takes a field\n" m.pname
   else Printf.bprintf b "(module %s)  structure block, tag 0, size %d\n" m.pname n;
   let names = List.map item_name m.slots in
   let w = List.fold_left (fun w l -> max w (String.length l)) 0 names in
   let iw = String.length (string_of_int (n - 1)) in
   List.iter2
-    (fun s l -> Printf.bprintf b "    %s  %s  %s\n" (lpad iw (string_of_int s.index)) (pad w l) (word s.word))
+    (fun s l ->
+      link b [ s.srange ];
+      Printf.bprintf b "    %s  %s  %s\n" (lpad iw (string_of_int s.index)) (pad w l) (word s.word))
     m.slots names;
   if m.no_slot <> [] && n > 0 then Printf.bprintf b "  no field: %s\n" (String.concat ", " m.no_slot)
 
-let rows b ~indent (rs : (string * string * string) list) =
+let rows b ~indent ?links (rs : (string * string * string) list) =
   (* Rows with nothing in the last column do not widen the middle one. *)
   let w = List.fold_left (fun w (_, l, x) -> if x = "" then w else max w (String.length l)) 0 rs in
   let iw = List.fold_left (fun w (i, _, _) -> max w (String.length i)) 0 rs in
-  List.iter
-    (fun (i, l, x) ->
+  let links = match links with Some ls -> ls | None -> List.map (fun _ -> None) rs in
+  List.iter2
+    (fun (i, l, x) r ->
+      link b [ r ];
       let line = Printf.sprintf "%s%s  %s  %s" (String.make indent ' ') (lpad iw i) (pad w l) x in
       (* No trailing spaces when the last column is empty. *)
       let n = ref (String.length line) in
       while !n > 0 && line.[!n - 1] = ' ' do decr n done;
       Printf.bprintf b "%s\n" (String.sub line 0 !n))
-    rs
+    rs links
 
 let fn_name f = if f.fname = "" then "(made by the compiler)" else f.fname
 
+(* The rows of a closure block, and the range of each: the function a word
+   belongs to, or where a captured variable is bound. *)
 let closure_rows ~native c =
   let offs, envstart = closure_offsets ~native c in
   let many = List.length c.fns > 1 in
@@ -211,18 +233,20 @@ let closure_rows ~native c =
           (string_of_int (off + 2), who "code pointer: the function itself", "") ]
       else [ (string_of_int off, who "code pointer", ""); (string_of_int (off + 1), who info, "") ]
     in
-    infix @ code
+    List.map (fun r -> (r, f.fn_range)) (infix @ code)
   in
-  List.concat (List.map2 entry c.fns offs)
-  @ List.mapi
-      (fun i (cv : capture) ->
-        (string_of_int (envstart + i), (if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty), word cv.cword))
-      c.env
+  List.split
+    (List.concat (List.map2 entry c.fns offs)
+    @ List.mapi
+        (fun i (cv : capture) ->
+          ((string_of_int (envstart + i), (if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty), word cv.cword), cv.cv_range))
+        c.env)
 
 let closure b ~native c =
   let names = String.concat ", " (List.map fn_name c.fns) in
   let f = List.hd c.fns in
   let size = closure_size ~native c in
+  link b (List.map (fun f -> f.fn_range) c.fns);
   if List.length c.fns = 1 && c.env = [] then
     Printf.bprintf b "  %s  line %d  %s, size %d, arity %d%s, no environment\n" names f.fline (tag_name closure_tag) size f.arity
       (if f.tupled then " (tupled)" else "")
@@ -232,7 +256,8 @@ let closure b ~native c =
     else
       Printf.bprintf b "  %s  line %d  one %s block for %d functions, size %d\n" names f.fline (tag_name closure_tag)
         (List.length c.fns) size;
-    rows b ~indent:6 (closure_rows ~native c)
+    let rs, links = closure_rows ~native c in
+    rows b ~indent:6 ~links rs
   end
 
 let backend b (bc : backend_closures) =
@@ -252,11 +277,13 @@ let lazy_value b (z : lazy_value) =
         Printf.sprintf "%s block, size 1, holding a closure; forcing it makes it a %s block holding the result"
           (tag_name lazy_tag) (tag_name forward_tag)
   in
+  link b [ z.zrange ];
   Printf.bprintf b "%s  line %d  %s\n" (shorten z.zsource) z.zline what
 
 let obj b (o : obj) =
   let first = if o.env_slot then 3 else 2 in
   let size = first + List.length o.ivars in
+  link b [ o.orange ];
   Printf.bprintf b "%s  line %d  %s, size %d%s\n" o.oname o.oline (tag_name object_tag) size
     (if o.unknown = [] then "" else " or more");
   let rs =
@@ -274,7 +301,8 @@ let obj b (o : obj) =
           (string_of_int (first + i), label, word v.vword ^ from))
         o.ivars
   in
-  rows b ~indent:4 rs;
+  let links = List.init first (fun _ -> None) @ List.map (fun (v : ivar) -> v.vrange) o.ivars in
+  rows b ~indent:4 ~links rs;
   List.iter
     (fun u -> Printf.bprintf b "    then the variables of %s, from another unit, in an order its class sets\n" u)
     o.unknown
@@ -335,8 +363,7 @@ let labels b (units : compunit list) =
   let w = List.fold_left (fun w l -> max w (String.length l.label + 1)) 0 uniq in
   List.iter (fun l -> Printf.bprintf b "%s  %11d  %s:%d\n" (pad w ("`" ^ l.label)) l.hash l.file l.lline) uniq
 
-let render opts units =
-  let b = Buffer.create 4096 in
+let render_into b opts units =
   let many = List.length units > 1 in
   List.iteri
     (fun i u ->
@@ -348,5 +375,35 @@ let render opts units =
   collisions c units;
   if Buffer.length c > 0 then (
     Buffer.add_char b '\n';
-    Buffer.add_buffer b c);
+    Buffer.add_buffer b c)
+
+let render opts units =
+  let b = Buffer.create 4096 in
+  render_into b opts units;
   Buffer.contents b
+
+(* The report, and the source ranges of its lines: each line's index,
+   counting from 0, with its ranges. *)
+let render_linked opts units =
+  let b = Buffer.create 4096 and marks = ref [] in
+  recording := Some (b, marks);
+  Fun.protect ~finally:(fun () -> recording := None) (fun () -> render_into b opts units);
+  let text = Buffer.contents b in
+  let line = ref 0 and at = ref 0 in
+  let lines =
+    List.map
+      (fun (off, rs) ->
+        while !at < off do
+          if text.[!at] = '\n' then incr line;
+          incr at
+        done;
+        (!line, rs))
+      (List.sort (fun (a, _) (b, _) -> compare a b) !marks)
+  in
+  (* A line written in pieces can have several marks. *)
+  let rec merge = function
+    | (i, a) :: (j, b) :: rest when i = j -> merge ((i, a @ b) :: rest)
+    | x :: rest -> x :: merge rest
+    | [] -> []
+  in
+  (text, merge lines)
