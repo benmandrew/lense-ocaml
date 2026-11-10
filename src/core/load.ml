@@ -29,8 +29,7 @@ let report exn =
   | None -> raise exn
 
 let unit_name_of file =
-  if file = "-" then "Stdin"
-  else String.capitalize_ascii (Filename.remove_extension (Filename.basename file))
+  if file = "-" then "Stdin" else String.capitalize_ascii (Filename.remove_extension (Filename.basename file))
 
 (* Type-check source text. [intf] chooses .mli syntax. *)
 let typecheck ~include_dirs ~file ~intf src =
@@ -69,18 +68,13 @@ let read_cmt ~include_dirs file =
       d :: (if p = d then [] else ancestors p)
     in
     let here = Filename.dirname (if Filename.is_relative file then Filename.concat (Sys.getcwd ()) file else file) in
-    match List.find_opt fits (cmt.cmt_builddir :: ancestors here) with
-    | Some d -> d
-    | None -> cmt.cmt_builddir
+    match List.find_opt fits (cmt.cmt_builddir :: ancestors here) with Some d -> d | None -> cmt.cmt_builddir
   in
   let rel d = if Filename.is_relative d then Filename.concat builddir d else d in
-  let visible =
-    List.map rel cmt.cmt_loadpath.visible @ include_dirs @ [ Filename.dirname file; standard_library () ]
-  in
-  Load_path.init ~auto_include:Load_path.no_auto_include ~visible
-    ~hidden:(List.map rel cmt.cmt_loadpath.hidden);
+  let visible = List.map rel cmt.cmt_loadpath.visible @ include_dirs @ [ Filename.dirname file; standard_library () ] in
+  Load_path.init ~auto_include:Load_path.no_auto_include ~visible ~hidden:(List.map rel cmt.cmt_loadpath.hidden);
   Compat.reset_envaux ();
-  Analyze.rebuild_env := (fun e -> try Envaux.env_of_only_summary e with _ -> e);
+  (Analyze.rebuild_env := fun e -> try Envaux.env_of_only_summary e with _ -> e);
   let input =
     match cmt.cmt_annots with
     | Implementation str -> Analyze.Impl str
@@ -126,8 +120,8 @@ let compunit ?(values = false) ~include_dirs file : M.compunit =
 
 (* One input file, or standard input when [file] is "-". *)
 let run ~values ~include_dirs ~intf file : M.compunit =
-  if file = "-" && intf then (
+  if file = "-" && intf then
     let src = read_stdin () in
     let unit_name, input = typecheck ~include_dirs ~file ~intf:true src in
-    Analyze.analyze ~file ~unit_name ~src:(Some src) input)
+    Analyze.analyze ~file ~unit_name ~src:(Some src) input
   else compunit ~values ~include_dirs file

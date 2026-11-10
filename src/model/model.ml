@@ -24,13 +24,12 @@ type range = { first_line : int; first_col : int; last_line : int; last_col : in
 (* What one word holds: a field of a block, or a whole value. *)
 type word =
   | Immediate of string  (** Always an immediate; says why. *)
-  | Pointer of { tag : int option; what : string }
-      (** Always a pointer to a block. [tag] is [None] when it varies. *)
+  | Pointer of { tag : int option; what : string }  (** Always a pointer to a block. [tag] is [None] when it varies. *)
   | Any of string  (** Could be either; says why. *)
   | Double  (** An unboxed double inside a flat float block. *)
   | Flat of { layout : string; bytes : int }
-      (** OxCaml: an unboxed value of a non-value layout, such as [float64],
-          with [bytes] of data. [bytes] is 0 when it is not one fixed size. *)
+      (** OxCaml: an unboxed value of a non-value layout, such as [float64], with [bytes] of data. [bytes] is 0 when it
+          is not one fixed size. *)
 
 type field_kind =
   | Label of string  (** A record or inline-record field. *)
@@ -64,12 +63,11 @@ type shape =
   | Ext_slot  (** An Object_tag block holding the name and a unique id. *)
   | Rebind of string  (** The same value as another extension constructor. *)
   | Product of field list
-      (** OxCaml: an unboxed record. No block: the fields are kept apart, in
-          registers or stored in place inside an enclosing block. *)
+      (** OxCaml: an unboxed record. No block: the fields are kept apart, in registers or stored in place inside an
+          enclosing block. *)
   | Mixed of { tag : int; fields : field list; scanned : int; slots : mixed_slot list }
-      (** OxCaml: a block whose first [scanned] words are values and whose
-          other words are flat data. [fields] is in declaration order,
-          [slots] in memory order. *)
+      (** OxCaml: a block whose first [scanned] words are values and whose other words are flat data. [fields] is in
+          declaration order, [slots] in memory order. *)
 
 (* The native target. js_of_ocaml reports 32 bits, but the page describes
    what ocamlopt and ocamlc do on a 64-bit machine. *)
@@ -78,9 +76,7 @@ let word_bytes = word_size / 8
 
 (* The byte offset of each slot, counting the header word. *)
 let mixed_offsets slots =
-  let _, offs =
-    List.fold_left (fun (o, acc) s -> (o + (s.words * word_bytes), o :: acc)) (word_bytes, []) slots
-  in
+  let _, offs = List.fold_left (fun (o, acc) s -> (o + (s.words * word_bytes), o :: acc)) (word_bytes, []) slots in
   List.rev offs
 
 let mixed_size slots = List.fold_left (fun n s -> n + s.words) 0 slots
@@ -113,7 +109,6 @@ type decl = {
 }
 
 type slot_kind = Value | Module | Functor | Exception | Extension | Class | Primitive
-
 type slot = { index : int; item : slot_kind; name : string; word : word; srange : range option }
 
 (* The block of every value of a first-class module type [(module S)]: tag
@@ -218,9 +213,7 @@ let collisions (units : compunit list) =
       List.iter
         (fun l ->
           let prev = try Hashtbl.find tbl l.hash with Not_found -> [] in
-          if not (List.exists (fun p -> p.label = l.label) prev) then
-            Hashtbl.replace tbl l.hash (prev @ [ l ]))
+          if not (List.exists (fun p -> p.label = l.label) prev) then Hashtbl.replace tbl l.hash (prev @ [ l ]))
         u.labels)
     units;
-  Hashtbl.fold (fun h ls acc -> if List.length ls > 1 then (h, ls) :: acc else acc) tbl []
-  |> List.sort compare
+  Hashtbl.fold (fun h ls acc -> if List.length ls > 1 then (h, ls) :: acc else acc) tbl [] |> List.sort compare

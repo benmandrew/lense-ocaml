@@ -17,14 +17,35 @@ let pick l = List.nth l (rand (List.length l))
 type sample = { ty : string; expr : string }
 
 let base =
-  [ ("int", "7"); ("bool", "true"); ("char", "'c'"); ("unit", "()"); ("float", "1.5");
-    ("fl", "2.5"); ("string", "\"s\""); ("bytes", "(Bytes.make 1 'b')"); ("int32", "3l");
-    ("int64", "4L"); ("nativeint", "5n"); ("int list", "[1]"); ("int list", "[]");
-    ("int option", "(Some 1)"); ("int option", "None"); ("int * string", "(1, \"a\")");
-    ("float array", "[|1.5|]"); ("float array", "[||]"); ("int array", "[|1|]");
-    ("int -> int", "(fun x -> x + 1)"); ("int ref", "(ref 1)"); ("exn", "Not_found");
-    ("exn", "(Failure \"f\")"); ("string Lazy.t", "(lazy (String.make 1 'z'))");
-    ("[ `On | `Off ]", "`On"); ("[ `N of int ]", "(`N 3)"); ("fstr", "{ fa = 1.; fb = 2. }") ]
+  [
+    ("int", "7");
+    ("bool", "true");
+    ("char", "'c'");
+    ("unit", "()");
+    ("float", "1.5");
+    ("fl", "2.5");
+    ("string", "\"s\"");
+    ("bytes", "(Bytes.make 1 'b')");
+    ("int32", "3l");
+    ("int64", "4L");
+    ("nativeint", "5n");
+    ("int list", "[1]");
+    ("int list", "[]");
+    ("int option", "(Some 1)");
+    ("int option", "None");
+    ("int * string", "(1, \"a\")");
+    ("float array", "[|1.5|]");
+    ("float array", "[||]");
+    ("int array", "[|1|]");
+    ("int -> int", "(fun x -> x + 1)");
+    ("int ref", "(ref 1)");
+    ("exn", "Not_found");
+    ("exn", "(Failure \"f\")");
+    ("string Lazy.t", "(lazy (String.make 1 'z'))");
+    ("[ `On | `Off ]", "`On");
+    ("[ `N of int ]", "(`N 3)");
+    ("fstr", "{ fa = 1.; fb = 2. }");
+  ]
   |> List.map (fun (ty, expr) -> { ty; expr })
 
 let prelude = "type fl = float\ntype fstr = { fa : float; fb : float }\ntype ext = ..\n"
@@ -69,25 +90,43 @@ type leaf = { lty : string; lexpr : string; bits : string option; mask : string;
 type ftree = Leaf of leaf | Prod of ftree list
 
 let flat_leaves =
-  [ { lty = "float#"; lexpr = "#2.5"; bits = Some "(Int64.to_nativeint (Int64.bits_of_float 2.5))"; mask = "(-1n)"; boxed = "2.5" };
-    { lty = "float32#"; lexpr = "#2.5s"; bits = Some "(Nativeint.of_int32 (Int32.bits_of_float 2.5))"; mask = "0xffffffffn"; boxed = "2.5s" };
+  [
+    {
+      lty = "float#";
+      lexpr = "#2.5";
+      bits = Some "(Int64.to_nativeint (Int64.bits_of_float 2.5))";
+      mask = "(-1n)";
+      boxed = "2.5";
+    };
+    {
+      lty = "float32#";
+      lexpr = "#2.5s";
+      bits = Some "(Nativeint.of_int32 (Int32.bits_of_float 2.5))";
+      mask = "0xffffffffn";
+      boxed = "2.5s";
+    };
     { lty = "int32#"; lexpr = "(-#3l)"; bits = Some "(-3n)"; mask = "0xffffffffn"; boxed = "(-3l)" };
     { lty = "int64#"; lexpr = "#4L"; bits = Some "4n"; mask = "(-1n)"; boxed = "4L" };
     { lty = "nativeint#"; lexpr = "(-#5n)"; bits = Some "(-5n)"; mask = "(-1n)"; boxed = "(-5n)" };
     { lty = "int8#"; lexpr = "(-#6s)"; bits = Some "(-6n)"; mask = "0xffn"; boxed = "(-6)" };
     { lty = "int16#"; lexpr = "#300S"; bits = Some "300n"; mask = "0xffffn"; boxed = "300" };
-    { lty = "int#"; lexpr = "#9m"; bits = Some "9n"; mask = "(-1n)"; boxed = "9" } ]
+    { lty = "int#"; lexpr = "#9m"; bits = Some "9n"; mask = "(-1n)"; boxed = "9" };
+  ]
 
 let float_leaf =
-  { lty = "float"; lexpr = "1.5"; bits = Some "(Int64.to_nativeint (Int64.bits_of_float 1.5))"; mask = "(-1n)"; boxed = "1.5" }
+  {
+    lty = "float";
+    lexpr = "1.5";
+    bits = Some "(Int64.to_nativeint (Int64.bits_of_float 1.5))";
+    mask = "(-1n)";
+    boxed = "1.5";
+  }
 
 let rec tree_ty = function
   | Leaf l -> if l.bits = None then "(" ^ l.lty ^ ")" else l.lty
   | Prod ts -> "#(" ^ String.concat " * " (List.map tree_ty ts) ^ ")"
 
-let rec tree_expr = function
-  | Leaf l -> l.lexpr
-  | Prod ts -> "#(" ^ String.concat ", " (List.map tree_expr ts) ^ ")"
+let rec tree_expr = function Leaf l -> l.lexpr | Prod ts -> "#(" ^ String.concat ", " (List.map tree_expr ts) ^ ")"
 
 type state = {
   decls : Buffer.t;
@@ -154,7 +193,8 @@ let gen_variant s =
     else cases
   in
   Printf.bprintf s.decls "type %s =%s%s\n" name
-    (String.concat "" (List.map (fun (c, a) -> match a with None -> " | " ^ c | Some (d, _, _) -> " | " ^ c ^ " of " ^ d) cases))
+    (String.concat ""
+       (List.map (fun (c, a) -> match a with None -> " | " ^ c | Some (d, _, _) -> " | " ^ c ^ " of " ^ d) cases))
     (if unboxed then " [@@unboxed]" else "");
   List.iter
     (fun (c, a) ->
@@ -168,12 +208,10 @@ let gen_record s =
   let floats = chance 0.35 in
   let n = 1 + rand 5 in
   let unboxed = n = 1 && chance 0.4 in
-  let fs =
-    List.init n (fun _ ->
-        (fresh s "f", chance 0.3, if floats then float_sample () else field_sample s))
-  in
+  let fs = List.init n (fun _ -> (fresh s "f", chance 0.3, if floats then float_sample () else field_sample s)) in
   Printf.bprintf s.decls "type %s = { %s }%s\n" name
-    (String.concat "; " (List.map (fun (l, m, x) -> (if m && not unboxed then "mutable " else "") ^ l ^ " : " ^ x.ty) fs))
+    (String.concat "; "
+       (List.map (fun (l, m, x) -> (if m && not unboxed then "mutable " else "") ^ l ^ " : " ^ x.ty) fs))
     (if unboxed then " [@@unboxed]" else "");
   let make es = "{ " ^ String.concat "; " (List.map2 (fun (l, _, _) e -> l ^ " = " ^ e) fs es) ^ " }" in
   let v = value make (List.map (fun (_, _, x) -> x.expr) fs) in
@@ -201,7 +239,9 @@ let gen_poly s =
 let gen_gadt s =
   let name = fresh s "g" in
   let cases =
-    List.init (1 + rand 4) (fun _ ->
+    List.init
+      (1 + rand 4)
+      (fun _ ->
         let c = fresh s "G" in
         let idx = pick [ "int"; "string"; "bool" ] in
         let exist = chance 0.4 in
@@ -239,8 +279,7 @@ let gen_exn s =
   else
     let a = if chance 0.4 then None else Some (args s) in
     let decl = match a with None -> c | Some (d, _, _) -> c ^ " of " ^ d in
-    if ext then Printf.bprintf s.decls "type ext += %s\n" decl
-    else Printf.bprintf s.decls "exception %s\n" decl;
+    if ext then Printf.bprintf s.decls "type ext += %s\n" decl else Printf.bprintf s.decls "exception %s\n" decl;
     let v = match a with None -> constant c | Some (_, make, fs) -> value (fun es -> c ^ " " ^ make es) fs in
     add_value s (if ext then "ext" else "exn") c v
 
@@ -268,14 +307,21 @@ let gen_mixed s =
     Printf.bprintf s.decls "type %s = { %s }\n" name
       (String.concat "; " (List.map (fun (l, m, t) -> (if m then "mutable " else "") ^ l ^ " : " ^ tree_ty t) fs));
     let make es = "{ " ^ String.concat "; " (List.map2 (fun (l, _, _) e -> l ^ " = " ^ e) fs es) ^ " }" in
-    let v = { vexpr = make (List.map (fun (_, _, t) -> tree_expr t) fs);
-              vfields = List.map (fun (_, _, t) -> match t with Leaf l -> l.boxed | Prod _ -> "()") fs; vmake = make } in
+    let v =
+      {
+        vexpr = make (List.map (fun (_, _, t) -> tree_expr t) fs);
+        vfields = List.map (fun (_, _, t) -> match t with Leaf l -> l.boxed | Prod _ -> "()") fs;
+        vmake = make;
+      }
+    in
     add_value s name "" v;
     Hashtbl.replace s.trees (name, "") (List.map (fun (_, _, t) -> t) fs))
   else
     let name = fresh s "mv" in
     let cases =
-      List.init (1 + rand 4) (fun _ ->
+      List.init
+        (1 + rand 4)
+        (fun _ ->
           let c = fresh s "K" in
           if chance 0.2 then (c, `Const)
           else if chance 0.3 then (c, `Inline (List.map (fun t -> (fresh s "k", t)) (fields ())))
@@ -288,14 +334,16 @@ let gen_mixed s =
               match a with
               | `Const -> " | " ^ c
               | `Tuple ts -> " | " ^ c ^ " of " ^ String.concat " * " (List.map tree_ty ts)
-              | `Inline fs -> " | " ^ c ^ " of { " ^ String.concat "; " (List.map (fun (l, t) -> l ^ " : " ^ tree_ty t) fs) ^ " }")
+              | `Inline fs ->
+                  " | " ^ c ^ " of { " ^ String.concat "; " (List.map (fun (l, t) -> l ^ " : " ^ tree_ty t) fs) ^ " }")
             cases));
     List.iter
       (fun (c, a) ->
         match a with
         | `Const -> add_value s name c (constant c)
         | `Tuple ts ->
-            add_value s name c { (constant (c ^ " (" ^ String.concat ", " (List.map tree_expr ts) ^ ")")) with vfields = [] };
+            add_value s name c
+              { (constant (c ^ " (" ^ String.concat ", " (List.map tree_expr ts) ^ ")")) with vfields = [] };
             Hashtbl.replace s.trees (name, c) ts
         | `Inline fs ->
             add_value s name c
@@ -308,7 +356,9 @@ let gen_mixed s =
 let gen_module s =
   let m = fresh s "M" in
   let items =
-    List.init (1 + rand 6) (fun _ ->
+    List.init
+      (1 + rand 6)
+      (fun _ ->
         match rand 6 with
         | 0 -> `Ext (fresh s "e")
         | 1 -> `Exn (fresh s "X")
@@ -329,7 +379,10 @@ let gen_module s =
     | `Ext e -> if chance 0.5 then Some (Printf.sprintf "val %s : 'a -> 'a" e) else None
     | `Exn x -> Some ("exception " ^ x)
     | `Type _ -> None
-    | `Sub sm -> Some (if chance 0.5 then "module " ^ sm ^ " : sig val w : string end" else "module " ^ sm ^ " : sig val z : int val w : string end")
+    | `Sub sm ->
+        Some
+          (if chance 0.5 then "module " ^ sm ^ " : sig val w : string end"
+           else "module " ^ sm ^ " : sig val z : int val w : string end")
   in
   let chosen = List.filter_map (fun it -> if chance 0.7 then sig_item it else None) items in
   let shuffled = List.map snd (List.sort compare (List.map (fun x -> (rand 1000, x)) chosen)) in
@@ -352,7 +405,7 @@ let gen_closure s =
   Option.iter (fun (k, x) -> Printf.bprintf s.decls "  let %s : %s = Sys.opaque_identity %s in\n" k x.ty x.expr) local;
   let v = fresh s "fv" in
   let args = String.concat " " (List.map (fun (_, x) -> x.expr) caps) in
-  (match rand 4 with
+  match rand 4 with
   | 0 ->
       let l = line s in
       let n = 1 + rand 3 in
@@ -372,19 +425,34 @@ let gen_closure s =
   | _ ->
       let arity2 = chance 0.5 in
       let l1 = line s in
-      Printf.bprintf s.decls "  let rec g1 (x0 : int) = %sif x0 = 0 then 0 else g2 (x0 - 1)%s\n" use (if arity2 then " 0" else "");
+      Printf.bprintf s.decls "  let rec g1 (x0 : int) = %sif x0 = 0 then 0 else g2 (x0 - 1)%s\n" use
+        (if arity2 then " 0" else "");
       let l2 = line s in
       Printf.bprintf s.decls "  and g2 (x0 : int) %s= %sg1 x0 in (g1, g2)\n" (if arity2 then "(_ : int) " else "") use;
       let v2 = fresh s "fv" in
       Printf.bprintf s.decls "let (%s, %s) = %s %s\n" v v2 f args;
-      s.vchecks <- Vclosure { values = [ (v, l1); (v2, l2) ] } :: s.vchecks)
+      s.vchecks <- Vclosure { values = [ (v, l1); (v2, l2) ] } :: s.vchecks
 
 let gen_lazy s =
   let v = fresh s "lz" in
   let x = field_sample s in
   let id = fresh s "lv" in
   let e =
-    pick [ "3"; "\"str\""; "2.5"; "None"; "(1, 2)"; "(fun x -> x + 1)"; id; id; "(Sys.opaque_identity 4 + 1)"; "`A"; "[1]"; "'c'" ]
+    pick
+      [
+        "3";
+        "\"str\"";
+        "2.5";
+        "None";
+        "(1, 2)";
+        "(fun x -> x + 1)";
+        id;
+        id;
+        "(Sys.opaque_identity 4 + 1)";
+        "`A";
+        "[1]";
+        "'c'";
+      ]
   in
   if e = id then Printf.bprintf s.decls "let %s : %s = %s\n" id x.ty x.expr;
   let l = line s in
@@ -409,7 +477,12 @@ let gen_class s =
           (* Redefine an inherited val: with !, or as a new val of the same name. *)
           match pvals with
           | (a, m, x) :: _ when chance 0.4 ->
-              [ Printf.sprintf "val%s %s%s : %s = %s" (if chance 0.5 then "!" else "") (if m then "mutable " else "") a x.ty x.expr ]
+              [
+                Printf.sprintf "val%s %s%s : %s = %s"
+                  (if chance 0.5 then "!" else "")
+                  (if m then "mutable " else "")
+                  a x.ty x.expr;
+              ]
           | _ -> []
         in
         let i = rand (List.length fields + 1) in
@@ -442,12 +515,20 @@ let gen_values s = match rand 3 with 0 -> gen_closure s | 1 -> gen_lazy s | _ ->
 
 let program () =
   let s =
-    { decls = Buffer.create 2048; trees = Hashtbl.create 8; pool = []; values = Hashtbl.create 32; modules = []; n = 0;
-      vchecks = []; classes = [] }
+    {
+      decls = Buffer.create 2048;
+      trees = Hashtbl.create 8;
+      pool = [];
+      values = Hashtbl.create 32;
+      modules = [];
+      n = 0;
+      vchecks = [];
+      classes = [];
+    }
   in
   for _ = 1 to 4 + rand 8 do
     match rand 15 with
-    | 10 | 11 | 12 when ox -> gen_mixed s
+    | (10 | 11 | 12) when ox -> gen_mixed s
     | 10 | 11 | 12 | 13 | 14 -> gen_values s
     | 0 | 1 | 2 -> gen_variant s
     | 3 | 4 -> gen_record s
@@ -471,7 +552,8 @@ let word_check what r (w : M.word) =
 let rec leaf_at t path =
   match (t, path) with
   | Leaf l, [] -> Some l
-  | Prod ts, j :: rest -> ( match int_of_string_opt j with Some j when j < List.length ts -> leaf_at (List.nth ts j) rest | _ -> None)
+  | Prod ts, j :: rest -> (
+      match int_of_string_opt j with Some j when j < List.length ts -> leaf_at (List.nth ts j) rest | _ -> None)
   | _ -> None
 
 let mixed_checks b ~what ~r ~trees ~tag ~(fields : M.field list) ~scanned ~(slots : M.mixed_slot list) =
@@ -517,16 +599,15 @@ let shape_checks ?(trees = []) b ~what ~v (shape : M.shape) =
       List.iteri
         (fun i (f : M.field) ->
           let fr = Printf.sprintf "(Obj.field %s %d)" r i in
-          (match f.fkind with
-          | Hash h -> Printf.bprintf b "  const %S %s %d;\n" (what ^ " hash") fr h
-          | _ -> ());
+          (match f.fkind with Hash h -> Printf.bprintf b "  const %S %s %d;\n" (what ^ " hash") fr h | _ -> ());
           let c = word_check (Printf.sprintf "%s field %d (%s)" what i f.ty) fr f.word in
           if c <> "" then Printf.bprintf b "  %s\n" c)
         fields
   | Flat_float fields ->
       Printf.bprintf b "  block %S %s %d %d;\n" what r M.double_array_tag (List.length fields);
       List.iteri
-        (fun i e -> Printf.bprintf b "  dbl %S %s %d (Obj.magic (%s) : float);\n" (Printf.sprintf "%s field %d" what i) r i e)
+        (fun i e ->
+          Printf.bprintf b "  dbl %S %s %d (Obj.magic (%s) : float);\n" (Printf.sprintf "%s field %d" what i) r i e)
         v.vfields
   | Unboxed f -> (
       match v.vfields with
@@ -536,8 +617,8 @@ let shape_checks ?(trees = []) b ~what ~v (shape : M.shape) =
           if c <> "" then Printf.bprintf b "  %s\n" c
       | _ -> ())
   | Ext_slot ->
-      Printf.bprintf b "  block %S %s %d 2;\n  ptr %S (Obj.field %s 0) (Some %d);\n  imm %S (Obj.field %s 1);\n"
-        what r M.object_tag (what ^ " name") r M.string_tag (what ^ " id") r
+      Printf.bprintf b "  block %S %s %d 2;\n  ptr %S (Obj.field %s 0) (Some %d);\n  imm %S (Obj.field %s 1);\n" what r
+        M.object_tag (what ^ " name") r M.string_tag (what ^ " id") r
   | Mixed { tag; fields; scanned; slots } -> mixed_checks b ~what ~r ~trees ~tag ~fields ~scanned ~slots
   | Product _ -> ()
   | Rebind _ -> (
@@ -622,7 +703,12 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
           Printf.bprintf b "  block %S %s 0 %d;\n" ("(module " ^ mt ^ ")") r (List.length p.slots);
           List.iter
             (fun (sl : M.slot) ->
-              let c = word_check (Printf.sprintf "(module %s).%s" mt sl.name) (Printf.sprintf "(Obj.field %s %d)" r sl.index) sl.word in
+              let c =
+                word_check
+                  (Printf.sprintf "(module %s).%s" mt sl.name)
+                  (Printf.sprintf "(Obj.field %s %d)" r sl.index)
+                  sl.word
+              in
               if c <> "" then Printf.bprintf b "  %s\n" c)
             p.slots
       | None -> ())
@@ -655,11 +741,19 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
                       let f = List.nth cl.fns !idx and off = List.nth offs !idx in
                       let r = "(Obj.repr " ^ v ^ ")" in
                       let tag, sz = if off = 0 then (M.closure_tag, size) else (M.infix_tag, off) in
-                      Printf.bprintf c "    block %S %s %d %d;\n    if is_block %s %d %d then begin\n" v r tag sz r tag sz;
-                      Printf.bprintf c "    clos %S %s (%d) %d;\n" v r (if f.tupled then -f.arity else f.arity) (envstart - off);
+                      Printf.bprintf c "    block %S %s %d %d;\n    if is_block %s %d %d then begin\n" v r tag sz r tag
+                        sz;
+                      Printf.bprintf c "    clos %S %s (%d) %d;\n" v r
+                        (if f.tupled then -f.arity else f.arity)
+                        (envstart - off);
                       List.iteri
                         (fun k (cv : M.capture) ->
-                          let w = word_check (v ^ "." ^ cv.cvar) (Printf.sprintf "(Obj.field %s %d)" r (envstart - off + k)) cv.cword in
+                          let w =
+                            word_check
+                              (v ^ "." ^ cv.cvar)
+                              (Printf.sprintf "(Obj.field %s %d)" r (envstart - off + k))
+                              cv.cword
+                          in
                           if w <> "" then Printf.bprintf c "    %s\n" w)
                         cl.env;
                       Printf.bprintf c "    end;\n"
@@ -692,11 +786,14 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
               | Some o ->
                   let first = if o.env_slot then 3 else 2 in
                   let size = first + List.length o.ivars in
-                  Printf.bprintf b "  block %S %s %d %d;\n  if is_block %s %d %d then begin\n" v r M.object_tag size r M.object_tag size;
+                  Printf.bprintf b "  block %S %s %d %d;\n  if is_block %s %d %d then begin\n" v r M.object_tag size r
+                    M.object_tag size;
                   if o.env_slot then Printf.bprintf b "  ptr %S (Obj.field %s 2) (Some 0);\n" (v ^ " environment") r;
                   List.iteri
                     (fun i (iv : M.ivar) ->
-                      let w = word_check (v ^ "." ^ iv.vname) (Printf.sprintf "(Obj.field %s %d)" r (first + i)) iv.vword in
+                      let w =
+                        word_check (v ^ "." ^ iv.vname) (Printf.sprintf "(Obj.field %s %d)" r (first + i)) iv.vword
+                      in
                       if w <> "" then Printf.bprintf b "  %s\n" w)
                     o.ivars;
                   Printf.bprintf b "  end;\n"))
@@ -705,17 +802,20 @@ let boxed what f x = if compare f x <> 0 then fail what ("expected the boxed val
   Buffer.contents b
 
 let run cmd = Sys.command (cmd ^ " > /dev/null 2>&1") = 0
-
 let run_out cmd out = Sys.command (Printf.sprintf "%s > %s 2>&1" cmd (Filename.quote out)) = 0
 
 let () =
   let seed = ref (int_of_float (Unix.gettimeofday () *. 1000.) land 0xffffff) in
   let rounds = ref 30 and keep = ref "" in
   Arg.parse
-    [ ("-seed", Arg.Set_int seed, "N First seed"); ("-rounds", Arg.Set_int rounds, "N Programs to try");
+    [
+      ("-seed", Arg.Set_int seed, "N First seed");
+      ("-rounds", Arg.Set_int rounds, "N Programs to try");
       ("-keep", Arg.Set_string keep, "DIR Keep the programs here");
-      ("-ox-stdlib", Arg.String (fun d -> Lense_core_ox.Load.stdlib_dir := Some d), "DIR The OxCaml stdlib .cmi files") ]
-    (fun _ -> ()) "fuzz.exe [-seed N] [-rounds N] [-keep DIR]";
+      ("-ox-stdlib", Arg.String (fun d -> Lense_core_ox.Load.stdlib_dir := Some d), "DIR The OxCaml stdlib .cmi files");
+    ]
+    (fun _ -> ())
+    "fuzz.exe [-seed N] [-rounds N] [-keep DIR]";
   let ocamlopt = Option.value (Sys.getenv_opt "LENSE_OCAMLOPT") ~default:"ocamlfind ocamlopt -package unix" in
   let ocamlc = Option.value (Sys.getenv_opt "LENSE_OCAMLC") ~default:"ocamlfind ocamlc -package unix" in
   let ocamlopt = if run "ocamlfind -version" then ocamlopt else "ocamlopt" in
@@ -743,7 +843,12 @@ let () =
           (fun (name, comp) ->
             let exe = Filename.concat dir (Printf.sprintf "prog%d.%s" seed name) in
             let log = exe ^ ".log" in
-            if not (run_out (Printf.sprintf "cd %s && %s -w -a %s -o %s" (Filename.quote dir) comp (Filename.quote file) (Filename.quote exe)) log)
+            if
+              not
+                (run_out
+                   (Printf.sprintf "cd %s && %s -w -a %s -o %s" (Filename.quote dir) comp (Filename.quote file)
+                      (Filename.quote exe))
+                   log)
             then (
               Printf.printf "seed %d (%s): checker does not compile, see %s\n" seed name log;
               incr failures)

@@ -7,14 +7,11 @@ open Types
 module M = Lense_model.Model
 
 let ptr ?tag what = M.Pointer { tag; what }
-
 let path_is p q = Path.same p q
 
 (* Apply a declaration's parameters to [args] in [ty]. Falls back to the
    unsubstituted type, which only loses precision on type variables. *)
-let instantiate env decl args ty =
-  try Ctype.apply env decl.type_params ty args with _ -> ty
-
+let instantiate env decl args ty = try Ctype.apply env decl.type_params ty args with _ -> ty
 let expand env ty = try Ctype.expand_head_opt env ty with _ -> ty
 
 (* The constant and non-constant counts of a polymorphic variant row, or
@@ -78,20 +75,16 @@ and constr ~depth env p args =
   else if path_is p Predef.path_bool then M.Immediate "bool"
   else if path_is p Predef.path_unit then M.Immediate "unit"
   else if path_is p Predef.path_float then ptr ~tag:M.double_tag "boxed float"
-  else if path_is p Predef.path_string || path_is p Predef.path_bytes then
-    ptr ~tag:M.string_tag "string"
-  else if
-    path_is p Predef.path_int32 || path_is p Predef.path_int64
-    || path_is p Predef.path_nativeint
-  then ptr ~tag:M.custom_tag "custom block"
+  else if path_is p Predef.path_string || path_is p Predef.path_bytes then ptr ~tag:M.string_tag "string"
+  else if path_is p Predef.path_int32 || path_is p Predef.path_int64 || path_is p Predef.path_nativeint then
+    ptr ~tag:M.custom_tag "custom block"
   else if path_is p Predef.path_floatarray then
     (* The empty array is a shared tag-0 atom. *)
     ptr "float array (Double_array_tag 254 unless empty)"
   else if path_is p Predef.path_array || path_is p Predef.path_iarray then
     match elt_is_float () with
     | `No -> ptr ~tag:0 "array"
-    | `Yes when Config.flat_float_array ->
-        ptr "float array (Double_array_tag 254 unless empty)"
+    | `Yes when Config.flat_float_array -> ptr "float array (Double_array_tag 254 unless empty)"
     | `Yes -> ptr ~tag:0 "array"
     | `Maybe when Config.flat_float_array -> ptr "array (flat if its elements are floats)"
     | `Maybe -> ptr ~tag:0 "array"
@@ -99,8 +92,7 @@ and constr ~depth env p args =
     (* A forced or eagerly built lazy value can be the result itself. *)
     M.Any "lazy value"
   else if path_is p Predef.path_exn then ptr "exception"
-  else if path_is p Predef.path_extension_constructor then
-    ptr ~tag:M.object_tag "extension slot"
+  else if path_is p Predef.path_extension_constructor then ptr ~tag:M.object_tag "extension slot"
   else if Compat.or_null p then
     match args with
     | [ a ] -> (

@@ -84,10 +84,7 @@ let abstract_word ~word:_ (_ : Env.t) (_ : Path.t) decl : M.word =
 (* Typed trees *)
 
 let ld_mutable (ld : T.label_declaration) = ld.ld_mutable = Mutable
-
-let tuple_args = function
-  | T.Cstr_tuple cts -> cts
-  | T.Cstr_record _ -> []
+let tuple_args = function T.Cstr_tuple cts -> cts | T.Cstr_record _ -> []
 
 type cstr_desc = Data_types.constructor_description
 
@@ -138,9 +135,7 @@ let read_cmi_signature file = Env.read_signature (Unit_info.Artifact.from_filena
 
 (* The local variable an expression is, if it is one. *)
 let expr_ident (e : T.expression) = match e.exp_desc with T.Texp_ident (Path.Pident id, _, _) -> Some id | _ -> None
-
-let bound_idents (p : _ T.general_pattern) =
-  List.map (fun (id, _, ty, _) -> (id, ty)) (T.pat_bound_idents_full p)
+let bound_idents (p : _ T.general_pattern) = List.map (fun (id, _, ty, _) -> (id, ty)) (T.pat_bound_idents_full p)
 
 type lfun = { lname : string; lloc : Location.t; nparams : int; ltupled : bool }
 
@@ -187,7 +182,11 @@ let closure_sets ~native (lam : Lambda.lambda) =
     | Lfunction f ->
         (* Named after its scope, so a split-off inner function reads as "f_inner". *)
         let scope = (lfun f).lname in
-        let last = match String.rindex_opt scope '.' with Some i -> String.sub scope (i + 1) (String.length scope - i - 1) | None -> scope in
+        let last =
+          match String.rindex_opt scope '.' with
+          | Some i -> String.sub scope (i + 1) (String.length scope - i - 1)
+          | None -> scope
+        in
         add [ { id = Ident.create_local (if last = "" then "fun" else last); def = f } ];
         walk f.body
     | Lletrec (bs, body) ->
@@ -202,7 +201,9 @@ let closure_sets ~native (lam : Lambda.lambda) =
 (* The Lambda code that ocamlopt (without flambda) or ocamlc compiles, built
    as the drivers build it. *)
 let lambda ~native ~modname (str : T.structure) =
-  Misc.protect_refs [ Misc.R (Clflags.native_code, native) ] (fun () ->
+  Misc.protect_refs
+    [ Misc.R (Clflags.native_code, native) ]
+    (fun () ->
       let p =
         (if native then Translmod.transl_store_implementation else Translmod.transl_implementation)
           modname (str, T.Tcoerce_none)

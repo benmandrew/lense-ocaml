@@ -7,15 +7,16 @@ type iu = IU of { iu : int } [@@unboxed]
 (* A float behind an alias or [@@unboxed] still makes a flat record. A float
    behind an abstract type does not. *)
 type metres = float
-module Opaque : sig type t end = struct type t = float end
+
+module Opaque : sig
+  type t
+end = struct
+  type t = float
+end
+
 type seen = { m : metres; fb : fbox }
 type hidden = { o : Opaque.t; h : float }
-
-type inline =
-  | I0
-  | I1 of int
-  | I2 of { ix : int; iy : float }
-  | I3 of { f1 : float; f2 : float }
+type inline = I0 | I1 of int | I2 of { ix : int; iy : float } | I3 of { f1 : float; f2 : float }
 
 type uses = {
   t : inline;

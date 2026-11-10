@@ -56,12 +56,16 @@ let analyze code opts =
       let links =
         let open Lense_model.Json in
         let b = Buffer.create 1024 in
-        write b ~indent:0 (List (List.map (fun (i, rs) -> List [ Int i; List (List.map (fun r -> range (Some r)) rs) ]) links));
+        write b ~indent:0
+          (List (List.map (fun (i, rs) -> List [ Int i; List (List.map (fun r -> range (Some r)) rs) ]) links));
         Buffer.contents b
       in
       Js.Unsafe.obj
-        [| ("text", Js.Unsafe.inject (Js.string text)); ("links", Js.Unsafe.inject (Js.string links));
-           ("diagrams", Js.Unsafe.inject (Js.string diagrams)) |]
+        [|
+          ("text", Js.Unsafe.inject (Js.string text));
+          ("links", Js.Unsafe.inject (Js.string links));
+          ("diagrams", Js.Unsafe.inject (Js.string diagrams));
+        |]
   | Error msg -> Js.Unsafe.obj [| ("error", Js.Unsafe.inject (Js.string msg)) |]
 
 let () = Js.Unsafe.set Js.Unsafe.global "lense_analyze" (Js.wrap_callback analyze)

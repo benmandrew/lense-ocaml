@@ -48,7 +48,6 @@ let field_label f =
 let pad n s = s ^ String.make (max 0 (n - String.length s)) ' '
 let lpad n s = String.make (max 0 (n - String.length s)) ' ' ^ s
 
-
 (* Rows of "index  label  word", aligned. [indent] is the left margin. *)
 let rows b ~indent ?(index = true) (fields : field list) =
   let labels = List.map field_label fields in
@@ -64,9 +63,7 @@ let rows b ~indent ?(index = true) (fields : field list) =
 let shape_summary = function
   | Constant n -> "immediate " ^ string_of_int n
   | Block { tag; fields } -> Printf.sprintf "block, %s, size %d" (tag_name tag) (List.length fields)
-  | Flat_float fields ->
-      Printf.sprintf "flat float block, %s, size %d" (tag_name double_array_tag)
-        (List.length fields)
+  | Flat_float fields -> Printf.sprintf "flat float block, %s, size %d" (tag_name double_array_tag) (List.length fields)
   | Unboxed _ -> "no block: [@@unboxed], the value is its field"
   | Ext_slot -> "extension slot: block, Object_tag 248, size 2 (name, unique id)"
   | Rebind p -> "the same value as " ^ p ^ " (rebinding)"
@@ -74,7 +71,8 @@ let shape_summary = function
   | Mixed { tag; scanned; slots; _ } ->
       let size = mixed_size slots in
       Printf.sprintf "mixed block, %s, size %d: %s, then %d flat" (tag_name tag) size
-        (plural scanned "scanned field" "scanned fields") (size - scanned)
+        (plural scanned "scanned field" "scanned fields")
+        (size - scanned)
 
 (* A mixed block: its slots in memory order, with the bytes each takes in
    native code. *)
@@ -110,7 +108,8 @@ let mixed b ~indent (fields : field list) (slots : mixed_slot list) =
     (List.combine rows slots);
   let reordered = List.exists (fun (i, s) -> s.field <> i || s.part <> "") (List.mapi (fun i s -> (i, s)) slots) in
   if reordered then Printf.bprintf b "%snote: values first, then flat fields, each in declaration order\n" margin;
-  Printf.bprintf b "%snote: native code; bytecode stores one boxed field per declared field, in declaration order\n" margin
+  Printf.bprintf b "%snote: native code; bytecode stores one boxed field per declared field, in declaration order\n"
+    margin
 
 let shape_rows b ~indent = function
   | Block { fields; _ } | Flat_float fields -> rows b ~indent fields
@@ -133,11 +132,8 @@ let cases b (cases : case list) =
 
 (* Each case below the heading gives its own representation, so the heading
    names only the kind of type. *)
-let variant_summary (cs : case list) =
-  if cs = [] then "variant with no constructors: it has no values" else "variant"
-
-let decl_head (d : decl) =
-  d.keyword ^ " " ^ (if d.params = "" then "" else d.params ^ " ") ^ d.name
+let variant_summary (cs : case list) = if cs = [] then "variant with no constructors: it has no values" else "variant"
+let decl_head (d : decl) = d.keyword ^ " " ^ (if d.params = "" then "" else d.params ^ " ") ^ d.name
 
 let decl ?(source = false) b (d : decl) =
   if source then Option.iter (fun s -> Printf.bprintf b "%s\n" s) d.source;
@@ -151,8 +147,7 @@ let decl ?(source = false) b (d : decl) =
       Printf.bprintf b "%s  %s\n" head (variant_summary cs);
       cases b cs
   | Polyvariant { cases = cs; closed } ->
-      Printf.bprintf b "%s  polymorphic variant%s\n" head
-        (if closed then "" else ", open: other tags may appear");
+      Printf.bprintf b "%s  polymorphic variant%s\n" head (if closed then "" else ", open: other tags may appear");
       cases b cs
   | Extension c ->
       Printf.bprintf b "%s  %s\n" head (shape_summary c.shape);
@@ -165,13 +160,13 @@ let decl ?(source = false) b (d : decl) =
 
 let item_name (s : slot) =
   (match s.item with
-  | Value -> "val "
-  | Module -> "module "
-  | Functor -> "functor "
-  | Exception -> "exception "
-  | Extension -> "extension "
-  | Class -> "class "
-  | Primitive -> "external ")
+    | Value -> "val "
+    | Module -> "module "
+    | Functor -> "functor "
+    | Exception -> "exception "
+    | Extension -> "extension "
+    | Class -> "class "
+    | Primitive -> "external ")
   ^ s.name
 
 let shorten s = if String.length s <= 72 then s else String.sub s 0 69 ^ "..."
@@ -203,7 +198,9 @@ let rows b ~indent ?links (rs : (string * string * string) list) =
       let line = Printf.sprintf "%s%s  %s  %s" (String.make indent ' ') (lpad iw i) (pad w l) x in
       (* No trailing spaces when the last column is empty. *)
       let n = ref (String.length line) in
-      while !n > 0 && line.[!n - 1] = ' ' do decr n done;
+      while !n > 0 && line.[!n - 1] = ' ' do
+        decr n
+      done;
       Printf.bprintf b "%s\n" (String.sub line 0 !n))
     rs links
 
@@ -224,13 +221,22 @@ let closure_rows ~native c =
     in
     let infix =
       if off = 0 then []
-      else [ (string_of_int (off - 1), who (tag_name infix_tag ^ " header: a pointer to " ^ fn_name f ^ " points to the next field"), "") ]
+      else
+        [
+          ( string_of_int (off - 1),
+            who (tag_name infix_tag ^ " header: a pointer to " ^ fn_name f ^ " points to the next field"),
+            "" );
+        ]
     in
     let code =
       if code_words ~native f = 3 then
-        [ (string_of_int off, who (if f.tupled then "code pointer: takes the tuple apart" else "code pointer: partial application"), "");
+        [
+          ( string_of_int off,
+            who (if f.tupled then "code pointer: takes the tuple apart" else "code pointer: partial application"),
+            "" );
           (string_of_int (off + 1), who info, "");
-          (string_of_int (off + 2), who "code pointer: the function itself", "") ]
+          (string_of_int (off + 2), who "code pointer: the function itself", "");
+        ]
       else [ (string_of_int off, who "code pointer", ""); (string_of_int (off + 1), who info, "") ]
     in
     List.map (fun r -> (r, f.fn_range)) (infix @ code)
@@ -239,7 +245,8 @@ let closure_rows ~native c =
     (List.concat (List.map2 entry c.fns offs)
     @ List.mapi
         (fun i (cv : capture) ->
-          ((string_of_int (envstart + i), (if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty), word cv.cword), cv.cv_range))
+          ( (string_of_int (envstart + i), (if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty), word cv.cword),
+            cv.cv_range ))
         c.env)
 
 let closure b ~native c =
@@ -248,7 +255,8 @@ let closure b ~native c =
   let size = closure_size ~native c in
   link b (List.map (fun f -> f.fn_range) c.fns);
   if List.length c.fns = 1 && c.env = [] then
-    Printf.bprintf b "  %s  line %d  %s, size %d, arity %d%s, no environment\n" names f.fline (tag_name closure_tag) size f.arity
+    Printf.bprintf b "  %s  line %d  %s, size %d, arity %d%s, no environment\n" names f.fline (tag_name closure_tag)
+      size f.arity
       (if f.tupled then " (tupled)" else "")
   else begin
     if List.length c.fns = 1 then
@@ -288,16 +296,15 @@ let obj b (o : obj) =
     (if o.unknown = [] then "" else " or more");
   let rs =
     [ ("0", "method table", "pointer to the class's method table"); ("1", "object id", "immediate (int)") ]
-    @ (if o.env_slot then [ ("2", "environment", "pointer to a block of the local variables the class uses, tag 0") ] else [])
+    @ (if o.env_slot then [ ("2", "environment", "pointer to a block of the local variables the class uses, tag 0") ]
+       else [])
     @ List.mapi
         (fun i (v : ivar) ->
-          let label =
-            (if v.vmutable then "mutable " else "") ^ v.vname ^ " : " ^ v.vty
-          in
+          let label = (if v.vmutable then "mutable " else "") ^ v.vname ^ " : " ^ v.vty in
+          let from = if v.vparam then "  (parameter)" else "" in
           let from =
-            if v.vparam then "  (parameter)" else ""
+            if "class " ^ v.vfrom = o.oname || v.vfrom = o.oname then from else from ^ "  (from " ^ v.vfrom ^ ")"
           in
-          let from = if "class " ^ v.vfrom = o.oname || v.vfrom = o.oname then from else from ^ "  (from " ^ v.vfrom ^ ")" in
           (string_of_int (first + i), label, word v.vword ^ from))
         o.ivars
   in
@@ -310,13 +317,25 @@ let obj b (o : obj) =
 let values b (v : values) =
   let first = ref true in
   let sep () = if !first then first := false else Buffer.add_char b '\n' in
-  List.iter (fun bc -> sep (); backend b bc) v.backends;
+  List.iter
+    (fun bc ->
+      sep ();
+      backend b bc)
+    v.backends;
   if v.lazies <> [] then begin
     sep ();
     Buffer.add_string b "lazy values\n";
-    List.iter (fun z -> Buffer.add_string b "  "; lazy_value b z) v.lazies
+    List.iter
+      (fun z ->
+        Buffer.add_string b "  ";
+        lazy_value b z)
+      v.lazies
   end;
-  List.iter (fun o -> sep (); obj b o) v.objects
+  List.iter
+    (fun o ->
+      sep ();
+      obj b o)
+    v.objects
 
 type options = { source : bool; only : string list }
 
@@ -343,10 +362,18 @@ let compunit opts b (u : compunit) =
   in
   List.stable_sort (fun (a, _) (c, _) -> compare a c) (decls @ packages)
   |> List.iter (function
-       | _, `Decl (d : decl) -> if selected opts d.name then (sep (); decl ~source:opts.source b d)
-       | _, `Package (m : package) -> if selected opts m.pname then (sep (); package b m));
+    | _, `Decl (d : decl) ->
+        if selected opts d.name then (
+          sep ();
+          decl ~source:opts.source b d)
+    | _, `Package (m : package) ->
+        if selected opts m.pname then (
+          sep ();
+          package b m));
   match u.values with
-  | Some v when opts.only = [] -> sep (); values b v
+  | Some v when opts.only = [] ->
+      sep ();
+      values b v
   | _ -> ()
 
 let collisions b units =

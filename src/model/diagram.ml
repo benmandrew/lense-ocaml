@@ -72,7 +72,6 @@ let rows_of f =
   | [] -> []
 
 let some = List.filter_map Fun.id
-
 let word_kind = function Immediate _ -> "imm" | Pointer _ -> "ptr" | Any _ -> "any" | Double | Flat _ -> "flat"
 
 let target_of = function
@@ -85,7 +84,6 @@ let target_of = function
    type does not. An "immediate or pointer" word and flat data have more to
    say than a fill. *)
 let drawn = function Immediate _ | Pointer _ | Double -> true | Any _ | Flat _ -> false
-
 let cell_label label ty = function Immediate why when why <> ty -> label ^ " (" ^ why ^ ")" | _ -> label
 
 (* --- Mixed blocks ------------------------------------------------------- *)
@@ -112,13 +110,19 @@ let bytes (fields : field list) (slots : mixed_slot list) =
                let lo = w * word_bytes in
                let used = max 0 (min word_bytes (data - lo)) in
                ( o + lo,
-                 (if used > 0 then [ { plabel = label s; pkind = word_kind s.mword; bytes = used; pranges = ranges s } ] else [])
+                 (if used > 0 then [ { plabel = label s; pkind = word_kind s.mword; bytes = used; pranges = ranges s } ]
+                  else [])
                  @
-                 if used < word_bytes then [ { plabel = "unused"; pkind = "pad"; bytes = word_bytes - used; pranges = [] } ]
+                 if used < word_bytes then
+                   [ { plabel = "unused"; pkind = "pad"; bytes = word_bytes - used; pranges = [] } ]
                  else [] )))
          slots (mixed_offsets slots))
   in
-  Bytes { word = word_bytes; rows = (0, [ { plabel = "header"; pkind = "meta"; bytes = word_bytes; pranges = [] } ]) :: rows }
+  Bytes
+    {
+      word = word_bytes;
+      rows = (0, [ { plabel = "header"; pkind = "meta"; bytes = word_bytes; pranges = [] } ]) :: rows;
+    }
 
 (* An ordinary block, a word per field. *)
 let block ~title (fields : field list) =
@@ -126,8 +130,15 @@ let block ~title (fields : field list) =
     List.mapi
       (fun index (f : field) ->
         let label = Text.field_label f in
-        { index; elabel = cell_label label f.ty f.word; ekind = word_kind f.word; desc = label ^ ", " ^ Text.word f.word;
-          incoming = None; target = target_of f.word; ranges = some [ f.frange ] })
+        {
+          index;
+          elabel = cell_label label f.ty f.word;
+          ekind = word_kind f.word;
+          desc = label ^ ", " ^ Text.word f.word;
+          incoming = None;
+          target = target_of f.word;
+          ranges = some [ f.frange ];
+        })
       fields
   in
   Column { title; entries }
@@ -177,8 +188,12 @@ let closure ~native (c : closure) =
       in
       let code =
         if code_words ~native f = 3 then
-          [ meta ~incoming:ptr off (if f.tupled then "code pointer: takes the tuple apart" else "code pointer: partial application");
-            meta (off + 1) info; meta (off + 2) "code pointer: the function itself" ]
+          [
+            meta ~incoming:ptr off
+              (if f.tupled then "code pointer: takes the tuple apart" else "code pointer: partial application");
+            meta (off + 1) info;
+            meta (off + 2) "code pointer: the function itself";
+          ]
         else [ meta ~incoming:ptr off "code pointer"; meta (off + 1) info ]
       in
       infix @ code
@@ -187,13 +202,22 @@ let closure ~native (c : closure) =
       List.mapi
         (fun i (cv : capture) ->
           let label = if cv.cty = "" then cv.cvar else cv.cvar ^ " : " ^ cv.cty in
-          { index = envstart + i; elabel = cell_label label cv.cty cv.cword; ekind = word_kind cv.cword; desc = "";
-            incoming = None; target = target_of cv.cword; ranges = some [ cv.cv_range ] })
+          {
+            index = envstart + i;
+            elabel = cell_label label cv.cty cv.cword;
+            ekind = word_kind cv.cword;
+            desc = "";
+            incoming = None;
+            target = target_of cv.cword;
+            ranges = some [ cv.cv_range ];
+          })
         c.env
     in
     let entries = List.concat (List.map2 entry c.fns offs) @ env in
     (* Each word reads as its text row, without the index. *)
-    let without_index row = match String.index_opt row ' ' with Some i -> String.sub row (i + 1) (String.length row - i - 1) | None -> row in
+    let without_index row =
+      match String.index_opt row ' ' with Some i -> String.sub row (i + 1) (String.length row - i - 1) | None -> row
+    in
     let entries = List.map2 (fun e row -> { e with desc = without_index row }) entries rows in
     let title = Printf.sprintf "%s, size %d" (Text.tag_name closure_tag) (closure_size ~native c) in
     let all = List.for_all (fun (cv : capture) -> drawn cv.cword) c.env in
@@ -220,31 +244,52 @@ let json (ds : t list) =
   let shape = function
     | Bytes { word; rows } ->
         Obj
-          [ ("type", Str "bytes"); ("word", Int word);
+          [
+            ("type", Str "bytes");
+            ("word", Int word);
             ( "rows",
               List
                 (List.map
                    (fun (o, ps) ->
                      Obj
-                       [ ("offset", Int o);
+                       [
+                         ("offset", Int o);
                          ( "cells",
                            List
                              (List.map
                                 (fun p ->
-                                  Obj [ ("label", Str p.plabel); ("kind", Str p.pkind); ("bytes", Int p.bytes); ("ranges", ranges p.pranges) ])
-                                ps) ) ])
-                   rows) ) ]
+                                  Obj
+                                    [
+                                      ("label", Str p.plabel);
+                                      ("kind", Str p.pkind);
+                                      ("bytes", Int p.bytes);
+                                      ("ranges", ranges p.pranges);
+                                    ])
+                                ps) );
+                       ])
+                   rows) );
+          ]
     | Column { title; entries } ->
         Obj
-          [ ("type", Str "column"); ("title", Str title);
+          [
+            ("type", Str "column");
+            ("title", Str title);
             ( "entries",
               List
                 (List.map
                    (fun e ->
                      Obj
-                       [ ("index", Int e.index); ("label", Str e.elabel); ("kind", Str e.ekind); ("desc", Str e.desc);
-                         ("incoming", opt e.incoming); ("target", opt e.target); ("ranges", ranges e.ranges) ])
-                   entries) ) ]
+                       [
+                         ("index", Int e.index);
+                         ("label", Str e.elabel);
+                         ("kind", Str e.ekind);
+                         ("desc", Str e.desc);
+                         ("incoming", opt e.incoming);
+                         ("target", opt e.target);
+                         ("ranges", ranges e.ranges);
+                       ])
+                   entries) );
+          ]
   in
   let b = Buffer.create 4096 in
   write b ~indent:0

@@ -9,6 +9,7 @@ eval $(opam env --switch=default --set-switch)   # OCaml 5.5 with dune
 dune build
 dune test            # cram goldens (incl. test/ox/mixed.t), Stage 0 checks, 20 fuzz rounds
 dune promote         # accept golden changes, after reading the diff
+dune fmt             # ocamlformat 0.29.0 (.ocamlformat); skips vendor/ and test/ox/mixed.ml
 dune exec test/fuzz/fuzz.exe -- -rounds 500 [-seed N] [-keep DIR]
 
 dune build web/jsoo/lense_web.bc.js              # lense_core for the browser (js_of_ocaml, pinned to master)

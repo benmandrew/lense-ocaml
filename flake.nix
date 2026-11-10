@@ -97,7 +97,7 @@
               self.packages.${pkgs.stdenv.hostPlatform.system}.default
               self.packages.${pkgs.stdenv.hostPlatform.system}.web-js
             ];
-            packages = [ ocamlPackages.findlib ocamlPackages.ocaml-lsp pkgs.nodejs ];
+            packages = [ ocamlPackages.findlib ocamlPackages.ocaml-lsp ocamlPackages.ocamlformat pkgs.nodejs ];
           };
         });
 

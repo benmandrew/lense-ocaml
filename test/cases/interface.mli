@@ -7,6 +7,7 @@ type pair = { a : t; b : small }
 
 module type CODEC = sig
   type v
+
   val encode : v -> string
   val default : v
 end

@@ -31,7 +31,14 @@ let signature_file (sg : T.signature) = own_file (List.map (fun (i : T.signature
 let range ctx (loc : Location.t) : M.range option =
   let a = loc.loc_start and b = loc.loc_end in
   if ctx.own = "" || a.pos_fname <> ctx.own || a.pos_cnum < 0 || b.pos_cnum < a.pos_cnum then None
-  else Some { first_line = a.pos_lnum; first_col = a.pos_cnum - a.pos_bol; last_line = b.pos_lnum; last_col = b.pos_cnum - b.pos_bol }
+  else
+    Some
+      {
+        first_line = a.pos_lnum;
+        first_col = a.pos_cnum - a.pos_bol;
+        last_line = b.pos_lnum;
+        last_col = b.pos_cnum - b.pos_bol;
+      }
 
 let squash s =
   let b = Buffer.create (String.length s) in
@@ -51,28 +58,28 @@ let slice ctx (loc : Location.t) =
   match ctx.src with
   | Some s when not loc.loc_ghost ->
       let a = loc.loc_start.pos_cnum and b = loc.loc_end.pos_cnum in
-      if a >= 0 && b <= String.length s && a < b then Some (String.sub s a (b - a))
-      else None
+      if a >= 0 && b <= String.length s && a < b then Some (String.sub s a (b - a)) else None
   | _ -> None
 
 let print_type ty = squash (Format.asprintf "%a" Printtyp.type_expr ty)
 
 let spell ctx (ct : T.core_type) =
-  match slice ctx ct.ctyp_loc with
-  | Some s -> squash s
-  | None -> print_type ct.ctyp_type
+  match slice ctx ct.ctyp_loc with Some s -> squash s | None -> print_type ct.ctyp_type
 
 let line (loc : Location.t) = loc.loc_start.pos_lnum
-
 let word env ty = Word.word env ty
 
 let field ?(fkind = M.Arg) ?(mutable_ = false) ?loc ~env ctx (ct : T.core_type) : M.field =
-  { fkind; ty = spell ctx ct; mutable_; word = Word.word env ct.ctyp_type;
-    frange = range ctx (Option.value loc ~default:ct.ctyp_loc) }
+  {
+    fkind;
+    ty = spell ctx ct;
+    mutable_;
+    word = Word.word env ct.ctyp_type;
+    frange = range ctx (Option.value loc ~default:ct.ctyp_loc);
+  }
 
 let label_field ~env ctx (ld : T.label_declaration) =
-  field ~fkind:(M.Label ld.ld_name.txt) ~mutable_:(Compat.ld_mutable ld) ~loc:ld.ld_loc ~env ctx
-    ld.ld_type
+  field ~fkind:(M.Label ld.ld_name.txt) ~mutable_:(Compat.ld_mutable ld) ~loc:ld.ld_loc ~env ctx ld.ld_type
 
 let arg_fields ~env ctx = function
   | T.Cstr_record lds -> List.map (label_field ~env ctx) lds
@@ -90,30 +97,28 @@ let rec is_float env ty =
   | _ -> false
 
 (* Notes on a constructor that the tag alone does not show. *)
-let constructor_notes env (desc : Compat.cstr_desc)
-    (args : T.constructor_arguments) =
+let constructor_notes env (desc : Compat.cstr_desc) (args : T.constructor_arguments) =
   let ex =
     match Compat.cstr_existentials desc with
     | [] -> []
-    | tys ->
-        [
-          "existential "
-          ^ String.concat ", " (List.map print_type tys)
-          ^ ": stored as uniform values";
-        ]
+    | tys -> [ "existential " ^ String.concat ", " (List.map print_type tys) ^ ": stored as uniform values" ]
   in
   let inline_floats =
     match args with
-    | T.Cstr_record lds
-      when lds <> [] && List.for_all (fun ld -> is_float env ld.T.ld_type.ctyp_type) lds ->
+    | T.Cstr_record lds when lds <> [] && List.for_all (fun ld -> is_float env ld.T.ld_type.ctyp_type) lds ->
         [ "inline record: all fields are float, but inline records are never stored flat" ]
     | _ -> []
   in
   ex @ inline_floats
 
 let slot_field name =
-  { M.fkind = M.Slot name; ty = "extension slot"; mutable_ = false;
-    word = M.Pointer { tag = Some M.object_tag; what = "extension slot" }; frange = None }
+  {
+    M.fkind = M.Slot name;
+    ty = "extension slot";
+    mutable_ = false;
+    word = M.Pointer { tag = Some M.object_tag; what = "extension slot" };
+    frange = None;
+  }
 
 let constructor_shape ~env ~args name desc fields =
   Compat.constructor_shape ~word ~env ~tys:(arg_types args) ~slot:(slot_field name) desc fields
@@ -125,20 +130,21 @@ let poly_cases ?(where = fun _ -> None) env row : M.case list =
       let name = "`" ^ label in
       let block ty =
         let arg = { M.fkind = Arg; ty = print_type ty; mutable_ = false; word = Word.word env ty; frange = None } in
-        let h =
-          { M.fkind = Hash hash; ty = "int"; mutable_ = false; word = M.Immediate "label hash"; frange = None }
-        in
+        let h = { M.fkind = Hash hash; ty = "int"; mutable_ = false; word = M.Immediate "label hash"; frange = None } in
         M.Block { tag = 0; fields = [ h; arg ] }
       in
       let case_range = where label in
       match row_field_repr f with
       | Rpresent None | Reither (true, [], _) -> Some { M.name; shape = Constant hash; notes = []; case_range }
-      | Rpresent (Some ty) | Reither (false, [ ty ], _) ->
-          Some { M.name; shape = block ty; notes = []; case_range }
+      | Rpresent (Some ty) | Reither (false, [ ty ], _) -> Some { M.name; shape = block ty; notes = []; case_range }
       | Reither (_, ty :: _, _) ->
           Some
-            { M.name; shape = block ty; case_range;
-              notes = [ "conjunctive type: the value may be constant or carry an argument" ] }
+            {
+              M.name;
+              shape = block ty;
+              case_range;
+              notes = [ "conjunctive type: the value may be constant or carry an argument" ];
+            }
       | Reither (false, [], _) | Rabsent -> None)
     (List.sort (fun (a, _) (b, _) -> compare (Btype.hash_variant a) (Btype.hash_variant b)) (row_fields row))
 
@@ -155,36 +161,39 @@ let type_decl ~env ctx (td : T.type_declaration) : M.decl =
     match Compat.record_shape ~word ~env decl td.typ_kind ~field:(label_field ~env ctx) with
     | Some shape -> Record shape
     | None -> (
-    match (decl.type_kind, td.typ_kind) with
-    | Type_variant _, Ttype_variant cds ->
-        let descs = Datarepr.constructors_of_type ~current_unit:None path decl in
-        Variant
-          (List.map2
-             (fun (cd : T.constructor_declaration) (_, (desc : Compat.cstr_desc)) ->
-               let fields = arg_fields ~env ctx cd.cd_args in
-               { M.name = cd.cd_name.txt;
-                 shape = constructor_shape ~env ~args:cd.cd_args cd.cd_name.txt desc fields;
-                 notes = constructor_notes env desc cd.cd_args; case_range = range ctx cd.cd_loc })
-             cds descs)
-    | Type_open, _ -> Open
-    | _, _ -> (
-        match decl.type_manifest with
-        | Some ty -> (
-            match get_desc (Word.expand env ty) with
-            | Tvariant row ->
-                (* Tags written in this declaration, where they are. *)
-                let where l =
-                  match td.typ_manifest with
-                  | Some { ctyp_desc = Ttyp_variant (rfs, _, _); _ } ->
-                      List.find_map
-                        (fun (rf : T.row_field) ->
-                          match rf.rf_desc with Ttag (t, _, _) when t.txt = l -> range ctx rf.rf_loc | _ -> None)
-                        rfs
-                  | _ -> None
-                in
-                Polyvariant { cases = poly_cases ~where env row; closed = Word.row_counts row <> None }
-            | _ -> Alias (Word.word env ty))
-        | None -> Abstract (Compat.abstract_word ~word env path decl)))
+        match (decl.type_kind, td.typ_kind) with
+        | Type_variant _, Ttype_variant cds ->
+            let descs = Datarepr.constructors_of_type ~current_unit:None path decl in
+            Variant
+              (List.map2
+                 (fun (cd : T.constructor_declaration) (_, (desc : Compat.cstr_desc)) ->
+                   let fields = arg_fields ~env ctx cd.cd_args in
+                   {
+                     M.name = cd.cd_name.txt;
+                     shape = constructor_shape ~env ~args:cd.cd_args cd.cd_name.txt desc fields;
+                     notes = constructor_notes env desc cd.cd_args;
+                     case_range = range ctx cd.cd_loc;
+                   })
+                 cds descs)
+        | Type_open, _ -> Open
+        | _, _ -> (
+            match decl.type_manifest with
+            | Some ty -> (
+                match get_desc (Word.expand env ty) with
+                | Tvariant row ->
+                    (* Tags written in this declaration, where they are. *)
+                    let where l =
+                      match td.typ_manifest with
+                      | Some { ctyp_desc = Ttyp_variant (rfs, _, _); _ } ->
+                          List.find_map
+                            (fun (rf : T.row_field) ->
+                              match rf.rf_desc with Ttag (t, _, _) when t.txt = l -> range ctx rf.rf_loc | _ -> None)
+                            rfs
+                      | _ -> None
+                    in
+                    Polyvariant { cases = poly_cases ~where env row; closed = Word.row_counts row <> None }
+                | _ -> Alias (Word.word env ty))
+            | None -> Abstract (Compat.abstract_word ~word env path decl)))
   in
   let notes =
     match td.typ_kind with
@@ -192,8 +201,16 @@ let type_decl ~env ctx (td : T.type_declaration) : M.decl =
         [ "GADT: type indices are erased, so the constructors are numbered as in an ordinary variant" ]
     | _ -> []
   in
-  { M.name = ctx.prefix ^ td.typ_name.txt; params = params ctx td; keyword = "type";
-    line = line td.typ_loc; source = Option.map squash (slice ctx td.typ_loc); kind; notes; range = range ctx td.typ_loc }
+  {
+    M.name = ctx.prefix ^ td.typ_name.txt;
+    params = params ctx td;
+    keyword = "type";
+    line = line td.typ_loc;
+    source = Option.map squash (slice ctx td.typ_loc);
+    kind;
+    notes;
+    range = range ctx td.typ_loc;
+  }
 
 let ext_decl ~env ctx ~keyword (ec : T.extension_constructor) : M.decl =
   let name = ec.ext_name.txt in
@@ -201,25 +218,32 @@ let ext_decl ~env ctx ~keyword (ec : T.extension_constructor) : M.decl =
     match ec.ext_kind with
     | Text_rebind (p, _) -> { name; shape = Rebind (Path.name p); notes = []; case_range = range ctx ec.ext_loc }
     | Text_decl (_, args, _) ->
-        let desc =
-          Datarepr.extension_descr ~current_unit:None (Path.Pident ec.ext_id) ec.ext_type
-        in
+        let desc = Datarepr.extension_descr ~current_unit:None (Path.Pident ec.ext_id) ec.ext_type in
         let fields = arg_fields ~env ctx args in
-        { name; shape = constructor_shape ~env ~args name desc fields;
-          notes = constructor_notes env desc args; case_range = range ctx ec.ext_loc }
+        {
+          name;
+          shape = constructor_shape ~env ~args name desc fields;
+          notes = constructor_notes env desc args;
+          case_range = range ctx ec.ext_loc;
+        }
   in
-  { M.name = ctx.prefix ^ name; params = ""; keyword; line = line ec.ext_loc;
-    source = Option.map squash (slice ctx ec.ext_loc); kind = Extension case; notes = []; range = range ctx ec.ext_loc }
+  {
+    M.name = ctx.prefix ^ name;
+    params = "";
+    keyword;
+    line = line ec.ext_loc;
+    source = Option.map squash (slice ctx ec.ext_loc);
+    kind = Extension case;
+    notes = [];
+    range = range ctx ec.ext_loc;
+  }
 
 (* The fields of a structure block, for first-class modules. *)
 
 let rec is_functor env mty =
   match Mtype.scrape env mty with
   | Mty_functor _ -> true
-  | Mty_alias p -> (
-      match Env.find_module p env with
-      | md -> is_functor env md.md_type
-      | exception Not_found -> false)
+  | Mty_alias p -> ( match Env.find_module p env with md -> is_functor env md.md_type | exception Not_found -> false)
   | _ -> false
   | exception _ -> false
 
@@ -233,9 +257,7 @@ let slots ctx env (sg : signature) =
     incr n
   in
   (* A class also declares a class type and an object type of its name. *)
-  let classes =
-    List.filter_map (function Sig_class (id, _, _, _) -> Some (Ident.name id) | _ -> None) sg
-  in
+  let classes = List.filter_map (function Sig_class (id, _, _, _) -> Some (Ident.name id) | _ -> None) sg in
   let hidden id =
     let s = Ident.name id in
     (String.length s > 0 && s.[0] = '#') || List.mem s classes
@@ -256,8 +278,7 @@ let slots ctx env (sg : signature) =
       | Sig_class (id, cd, _, _) -> add ~loc:cd.cty_loc M.Class id (M.Pointer { tag = Some 0; what = "class" })
       | Sig_type (id, _, _, _) when not (hidden id) -> none := ("type " ^ Ident.name id) :: !none
       | Sig_modtype (id, _, _) -> none := ("module type " ^ Ident.name id) :: !none
-      | Sig_class_type (id, _, _, _) when not (hidden id) ->
-          none := ("class type " ^ Ident.name id) :: !none
+      | Sig_class_type (id, _, _, _) when not (hidden id) -> none := ("class type " ^ Ident.name id) :: !none
       | Sig_type _ | Sig_class_type _ -> ())
     sg;
   (List.rev !slots, List.rev !none)
@@ -273,11 +294,8 @@ and structure_item acc ctx ~env (item : T.structure_item) =
   match item.str_desc with
   | Tstr_type (_, tds) -> List.iter (fun td -> acc.decls <- type_decl ~env ctx td :: acc.decls) tds
   | Tstr_typext te ->
-      List.iter
-        (fun ec -> acc.decls <- ext_decl ~env ctx ~keyword:"extension" ec :: acc.decls)
-        te.tyext_constructors
-  | Tstr_exception te ->
-      acc.decls <- ext_decl ~env ctx ~keyword:"exception" te.tyexn_constructor :: acc.decls
+      List.iter (fun ec -> acc.decls <- ext_decl ~env ctx ~keyword:"extension" ec :: acc.decls) te.tyext_constructors
+  | Tstr_exception te -> acc.decls <- ext_decl ~env ctx ~keyword:"exception" te.tyexn_constructor :: acc.decls
   | Tstr_module mb -> module_binding acc ctx mb
   | Tstr_recmodule mbs -> List.iter (module_binding acc ctx) mbs
   | Tstr_include { incl_mod; _ } -> module_expr acc ctx incl_mod
@@ -304,8 +322,7 @@ let rec signature acc ctx (sg : T.signature) =
           List.iter
             (fun ec -> acc.decls <- ext_decl ~env ctx ~keyword:"extension" ec :: acc.decls)
             te.tyext_constructors
-      | Tsig_exception te ->
-          acc.decls <- ext_decl ~env ctx ~keyword:"exception" te.tyexn_constructor :: acc.decls
+      | Tsig_exception te -> acc.decls <- ext_decl ~env ctx ~keyword:"exception" te.tyexn_constructor :: acc.decls
       | Tsig_module { md_name = { txt = Some n; _ }; md_type = { mty_desc = Tmty_signature s; _ }; _ } ->
           signature acc { ctx with prefix = ctx.prefix ^ n ^ "." } s
       | _ -> ())
@@ -321,8 +338,9 @@ let labels ~file iter_with =
   let typ it (ct : T.core_type) =
     (match ct.ctyp_desc with
     | Ttyp_variant (rfs, _, _) ->
-        List.iter (fun (rf : T.row_field) ->
-            match rf.rf_desc with Ttag (l, _, _) -> add l.txt l.loc | Tinherit _ -> ()) rfs
+        List.iter
+          (fun (rf : T.row_field) -> match rf.rf_desc with Ttag (l, _, _) -> add l.txt l.loc | Tinherit _ -> ())
+          rfs
     | _ -> ());
     default_iterator.typ it ct
   in
@@ -365,14 +383,14 @@ let packages ctx iter_with =
   iter_with { default_iterator with typ; expr };
   List.rev !found
   |> List.filter_map (fun (p, env, l) ->
-         let env = !rebuild_env env in
-         match Mtype.scrape env (Env.find_modtype_expansion p env) with
-         | Mty_signature sg ->
-             let slots, no_slot = slots ctx (Env.add_signature sg env) sg in
-             let prange = match Env.find_modtype p env with mtd -> range ctx mtd.mtd_loc | exception Not_found -> None in
-             Some { M.pname = Path.name p; pline = l; slots; no_slot; prange }
-         | _ -> None
-         | exception _ -> None)
+      let env = !rebuild_env env in
+      match Mtype.scrape env (Env.find_modtype_expansion p env) with
+      | Mty_signature sg ->
+          let slots, no_slot = slots ctx (Env.add_signature sg env) sg in
+          let prange = match Env.find_modtype p env with mtd -> range ctx mtd.mtd_loc | exception Not_found -> None in
+          Some { M.pname = Path.name p; pline = l; slots; no_slot; prange }
+      | _ -> None
+      | exception _ -> None)
 
 type input = Impl of T.structure | Intf of T.signature
 
@@ -389,5 +407,11 @@ let analyze ~file ~unit_name ~src input : M.compunit =
         signature acc ctx sg;
         fun it -> it.signature it sg
   in
-  { M.file; unit_name; decls = List.rev acc.decls; packages = packages ctx iter_with;
-    labels = labels ~file iter_with; values = None }
+  {
+    M.file;
+    unit_name;
+    decls = List.rev acc.decls;
+    packages = packages ctx iter_with;
+    labels = labels ~file iter_with;
+    values = None;
+  }

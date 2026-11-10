@@ -6,7 +6,8 @@ let usage =
   "lense-ocaml [options] <file.ml | file.mli | file.cmt | file.cmti | -> ...\n\n\
    Prints which constructors become immediates, which tag each block gets,\n\
    when the compiler drops the block, and how first-class modules are laid out.\n\
-   Sizes are in words, without the header word.\n\nOptions:"
+   Sizes are in words, without the header word.\n\n\
+   Options:"
 
 (* Which compiler's type checker reads the input. *)
 type compiler = C55 | Ox
@@ -36,7 +37,10 @@ let find_ox_stdlib given =
   let candidates =
     match given with
     | Some d -> [ d ]
-    | None -> [ Filename.concat here "../share/lense-ocaml/oxcaml-stdlib"; Filename.concat here "../vendor/oxcaml/stdlib/cmi" ]
+    | None ->
+        [
+          Filename.concat here "../share/lense-ocaml/oxcaml-stdlib"; Filename.concat here "../vendor/oxcaml/stdlib/cmi";
+        ]
   in
   match List.find_opt (fun d -> Sys.file_exists (Filename.concat d "stdlib.cmi")) candidates with
   | Some d -> d
@@ -60,8 +64,9 @@ let () =
         ("--labels", Arg.Set labels, " List every polymorphic variant label with its hash");
         ("--intf", Arg.Set intf, " Read standard input as an interface (.mli)");
         ("-", Arg.Unit (fun () -> files := "-" :: !files), " Read source from standard input");
-        ("--compiler", Arg.String (fun s -> compiler := Some (compiler_of_string s)),
-         "5.5|ox Type-check with OCaml 5.5 or OxCaml (default: from a .cmt file's magic number, else 5.5)");
+        ( "--compiler",
+          Arg.String (fun s -> compiler := Some (compiler_of_string s)),
+          "5.5|ox Type-check with OCaml 5.5 or OxCaml (default: from a .cmt file's magic number, else 5.5)" );
         ("--ox-stdlib", Arg.String (fun d -> ox_stdlib := Some d), "DIR Where the OxCaml stdlib .cmi files are");
         ("-I", Arg.String (fun d -> includes := d :: !includes), "DIR Add DIR to the load path for .cmi files");
       ]
@@ -80,10 +85,10 @@ let () =
         try
           Some
             (match c with
-             | C55 -> Lense_core_55.Load.run ~values:!values ~include_dirs ~intf:!intf f
-             | Ox ->
-                 Lense_core_ox.Load.stdlib_dir := Some (find_ox_stdlib !ox_stdlib);
-                 Lense_core_ox.Load.run ~values:!values ~include_dirs ~intf:!intf f)
+            | C55 -> Lense_core_55.Load.run ~values:!values ~include_dirs ~intf:!intf f
+            | Ox ->
+                Lense_core_ox.Load.stdlib_dir := Some (find_ox_stdlib !ox_stdlib);
+                Lense_core_ox.Load.run ~values:!values ~include_dirs ~intf:!intf f)
         with
         | Lense_core_55.Load.Failed msg | Lense_core_ox.Load.Failed msg ->
             if msg <> "" then prerr_string msg;
@@ -102,7 +107,5 @@ let () =
     Lense_model.Text.labels b units;
     Lense_model.Text.collisions b units;
     print_string (Buffer.contents b))
-  else
-    print_string
-      (Lense_model.Text.render { source = !source; only = List.rev !only } units);
+  else print_string (Lense_model.Text.render { source = !source; only = List.rev !only } units);
   exit (if !failed then 1 else 0)

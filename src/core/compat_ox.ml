@@ -8,9 +8,11 @@ module T = Typedtree
 
 let expand env ty = try Ctype.expand_head_opt env ty with _ -> ty
 let instantiate env decl args ty = try Ctype.apply env decl.type_params ty args with _ -> ty
+
 let print_type ty =
   let s = Format.asprintf "%a" Printtyp.type_expr ty in
-  String.concat " " (List.filter (( <> ) "") (String.split_on_char ' ' (String.map (function '\n' | '\t' | '\r' -> ' ' | c -> c) s)))
+  String.concat " "
+    (List.filter (( <> ) "") (String.split_on_char ' ' (String.map (function '\n' | '\t' | '\r' -> ' ' | c -> c) s)))
 
 (* Types *)
 
@@ -97,8 +99,7 @@ let decl_view env p args decl =
   | Type_open -> Open
   | Type_abstract _ ->
       let ty = Btype.newgenty (Tconstr (p, args, ref Mnil)) in
-      if (try Ctype.is_always_gc_ignorable env ty with _ -> false) then Immediate ": immediate"
-      else Abstract
+      if try Ctype.is_always_gc_ignorable env ty with _ -> false then Immediate ": immediate" else Abstract
 
 (* The word of an abstract type declared in the file being read. *)
 let abstract_word ~word env p decl : M.word = word env (Btype.newgenty (Tconstr (p, decl.type_params, ref Mnil)))
@@ -156,8 +157,7 @@ let rec part_of env ty path =
           | exception Not_found -> ("." ^ string_of_int j, None))
       | _ -> ("." ^ string_of_int j, None))
 
-let element_word ~word ~env (fields : M.field array) field part_ty (e : unit Lambda.mixed_block_element) :
-    M.word =
+let element_word ~word ~env (fields : M.field array) field part_ty (e : unit Lambda.mixed_block_element) : M.word =
   match e with
   | Value _ -> ( match part_ty with None -> fields.(field).word | Some t -> word env t)
   | Float_boxed _ -> M.Flat { layout = "float64, boxed again when read"; bytes = 8 }
@@ -188,13 +188,10 @@ let singleton (e : unit Mixed_block_shape.Singleton_mixed_block_element.t) : uni
 let mixed ~word ~env ~tys ~tag (shape : Types.mixed_product_shape) (fields : M.field list) : M.shape =
   let tys = Array.of_list tys and farr = Array.of_list fields in
   let t =
-    Mixed_block_shape.of_mixed_block_elements ~print_locality:(fun _ () -> ())
-      (Lambda.transl_mixed_product_shape shape)
+    Mixed_block_shape.of_mixed_block_elements ~print_locality:(fun _ () -> ()) (Lambda.transl_mixed_product_shape shape)
   in
   let slot i e =
-    let field, rest =
-      match Mixed_block_shape.new_index_to_old_path t i with f :: r -> (f, r) | [] -> (0, [])
-    in
+    let field, rest = match Mixed_block_shape.new_index_to_old_path t i with f :: r -> (f, r) | [] -> (0, []) in
     let part, part_ty = if rest = [] || field >= Array.length tys then ("", None) else part_of env tys.(field) rest in
     let pty = match part_ty with Some t -> print_type t | None -> "" in
     let e = singleton e in
@@ -239,8 +236,7 @@ let constructor_shape ~word ~env ~tys ~slot (desc : cstr_desc) fields : M.shape 
       match desc.cstr_shape with
       | Constructor_uniform_value -> Block { tag = 0; fields = slot :: fields }
       | Constructor_mixed shape ->
-          mixed ~word ~env ~tys:(Predef.type_int :: tys) ~tag:0 (Array.append [| Types.Value |] shape)
-            (slot :: fields))
+          mixed ~word ~env ~tys:(Predef.type_int :: tys) ~tag:0 (Array.append [| Types.Value |] shape) (slot :: fields))
 
 (* Loading *)
 
@@ -267,10 +263,10 @@ let read_cmi_signature file = (Cmi_format.read_cmi file).cmi_sign
 (* Stage 4 *)
 
 (* The local variable an expression is, if it is one. *)
-let expr_ident (e : T.expression) = match e.exp_desc with T.Texp_ident (Path.Pident id, _, _, _, _) -> Some id | _ -> None
+let expr_ident (e : T.expression) =
+  match e.exp_desc with T.Texp_ident (Path.Pident id, _, _, _, _) -> Some id | _ -> None
 
-let bound_idents (p : _ T.general_pattern) =
-  List.map (fun (id, _, ty, _, _) -> (id, ty)) (T.pat_bound_idents_full p)
+let bound_idents (p : _ T.general_pattern) = List.map (fun (id, _, ty, _, _) -> (id, ty)) (T.pat_bound_idents_full p)
 
 type lfun = { lname : string; lloc : Location.t; nparams : int; ltupled : bool }
 
@@ -294,7 +290,9 @@ let closure_sets (lam : Lambda.lambda) =
         add [ f ] (Lambda.free_variables lam);
         walk f.body
     | Lletrec (bs, body) ->
-        add (List.map (fun (b : Lambda.rec_binding) -> b.def) bs) (Lambda.free_variables (Lletrec (bs, Lambda.lambda_unit)));
+        add
+          (List.map (fun (b : Lambda.rec_binding) -> b.def) bs)
+          (Lambda.free_variables (Lletrec (bs, Lambda.lambda_unit)));
         List.iter (fun (b : Lambda.rec_binding) -> walk b.def.body) bs;
         walk body
     | _ -> Lambda.shallow_iter ~tail:walk ~non_tail:walk lam
@@ -305,7 +303,9 @@ let closure_sets (lam : Lambda.lambda) =
 (* The Lambda code that OxCaml's ocamlc compiles, built as its driver
    builds it. *)
 let bytecode_lambda ~modname (str : T.structure) =
-  Misc.protect_refs [ Misc.R (Clflags.native_code, false) ] (fun () ->
+  Misc.protect_refs
+    [ Misc.R (Clflags.native_code, false) ]
+    (fun () ->
       let cu = Compilation_unit.create Compilation_unit.Prefix.empty (Compilation_unit.Name.of_string modname) in
       let p = Translmod.transl_implementation cu (str, T.Tcoerce_none, None) in
       Simplif.simplify_lambda_for_bytecode p.code)
@@ -313,7 +313,5 @@ let bytecode_lambda ~modname (str : T.structure) =
 let closure_backends ~modname str =
   [
     ("native code", "flambda 2, which chooses closure layouts itself", None);
-    ( "bytecode",
-      "ocamlc without -g",
-      try Some (closure_sets (bytecode_lambda ~modname str)) with _ -> None );
+    ("bytecode", "ocamlc without -g", try Some (closure_sets (bytecode_lambda ~modname str)) with _ -> None);
   ]

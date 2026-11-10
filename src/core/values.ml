@@ -69,10 +69,18 @@ let binding_locs (str : T.structure) =
 let closures ctx ~modname str : M.backend_closures list =
   let tbl = ident_types str and classes = class_locs str and bound = binding_locs str in
   let prefix = modname ^ "." in
-  let name s = if String.starts_with ~prefix s then String.sub s (String.length prefix) (String.length s - String.length prefix) else s in
+  let name s =
+    if String.starts_with ~prefix s then String.sub s (String.length prefix) (String.length s - String.length prefix)
+    else s
+  in
   let fn (f : Compat.lfun) =
-    { M.fname = name f.lname; fline = f.lloc.loc_start.pos_lnum; arity = f.nparams; tupled = f.ltupled;
-      fn_range = Analyze.range ctx (bound f.lloc) }
+    {
+      M.fname = name f.lname;
+      fline = f.lloc.loc_start.pos_lnum;
+      arity = f.nparams;
+      tupled = f.ltupled;
+      fn_range = Analyze.range ctx (bound f.lloc);
+    }
   in
   let shown ((fns : Compat.lfun list), _) =
     List.for_all (fun (f : Compat.lfun) -> f.lname <> "" && not (List.exists (fun c -> inside c f.lloc) classes)) fns
@@ -98,8 +106,13 @@ let lazies ctx (str : T.structure) =
         in
         let zsource = match Analyze.slice ctx e.exp_loc with Some s -> Analyze.squash s | None -> "lazy" in
         acc :=
-          { M.zline = Analyze.line e.exp_loc; zsource; zkind; zword = Word.word a.exp_env a.exp_type;
-            zrange = Analyze.range ctx e.exp_loc }
+          {
+            M.zline = Analyze.line e.exp_loc;
+            zsource;
+            zkind;
+            zword = Word.word a.exp_env a.exp_type;
+            zrange = Analyze.range ctx e.exp_loc;
+          }
           :: !acc
     | _ -> ());
     Tast_iterator.default_iterator.expr sub e
@@ -150,8 +163,15 @@ let method_idents (ce : T.class_expr) =
   !used
 
 let ivar ?(param = false) ~where ~from name mutable_ ty env : M.ivar =
-  { vname = name; vty = Analyze.print_type ty; vmutable = mutable_; vparam = param; vword = Word.word env ty; vfrom = from;
-    vrange = where }
+  {
+    vname = name;
+    vty = Analyze.print_type ty;
+    vmutable = mutable_;
+    vparam = param;
+    vword = Word.word env ty;
+    vfrom = from;
+    vrange = where;
+  }
 
 (* Instance variables in slot order. Each class level allocates, in this
    order: the parameters and class-level lets its methods use (always a new
@@ -169,7 +189,8 @@ let rec class_vars ctx classes ~from (ce : T.class_expr) : M.ivar list * string 
           (fun (id, (e : T.expression)) ->
             (* Methods reach a parameter through Texp_instvar on [id]. *)
             if Ident.Set.mem id used then
-              Some (ivar ~param:true ~where:(Analyze.range ctx e.exp_loc) ~from (Ident.name id) false e.exp_type e.exp_env)
+              Some
+                (ivar ~param:true ~where:(Analyze.range ctx e.exp_loc) ~from (Ident.name id) false e.exp_type e.exp_env)
             else None)
           vals
       in
@@ -195,7 +216,9 @@ let rec class_vars ctx classes ~from (ce : T.class_expr) : M.ivar list * string 
           match f.cf_desc with
           | Tcf_inherit (_, cl, _, _, _) ->
               let pv, pu = class_vars ctx classes ~from:(parent_name cl) cl in
-              let taken (v : M.ivar) = (not v.vparam) && List.exists (fun (w : M.ivar) -> (not w.vparam) && w.vname = v.vname) vars in
+              let taken (v : M.ivar) =
+                (not v.vparam) && List.exists (fun (w : M.ivar) -> (not w.vparam) && w.vname = v.vname) vars
+              in
               let fresh = List.filter (fun v -> not (taken v)) pv in
               (vars @ fresh, unknown @ pu)
           | _ -> (vars, unknown))
@@ -222,7 +245,8 @@ let objects ctx (str : T.structure) : M.obj list =
   let add ~top ~locals name (loc : Location.t) (ce : T.class_expr) =
     let ivars, unknown = class_vars ctx classes ~from:name ce in
     let env_slot = (not top) && not (Ident.Set.is_empty (Ident.Set.inter (method_idents ce) locals)) in
-    acc := { M.oname = name; oline = Analyze.line loc; env_slot; ivars; unknown; orange = Analyze.range ctx loc } :: !acc
+    acc :=
+      { M.oname = name; oline = Analyze.line loc; env_slot; ivars; unknown; orange = Analyze.range ctx loc } :: !acc
   in
   let class_decls ~top ~locals l =
     List.iter
@@ -240,8 +264,15 @@ let objects ctx (str : T.structure) : M.obj list =
     let expr sub (e : T.expression) =
       (match e.exp_desc with
       | Texp_object (cs, _) ->
-          let ce = { T.cl_desc = Tcl_structure cs; cl_loc = e.exp_loc; cl_type = Cty_signature cs.cstr_type;
-                     cl_env = e.exp_env; cl_attributes = [] } in
+          let ce =
+            {
+              T.cl_desc = Tcl_structure cs;
+              cl_loc = e.exp_loc;
+              cl_type = Cty_signature cs.cstr_type;
+              cl_env = e.exp_env;
+              cl_attributes = [];
+            }
+          in
           add ~top:false ~locals "object" e.exp_loc ce
       | _ -> ());
       Tast_iterator.default_iterator.expr sub e
@@ -264,8 +295,10 @@ let objects ctx (str : T.structure) : M.obj list =
             let collect = { Tast_iterator.default_iterator with pat } in
             collect.structure_item collect si;
             (* The item's own top-level names are not local. *)
-            let own = match si.str_desc with
-              | Tstr_value (_, vbs) -> List.concat_map (fun (vb : T.value_binding) -> List.map fst (Compat.bound_idents vb.vb_pat)) vbs
+            let own =
+              match si.str_desc with
+              | Tstr_value (_, vbs) ->
+                  List.concat_map (fun (vb : T.value_binding) -> List.map fst (Compat.bound_idents vb.vb_pat)) vbs
               | _ -> []
             in
             let locals = List.fold_left (fun s id -> Ident.Set.remove id s) !locals own in

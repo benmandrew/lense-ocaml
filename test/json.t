@@ -310,7 +310,7 @@
             "name": "entry",
             "params": "",
             "keyword": "type",
-            "line": 10,
+            "line": 15,
             "kind": "record",
             "shape": {
               "kind": "block",
@@ -326,7 +326,7 @@
                     "kind": "immediate",
                     "why": "int"
                   },
-                  "range": {"line": 10, "column": 15, "end_line": 10, "end_column": 25}
+                  "range": {"line": 15, "column": 15, "end_line": 15, "end_column": 25}
                 },
                 {
                   "kind": "label",
@@ -338,18 +338,18 @@
                     "tag": null,
                     "what": "first-class module"
                   },
-                  "range": {"line": 10, "column": 26, "end_line": 10, "end_column": 66}
+                  "range": {"line": 15, "column": 26, "end_line": 15, "end_column": 66}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 10, "column": 0, "end_line": 10, "end_column": 68}
+            "range": {"line": 15, "column": 0, "end_line": 15, "end_column": 68}
           },
           {
             "name": "Ints.Unordered",
             "params": "",
             "keyword": "exception",
-            "line": 15,
+            "line": 20,
             "kind": "extension",
             "case": {
               "name": "Unordered",
@@ -360,29 +360,29 @@
                 "extension_slot": true
               },
               "notes": [],
-              "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 21}
+              "range": {"line": 20, "column": 2, "end_line": 20, "end_column": 21}
             },
             "notes": [],
-            "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 21}
+            "range": {"line": 20, "column": 2, "end_line": 20, "end_column": 21}
           },
           {
             "name": "Ints.t",
             "params": "",
             "keyword": "type",
-            "line": 16,
+            "line": 22,
             "kind": "alias",
             "word": {
               "kind": "immediate",
               "why": "int"
             },
             "notes": [],
-            "range": {"line": 16, "column": 2, "end_line": 16, "end_column": 14}
+            "range": {"line": 22, "column": 2, "end_line": 22, "end_column": 14}
           }
         ],
         "packages": [
           {
             "name": "ORDERED",
-            "line": 10,
+            "line": 15,
             "size": 4,
             "fields": [
               {
@@ -394,7 +394,7 @@
                   "tag": 252,
                   "what": "string"
                 },
-                "range": {"line": 3, "column": 2, "end_line": 3, "end_column": 19}
+                "range": {"line": 4, "column": 2, "end_line": 4, "end_column": 19}
               },
               {
                 "index": 1,
@@ -405,7 +405,7 @@
                   "tag": 247,
                   "what": "closure"
                 },
-                "range": {"line": 4, "column": 2, "end_line": 4, "end_column": 29}
+                "range": {"line": 5, "column": 2, "end_line": 5, "end_column": 29}
               },
               {
                 "index": 2,
@@ -416,7 +416,7 @@
                   "tag": 0,
                   "what": "structure"
                 },
-                "range": {"line": 6, "column": 2, "end_line": 6, "end_column": 38}
+                "range": {"line": 8, "column": 2, "end_line": 10, "end_column": 5}
               },
               {
                 "index": 3,
@@ -427,18 +427,18 @@
                   "tag": 248,
                   "what": "extension slot"
                 },
-                "range": {"line": 7, "column": 2, "end_line": 7, "end_column": 21}
+                "range": {"line": 12, "column": 2, "end_line": 12, "end_column": 21}
               }
             ],
             "no_field": [
               "type t",
               "external id"
             ],
-            "range": {"line": 1, "column": 0, "end_line": 8, "end_column": 3}
+            "range": {"line": 1, "column": 0, "end_line": 13, "end_column": 3}
           },
           {
             "name": "Shapes.SHAPE",
-            "line": 35,
+            "line": 56,
             "size": 3,
             "fields": [
               {
@@ -450,7 +450,7 @@
                   "tag": 253,
                   "what": "boxed float"
                 },
-                "range": {"line": 28, "column": 4, "end_line": 28, "end_column": 20}
+                "range": {"line": 41, "column": 4, "end_line": 41, "end_column": 20}
               },
               {
                 "index": 1,
@@ -461,7 +461,7 @@
                   "tag": 0,
                   "what": "class"
                 },
-                "range": {"line": 29, "column": 4, "end_line": 29, "end_column": 49}
+                "range": {"line": 43, "column": 4, "end_line": 45, "end_column": 7}
               },
               {
                 "index": 2,
@@ -472,21 +472,21 @@
                   "tag": 247,
                   "what": "closure"
                 },
-                "range": {"line": 30, "column": 4, "end_line": 30, "end_column": 71}
+                "range": {"line": 47, "column": 4, "end_line": 51, "end_column": 7}
               }
             ],
             "no_field": [],
-            "range": {"line": 27, "column": 2, "end_line": 31, "end_column": 5}
+            "range": {"line": 40, "column": 2, "end_line": 52, "end_column": 5}
           },
           {
             "name": "EMPTY",
-            "line": 43,
+            "line": 77,
             "size": 0,
             "fields": [],
             "no_field": [
               "type t"
             ],
-            "range": {"line": 41, "column": 0, "end_line": 41, "end_column": 34}
+            "range": {"line": 72, "column": 0, "end_line": 74, "end_column": 3}
           }
         ],
         "labels": []
@@ -1070,7 +1070,7 @@
             "name": "Opaque.t",
             "params": "",
             "keyword": "type",
-            "line": 10,
+            "line": 14,
             "kind": "alias",
             "word": {
               "kind": "pointer",
@@ -1078,13 +1078,13 @@
               "what": "boxed float"
             },
             "notes": [],
-            "range": {"line": 10, "column": 40, "end_line": 10, "end_column": 54}
+            "range": {"line": 14, "column": 2, "end_line": 14, "end_column": 16}
           },
           {
             "name": "seen",
             "params": "",
             "keyword": "type",
-            "line": 11,
+            "line": 17,
             "kind": "record",
             "shape": {
               "kind": "block",
@@ -1100,7 +1100,7 @@
                   "word": {
                     "kind": "double"
                   },
-                  "range": {"line": 11, "column": 14, "end_line": 11, "end_column": 25}
+                  "range": {"line": 17, "column": 14, "end_line": 17, "end_column": 25}
                 },
                 {
                   "kind": "label",
@@ -1110,18 +1110,18 @@
                   "word": {
                     "kind": "double"
                   },
-                  "range": {"line": 11, "column": 26, "end_line": 11, "end_column": 35}
+                  "range": {"line": 17, "column": 26, "end_line": 17, "end_column": 35}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 11, "column": 0, "end_line": 11, "end_column": 37}
+            "range": {"line": 17, "column": 0, "end_line": 17, "end_column": 37}
           },
           {
             "name": "hidden",
             "params": "",
             "keyword": "type",
-            "line": 12,
+            "line": 18,
             "kind": "record",
             "shape": {
               "kind": "block",
@@ -1137,7 +1137,7 @@
                     "kind": "any",
                     "why": "abstract type Opaque.t"
                   },
-                  "range": {"line": 12, "column": 16, "end_line": 12, "end_column": 29}
+                  "range": {"line": 18, "column": 16, "end_line": 18, "end_column": 29}
                 },
                 {
                   "kind": "label",
@@ -1149,18 +1149,18 @@
                     "tag": 253,
                     "what": "boxed float"
                   },
-                  "range": {"line": 12, "column": 30, "end_line": 12, "end_column": 39}
+                  "range": {"line": 18, "column": 30, "end_line": 18, "end_column": 39}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 12, "column": 0, "end_line": 12, "end_column": 41}
+            "range": {"line": 18, "column": 0, "end_line": 18, "end_column": 41}
           },
           {
             "name": "inline",
             "params": "",
             "keyword": "type",
-            "line": 14,
+            "line": 19,
             "kind": "variant",
             "cases": [
               {
@@ -1170,7 +1170,7 @@
                   "value": 0
                 },
                 "notes": [],
-                "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 6}
+                "range": {"line": 19, "column": 14, "end_line": 19, "end_column": 16}
               },
               {
                 "name": "I1",
@@ -1187,12 +1187,12 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 16, "column": 10, "end_line": 16, "end_column": 13}
+                      "range": {"line": 19, "column": 25, "end_line": 19, "end_column": 28}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 16, "column": 2, "end_line": 16, "end_column": 13}
+                "range": {"line": 19, "column": 17, "end_line": 19, "end_column": 28}
               },
               {
                 "name": "I2",
@@ -1210,7 +1210,7 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 17, "column": 12, "end_line": 17, "end_column": 21}
+                      "range": {"line": 19, "column": 39, "end_line": 19, "end_column": 48}
                     },
                     {
                       "kind": "label",
@@ -1222,12 +1222,12 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 17, "column": 22, "end_line": 17, "end_column": 32}
+                      "range": {"line": 19, "column": 49, "end_line": 19, "end_column": 59}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 17, "column": 2, "end_line": 17, "end_column": 34}
+                "range": {"line": 19, "column": 29, "end_line": 19, "end_column": 61}
               },
               {
                 "name": "I3",
@@ -1246,7 +1246,7 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 18, "column": 12, "end_line": 18, "end_column": 23}
+                      "range": {"line": 19, "column": 72, "end_line": 19, "end_column": 83}
                     },
                     {
                       "kind": "label",
@@ -1258,24 +1258,24 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 18, "column": 24, "end_line": 18, "end_column": 34}
+                      "range": {"line": 19, "column": 84, "end_line": 19, "end_column": 94}
                     }
                   ]
                 },
                 "notes": [
                   "inline record: all fields are float, but inline records are never stored flat"
                 ],
-                "range": {"line": 18, "column": 2, "end_line": 18, "end_column": 36}
+                "range": {"line": 19, "column": 62, "end_line": 19, "end_column": 96}
               }
             ],
             "notes": [],
-            "range": {"line": 14, "column": 0, "end_line": 18, "end_column": 36}
+            "range": {"line": 19, "column": 0, "end_line": 19, "end_column": 96}
           },
           {
             "name": "uses",
             "params": "",
             "keyword": "type",
-            "line": 20,
+            "line": 21,
             "kind": "record",
             "shape": {
               "kind": "block",
@@ -1291,7 +1291,7 @@
                     "kind": "any",
                     "why": "inline"
                   },
-                  "range": {"line": 21, "column": 2, "end_line": 21, "end_column": 13}
+                  "range": {"line": 22, "column": 2, "end_line": 22, "end_column": 13}
                 },
                 {
                   "kind": "label",
@@ -1302,7 +1302,7 @@
                     "kind": "any",
                     "why": "list"
                   },
-                  "range": {"line": 22, "column": 2, "end_line": 22, "end_column": 16}
+                  "range": {"line": 23, "column": 2, "end_line": 23, "end_column": 16}
                 },
                 {
                   "kind": "label",
@@ -1314,7 +1314,7 @@
                     "tag": null,
                     "what": "float array (Double_array_tag 254 unless empty)"
                   },
-                  "range": {"line": 23, "column": 2, "end_line": 23, "end_column": 20}
+                  "range": {"line": 24, "column": 2, "end_line": 24, "end_column": 20}
                 },
                 {
                   "kind": "label",
@@ -1326,7 +1326,7 @@
                     "tag": 0,
                     "what": "array"
                   },
-                  "range": {"line": 24, "column": 2, "end_line": 24, "end_column": 19}
+                  "range": {"line": 25, "column": 2, "end_line": 25, "end_column": 19}
                 },
                 {
                   "kind": "label",
@@ -1337,7 +1337,7 @@
                     "kind": "any",
                     "why": "option"
                   },
-                  "range": {"line": 25, "column": 2, "end_line": 25, "end_column": 19}
+                  "range": {"line": 26, "column": 2, "end_line": 26, "end_column": 19}
                 },
                 {
                   "kind": "label",
@@ -1349,7 +1349,7 @@
                     "tag": 255,
                     "what": "custom block"
                   },
-                  "range": {"line": 26, "column": 2, "end_line": 26, "end_column": 14}
+                  "range": {"line": 27, "column": 2, "end_line": 27, "end_column": 14}
                 },
                 {
                   "kind": "label",
@@ -1360,7 +1360,7 @@
                     "kind": "immediate",
                     "why": "char"
                   },
-                  "range": {"line": 27, "column": 2, "end_line": 27, "end_column": 12}
+                  "range": {"line": 28, "column": 2, "end_line": 28, "end_column": 12}
                 },
                 {
                   "kind": "label",
@@ -1371,7 +1371,7 @@
                     "kind": "any",
                     "why": "lazy value"
                   },
-                  "range": {"line": 28, "column": 2, "end_line": 28, "end_column": 18}
+                  "range": {"line": 29, "column": 2, "end_line": 29, "end_column": 18}
                 },
                 {
                   "kind": "label",
@@ -1383,12 +1383,12 @@
                     "tag": 247,
                     "what": "closure"
                   },
-                  "range": {"line": 29, "column": 2, "end_line": 29, "end_column": 23}
+                  "range": {"line": 30, "column": 2, "end_line": 30, "end_column": 23}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 20, "column": 0, "end_line": 30, "end_column": 1}
+            "range": {"line": 21, "column": 0, "end_line": 31, "end_column": 1}
           }
         ],
         "packages": [],
@@ -1419,7 +1419,7 @@
                   "value": 0
                 },
                 "notes": [],
-                "range": {"line": 3, "column": 2, "end_line": 3, "end_column": 9}
+                "range": {"line": 2, "column": 13, "end_line": 2, "end_column": 18}
               },
               {
                 "name": "Circle",
@@ -1437,12 +1437,12 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 4, "column": 14, "end_line": 4, "end_column": 19}
+                      "range": {"line": 2, "column": 31, "end_line": 2, "end_column": 36}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 4, "column": 2, "end_line": 4, "end_column": 19}
+                "range": {"line": 2, "column": 19, "end_line": 2, "end_column": 36}
               },
               {
                 "name": "Rect",
@@ -1461,7 +1461,7 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 5, "column": 14, "end_line": 5, "end_column": 24}
+                      "range": {"line": 2, "column": 49, "end_line": 2, "end_column": 59}
                     },
                     {
                       "kind": "label",
@@ -1473,24 +1473,24 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 5, "column": 25, "end_line": 5, "end_column": 34}
+                      "range": {"line": 2, "column": 60, "end_line": 2, "end_column": 69}
                     }
                   ]
                 },
                 "notes": [
                   "inline record: all fields are float, but inline records are never stored flat"
                 ],
-                "range": {"line": 5, "column": 2, "end_line": 5, "end_column": 36}
+                "range": {"line": 2, "column": 37, "end_line": 2, "end_column": 71}
               }
             ],
             "notes": [],
-            "range": {"line": 2, "column": 0, "end_line": 5, "end_column": 36}
+            "range": {"line": 2, "column": 0, "end_line": 2, "end_column": 71}
           },
           {
             "name": "colour",
             "params": "",
             "keyword": "type",
-            "line": 7,
+            "line": 3,
             "kind": "variant",
             "cases": [
               {
@@ -1500,7 +1500,7 @@
                   "value": 0
                 },
                 "notes": [],
-                "range": {"line": 7, "column": 14, "end_line": 7, "end_column": 17}
+                "range": {"line": 3, "column": 14, "end_line": 3, "end_column": 17}
               },
               {
                 "name": "Green",
@@ -1509,7 +1509,7 @@
                   "value": 1
                 },
                 "notes": [],
-                "range": {"line": 7, "column": 18, "end_line": 7, "end_column": 25}
+                "range": {"line": 3, "column": 18, "end_line": 3, "end_column": 25}
               },
               {
                 "name": "Blue",
@@ -1518,17 +1518,17 @@
                   "value": 2
                 },
                 "notes": [],
-                "range": {"line": 7, "column": 26, "end_line": 7, "end_column": 32}
+                "range": {"line": 3, "column": 26, "end_line": 3, "end_column": 32}
               }
             ],
             "notes": [],
-            "range": {"line": 7, "column": 0, "end_line": 7, "end_column": 32}
+            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 32}
           },
           {
             "name": "vec",
             "params": "",
             "keyword": "type",
-            "line": 9,
+            "line": 4,
             "kind": "record",
             "shape": {
               "kind": "block",
@@ -1544,7 +1544,7 @@
                   "word": {
                     "kind": "double"
                   },
-                  "range": {"line": 9, "column": 13, "end_line": 9, "end_column": 23}
+                  "range": {"line": 4, "column": 13, "end_line": 4, "end_column": 23}
                 },
                 {
                   "kind": "label",
@@ -1554,7 +1554,7 @@
                   "word": {
                     "kind": "double"
                   },
-                  "range": {"line": 9, "column": 24, "end_line": 9, "end_column": 34}
+                  "range": {"line": 4, "column": 24, "end_line": 4, "end_column": 34}
                 },
                 {
                   "kind": "label",
@@ -1564,18 +1564,18 @@
                   "word": {
                     "kind": "double"
                   },
-                  "range": {"line": 9, "column": 35, "end_line": 9, "end_column": 44}
+                  "range": {"line": 4, "column": 35, "end_line": 4, "end_column": 44}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 9, "column": 0, "end_line": 9, "end_column": 46}
+            "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 46}
           },
           {
             "name": "id",
             "params": "",
             "keyword": "type",
-            "line": 11,
+            "line": 5,
             "kind": "variant",
             "cases": [
               {
@@ -1590,15 +1590,15 @@
                       "kind": "immediate",
                       "why": "int"
                     },
-                    "range": {"line": 11, "column": 16, "end_line": 11, "end_column": 19}
+                    "range": {"line": 5, "column": 16, "end_line": 5, "end_column": 19}
                   }
                 },
                 "notes": [],
-                "range": {"line": 11, "column": 10, "end_line": 11, "end_column": 19}
+                "range": {"line": 5, "column": 10, "end_line": 5, "end_column": 19}
               }
             ],
             "notes": [],
-            "range": {"line": 11, "column": 0, "end_line": 11, "end_column": 31}
+            "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 31}
           }
         ],
         "packages": [],
@@ -1619,7 +1619,7 @@
             "name": "counter",
             "params": "",
             "keyword": "type",
-            "line": 14,
+            "line": 16,
             "kind": "record",
             "shape": {
               "kind": "block",
@@ -1636,7 +1636,7 @@
                     "tag": 247,
                     "what": "closure"
                   },
-                  "range": {"line": 14, "column": 17, "end_line": 14, "end_column": 36}
+                  "range": {"line": 16, "column": 17, "end_line": 16, "end_column": 36}
                 },
                 {
                   "kind": "label",
@@ -1648,12 +1648,12 @@
                     "tag": 247,
                     "what": "closure"
                   },
-                  "range": {"line": 14, "column": 37, "end_line": 14, "end_column": 57}
+                  "range": {"line": 16, "column": 37, "end_line": 16, "end_column": 57}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 14, "column": 0, "end_line": 14, "end_column": 59}
+            "range": {"line": 16, "column": 0, "end_line": 16, "end_column": 59}
           }
         ],
         "packages": [],
@@ -1748,7 +1748,7 @@
             "name": "nested",
             "params": "",
             "keyword": "type",
-            "line": 3,
+            "line": 2,
             "kind": "variant",
             "cases": [
               {
@@ -1767,12 +1767,12 @@
                         "tag": 0,
                         "what": "tuple"
                       },
-                      "range": {"line": 3, "column": 20, "end_line": 3, "end_column": 29}
+                      "range": {"line": 2, "column": 20, "end_line": 2, "end_column": 29}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 3, "column": 14, "end_line": 3, "end_column": 30}
+                "range": {"line": 2, "column": 14, "end_line": 2, "end_column": 30}
               },
               {
                 "name": "T2",
@@ -1789,7 +1789,7 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 3, "column": 39, "end_line": 3, "end_column": 42}
+                      "range": {"line": 2, "column": 39, "end_line": 2, "end_column": 42}
                     },
                     {
                       "kind": "arg",
@@ -1799,22 +1799,22 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 3, "column": 45, "end_line": 3, "end_column": 48}
+                      "range": {"line": 2, "column": 45, "end_line": 2, "end_column": 48}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 3, "column": 31, "end_line": 3, "end_column": 48}
+                "range": {"line": 2, "column": 31, "end_line": 2, "end_column": 48}
               }
             ],
             "notes": [],
-            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 48}
+            "range": {"line": 2, "column": 0, "end_line": 2, "end_column": 48}
           },
           {
             "name": "tree",
             "params": "'a",
             "keyword": "type",
-            "line": 5,
+            "line": 3,
             "kind": "variant",
             "cases": [
               {
@@ -1824,7 +1824,7 @@
                   "value": 0
                 },
                 "notes": [],
-                "range": {"line": 5, "column": 15, "end_line": 5, "end_column": 19}
+                "range": {"line": 3, "column": 15, "end_line": 3, "end_column": 19}
               },
               {
                 "name": "Node",
@@ -1841,7 +1841,7 @@
                         "kind": "any",
                         "why": "tree"
                       },
-                      "range": {"line": 5, "column": 30, "end_line": 5, "end_column": 37}
+                      "range": {"line": 3, "column": 30, "end_line": 3, "end_column": 37}
                     },
                     {
                       "kind": "arg",
@@ -1851,7 +1851,7 @@
                         "kind": "any",
                         "why": "type variable 'a"
                       },
-                      "range": {"line": 5, "column": 40, "end_line": 5, "end_column": 42}
+                      "range": {"line": 3, "column": 40, "end_line": 3, "end_column": 42}
                     },
                     {
                       "kind": "arg",
@@ -1861,32 +1861,32 @@
                         "kind": "any",
                         "why": "tree"
                       },
-                      "range": {"line": 5, "column": 45, "end_line": 5, "end_column": 52}
+                      "range": {"line": 3, "column": 45, "end_line": 3, "end_column": 52}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 5, "column": 20, "end_line": 5, "end_column": 52}
+                "range": {"line": 3, "column": 20, "end_line": 3, "end_column": 52}
               }
             ],
             "notes": [],
-            "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 52}
+            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 52}
           },
           {
             "name": "empty",
             "params": "",
             "keyword": "type",
-            "line": 7,
+            "line": 4,
             "kind": "variant",
             "cases": [],
             "notes": [],
-            "range": {"line": 7, "column": 0, "end_line": 7, "end_column": 14}
+            "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 14}
           },
           {
             "name": "expr",
             "params": "_",
             "keyword": "type",
-            "line": 9,
+            "line": 6,
             "kind": "variant",
             "cases": [
               {
@@ -1904,12 +1904,12 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 10, "column": 10, "end_line": 10, "end_column": 13}
+                      "range": {"line": 7, "column": 10, "end_line": 7, "end_column": 13}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 10, "column": 2, "end_line": 10, "end_column": 25}
+                "range": {"line": 7, "column": 2, "end_line": 7, "end_column": 25}
               },
               {
                 "name": "Bool",
@@ -1926,12 +1926,12 @@
                         "kind": "immediate",
                         "why": "bool"
                       },
-                      "range": {"line": 11, "column": 11, "end_line": 11, "end_column": 15}
+                      "range": {"line": 8, "column": 11, "end_line": 8, "end_column": 15}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 11, "column": 2, "end_line": 11, "end_column": 28}
+                "range": {"line": 8, "column": 2, "end_line": 8, "end_column": 28}
               },
               {
                 "name": "Hide",
@@ -1948,7 +1948,7 @@
                         "kind": "any",
                         "why": "type variable 'a"
                       },
-                      "range": {"line": 12, "column": 11, "end_line": 12, "end_column": 13}
+                      "range": {"line": 9, "column": 11, "end_line": 9, "end_column": 13}
                     },
                     {
                       "kind": "arg",
@@ -1959,14 +1959,14 @@
                         "tag": 247,
                         "what": "closure"
                       },
-                      "range": {"line": 12, "column": 17, "end_line": 12, "end_column": 29}
+                      "range": {"line": 9, "column": 17, "end_line": 9, "end_column": 29}
                     }
                   ]
                 },
                 "notes": [
                   "existential 'a: stored as uniform values"
                 ],
-                "range": {"line": 12, "column": 2, "end_line": 12, "end_column": 45}
+                "range": {"line": 9, "column": 2, "end_line": 9, "end_column": 45}
               },
               {
                 "name": "Unit",
@@ -1975,13 +1975,13 @@
                   "value": 0
                 },
                 "notes": [],
-                "range": {"line": 13, "column": 2, "end_line": 13, "end_column": 20}
+                "range": {"line": 10, "column": 2, "end_line": 10, "end_column": 20}
               }
             ],
             "notes": [
               "GADT: type indices are erased, so the constructors are numbered as in an ordinary variant"
             ],
-            "range": {"line": 9, "column": 0, "end_line": 13, "end_column": 20}
+            "range": {"line": 6, "column": 0, "end_line": 10, "end_column": 20}
           }
         ],
         "packages": [],
@@ -2116,7 +2116,7 @@
         "packages": [
           {
             "name": "CODEC",
-            "line": 14,
+            "line": 15,
             "size": 2,
             "fields": [
               {
@@ -2128,7 +2128,7 @@
                   "tag": 247,
                   "what": "closure"
                 },
-                "range": {"line": 10, "column": 2, "end_line": 10, "end_column": 26}
+                "range": {"line": 11, "column": 2, "end_line": 11, "end_column": 26}
               },
               {
                 "index": 1,
@@ -2138,13 +2138,13 @@
                   "kind": "any",
                   "why": "abstract type v"
                 },
-                "range": {"line": 11, "column": 2, "end_line": 11, "end_column": 17}
+                "range": {"line": 12, "column": 2, "end_line": 12, "end_column": 17}
               }
             ],
             "no_field": [
               "type v"
             ],
-            "range": {"line": 8, "column": 0, "end_line": 12, "end_column": 3}
+            "range": {"line": 8, "column": 0, "end_line": 13, "end_column": 3}
           }
         ],
         "labels": []

@@ -1,6 +1,8 @@
 (lang dune 3.17)
 (name lense-ocaml)
 (cram enable)
+; dune fmt runs ocamlformat (.ocamlformat); dune files keep their own layout.
+(formatting (enabled_for ocaml))
 (generate_opam_files true)
 
 (package
