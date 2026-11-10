@@ -1,7 +1,8 @@
 (* The browser entry point. It sets globalThis.lense_analyze, which the web
    worker calls with the source text and an options object, and which
-   returns { text } or { error }. The option "compiler" is "5.5" (the
-   default) or "ox"; each has its stdlib .cmi files embedded under /static. *)
+   returns { text, diagrams } or { error }; diagrams is Diagram.json's
+   string. The option "compiler" is "5.5" (the default) or "ox"; each has
+   its stdlib .cmi files embedded under /static. *)
 
 open Js_of_ocaml
 module M = Lense_model.Model
@@ -41,13 +42,18 @@ let analyze code opts =
             let b = Buffer.create 1024 in
             Lense_model.Text.labels b [ u ];
             Lense_model.Text.collisions b [ u ];
-            Buffer.contents b)
-          else Lense_model.Text.render { source = flag opts "source"; only = [] } [ u ])
+            (Buffer.contents b, "[]"))
+          else
+            let topts : Lense_model.Text.options = { source = flag opts "source"; only = [] } in
+            (Lense_model.Text.render topts [ u ], Lense_model.Diagram.(json (compunit topts u))))
         ((if str opts "compiler" = "ox" then unit_ox else unit_55) ~file ~intf ~values src)
     with exn -> Error ("lense stopped: " ^ Printexc.to_string exn)
   in
   match result with
-  | Ok text -> Js.Unsafe.obj [| ("text", Js.Unsafe.inject (Js.string text)) |]
+  | Ok (text, diagrams) ->
+      Js.Unsafe.obj
+        [| ("text", Js.Unsafe.inject (Js.string text));
+           ("diagrams", Js.Unsafe.inject (Js.string diagrams)) |]
   | Error msg -> Js.Unsafe.obj [| ("error", Js.Unsafe.inject (Js.string msg)) |]
 
 let () = Js.Unsafe.set Js.Unsafe.global "lense_analyze" (Js.wrap_callback analyze)

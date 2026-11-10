@@ -10,7 +10,23 @@ export interface Options {
   labels: boolean;
 }
 
-export type Result = { text: string } | { error: string };
+// Diagrams, as Diagram.json in src/model writes them. Each belongs to the
+// card that holds the text line [key], with runs of spaces collapsed.
+
+/** What a cell holds: imm, ptr, any and flat as in the text columns; meta
+ *  for headers, code pointers and closinfo; pad for unused bytes. */
+export type Kind = 'imm' | 'ptr' | 'any' | 'flat' | 'meta' | 'pad' | '';
+
+export type Shape =
+  | { type: 'bytes'; word: number; rows: { offset: number; cells: { label: string; kind: Kind; bytes: number }[] }[] }
+  | { type: 'column'; title: string;
+      entries: { index: number; label: string; kind: Kind; desc: string; incoming: string | null; target: string | null }[] };
+
+/** [replaces] lists the text rows the diagram shows in full, with runs of
+ *  spaces collapsed; the page draws the diagram in their place. */
+export interface Diagram { key: string; diagram: Shape; replaces: string[] }
+
+export type Result = { text: string; diagrams: Diagram[] } | { error: string };
 
 export type ToWorker =
   | { type: 'init'; url: string }

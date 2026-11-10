@@ -4,7 +4,7 @@ import { type Diagnostic, lintGutter, setDiagnostics } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
 import { basicSetup, EditorView } from 'codemirror';
 import EXAMPLES from 'virtual:examples';
-import type { Compiler, FromWorker, Options, ToWorker } from './protocol';
+import type { Compiler, Diagram, FromWorker, Kind, Options, Shape, ToWorker } from './protocol';
 import './style.css';
 
 const SAMPLE = `(* Edit the code: the representations update as you type. *)
@@ -198,9 +198,89 @@ function legend(): HTMLElement {
   return p;
 }
 
+const squeeze = (s: string) => s.trim().replace(/ +/g, ' ');
+
+/** Diagrams by the text line they belong to, each list in report order. */
+function byKey(diagrams: Diagram[]): Map<string, Diagram[]> {
+  const m = new Map<string, Diagram[]>();
+  for (const d of diagrams) m.set(d.key, [...(m.get(d.key) ?? []), d]);
+  return m;
+}
+
+// --- Diagrams --------------------------------------------------------------
+
+// Cells are filled as in lense's byte map: green, orange and blue for
+// immediates, pointers and unboxed data, with dark text on them.
+
+/** A cell. With [desc], a screen reader hears that in place of the label:
+ *  the text row the cell stands for, which says what the fill shows. */
+function seg(label: string, kind: Kind, desc = ''): HTMLElement {
+  const s = el('span', `seg d-${kind || 'plain'}`);
+  s.title = desc || label;
+  if (!desc) s.textContent = label;
+  else {
+    const shown = el('span', '', label);
+    shown.setAttribute('aria-hidden', 'true');
+    s.append(shown, el('span', 'sr', desc));
+  }
+  return s;
+}
+
+const hidden = <E extends Element>(e: E): E => (e.setAttribute('aria-hidden', 'true'), e);
+
+/** A mixed block, a row per word, as lense draws a struct. */
+function byteMap(d: Extract<Shape, { type: 'bytes' }>): HTMLElement {
+  // The text rows stay beside a byte map, so screen readers skip it.
+  const map = hidden(el('div', 'bytemap'));
+  map.style.setProperty('--bytes', String(d.word));
+  const marks = el('div', 'marks');
+  for (let b = 0; b < d.word; b++) marks.append(el('span', '', `+${b}`));
+  const ruler = el('div', 'row');
+  ruler.append(el('span', 'off'), marks);
+  map.append(ruler);
+  for (const r of d.rows) {
+    const row = el('div', 'row');
+    const cells = el('div', 'cells');
+    for (const c of r.cells) {
+      const s = seg(c.label, c.kind);
+      s.style.gridColumn = `span ${c.bytes}`;
+      cells.append(s);
+    }
+    row.append(el('span', 'off', String(r.offset)), cells);
+    map.append(row);
+  }
+  return map;
+}
+
+/** A block as a column of words: the pointers that enter it on the left,
+ *  the blocks its words point to on the right. */
+function column(d: Extract<Shape, { type: 'column' }>): HTMLElement {
+  const g = el('div', 'column');
+  const left = d.entries.some((e) => e.incoming);
+  if (!left) g.classList.add('no-in');
+  // The title sits over the words; empty cells fill the rest of its row.
+  const blank = (n: number) => Array.from({ length: n }, () => el('span'));
+  g.append(...blank(left ? 3 : 1), el('span', 'title', d.title), ...blank(2));
+  for (const e of d.entries) {
+    // The arrows and the boxes at their ends repeat what desc says.
+    if (left) g.append(hidden(e.incoming ? el('span', 'incoming', e.incoming) : el('span')), hidden(el('span', e.incoming ? 'arrow' : '')));
+    g.append(el('span', 'off', String(e.index)), seg(e.label, e.kind, e.desc),
+             hidden(el('span', e.target ? 'arrow' : '')), hidden(e.target ? el('span', 'target', e.target) : el('span')));
+  }
+  return g;
+}
+
+function diagram(d: Shape): HTMLElement {
+  const box = el('div', 'diagram');
+  box.append(d.type === 'bytes' ? byteMap(d) : column(d));
+  return box;
+}
+
 /** One card per paragraph of the text report. The first line is the
- *  heading: its name, then the description after two spaces. */
-function render(text: string) {
+ *  heading: its name, then the description after two spaces. A diagram
+ *  follows the text of the card that holds its line. */
+function render(text: string, diagrams: Diagram[] = []) {
+  const pending = byKey(diagrams);
   output.replaceChildren(legend());
   for (const para of text.split(/\n\s*\n/)) {
     const lines = para.replace(/\s+$/, '').split('\n');
@@ -212,14 +292,50 @@ function render(text: string) {
     if (cut > 0) h.append(el('span', 'name', head.slice(0, cut)), el('span', 'desc', head.slice(cut).trimStart()));
     else h.append(el('span', 'name', head));
     card.append(h);
-    if (lines.length > 1) {
-      // Strip the indent the body shares, so it starts at the card's edge.
-      const body = lines.slice(1);
-      const indent = Math.min(...body.filter((l) => l.trim()).map((l) => l.length - l.trimStart().length));
-      const pre = el('pre');
-      body.forEach((l, i) => pre.append(...(i ? ['\n'] : []), ...line(l.slice(indent))));
-      card.append(pre);
+    // A diagram keyed by the heading belongs to the whole card, one keyed by
+    // a body line to the rows below it: those up to the next line indented
+    // no further. It takes the place of the rows it replaces, and otherwise
+    // follows its rows.
+    type Scope = { d: Diagram; depth: number; drop: Set<string>; placed: boolean };
+    const open = (d: Diagram, depth: number): Scope => ({ d, depth, drop: new Set(d.replaces), placed: false });
+    const take = (l: string) => pending.get(squeeze(l))?.shift();
+    const first = take(lines[0]);
+    const whole = first && open(first, -1);
+    // Strip the indent the body shares, so it starts at the card's edge.
+    const body = lines.slice(1);
+    const indent = Math.min(...body.filter((l) => l.trim()).map((l) => l.length - l.trimStart().length));
+    const depth = (l: string) => l.length - l.trimStart().length;
+    let pre = el('pre');
+    const flush = () => {
+      if (pre.childNodes.length) card.append(pre);
+      pre = el('pre');
+    };
+    const place = (sc: Scope) => {
+      if (sc.placed) return;
+      flush();
+      card.append(diagram(sc.d.diagram));
+      sc.placed = true;
+    };
+    let held: Scope | undefined;
+    for (const l of body) {
+      if (held && l.trim() && depth(l) <= held.depth) {
+        place(held);
+        held = undefined;
+      }
+      const k = squeeze(l);
+      const owner = held?.drop.has(k) ? held : whole?.drop.has(k) ? whole : undefined;
+      if (owner) {
+        owner.drop.delete(k);
+        place(owner);
+        continue;
+      }
+      pre.append(...(pre.childNodes.length ? ['\n'] : []), ...line(l.slice(indent)));
+      const d = take(l);
+      if (d) held = open(d, depth(l));
     }
+    flush();
+    if (held) place(held);
+    if (whole) place(whole);
     output.append(card);
   }
 }
@@ -319,7 +435,7 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
         status('error', true);
       } else {
         view.dispatch(setDiagnostics(view.state, []));
-        render(r.text);
+        render(r.text, r.diagrams);
         status(`${Math.round(m.ms)} ms`);
       }
     }

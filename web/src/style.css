@@ -231,3 +231,81 @@ pre.report {
 .legend .k-ptr { color: var(--c-ptr); }
 .legend .k-flat { color: var(--c-field); }
 .legend .k-any { color: var(--warning); }
+
+/* --- Diagrams ------------------------------------------------------------- */
+
+/* Cells use the fills of lense's byte map, which carry --on-fill text at
+   5.9:1 or more. Rows are 24px with 2px gaps, as there. */
+
+.card .diagram { margin: 10px 0 12px; overflow-x: auto; font: 11px var(--mono); }
+.diagram .title { color: var(--muted); line-height: 18px; white-space: nowrap; }
+.diagram .off { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; line-height: 24px; }
+
+.diagram .seg {
+  position: relative;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  color: var(--on-fill);
+  line-height: 24px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.diagram .d-imm { background: var(--c-base); }
+.diagram .d-ptr { background: var(--c-ptr); }
+.diagram .d-flat { background: var(--c-field); }
+.diagram .d-any { background: var(--warning); }
+.diagram .d-meta, .diagram .d-plain {
+  color: var(--ink-2);
+  background: var(--code-bg);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.diagram .d-pad {
+  color: var(--ink-2);
+  background: repeating-linear-gradient(45deg, var(--pad-ink) 0 1px, transparent 1px 5px), var(--pad-bg);
+}
+
+/* A byte map: offsets on the left, a column per byte. */
+.bytemap { display: flex; flex-direction: column; gap: 2px; max-width: 560px; }
+.bytemap .row { display: grid; grid-template-columns: 3em minmax(0, 1fr); column-gap: 8px; }
+.bytemap .marks, .bytemap .cells { display: grid; grid-template-columns: repeat(var(--bytes), minmax(0, 1fr)); column-gap: 2px; }
+.bytemap .marks span { padding-left: 3px; color: var(--muted); }
+.bytemap .cells .seg { text-align: center; }
+
+/* A block as a column of words, with arrows in and out. */
+.column {
+  display: inline-grid;
+  grid-template-columns: max-content 28px 2.5em minmax(12em, max-content) 28px max-content;
+  align-items: center;
+  gap: 2px 6px;
+}
+.column.no-in { grid-template-columns: 2.5em minmax(12em, max-content) 28px max-content; }
+.column .incoming, .column .target {
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  line-height: 22px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.column .incoming { border-radius: 12px; }
+.column .target { border-radius: 4px; }
+/* A line with a head at its right end. */
+.column .arrow {
+  position: relative;
+  height: 1px;
+  background: var(--ink-2);
+}
+.column .arrow::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: -3px;
+  border: 3.5px solid transparent;
+  border-left: 6px solid var(--ink-2);
+  border-right: 0;
+}
+
+/* Text for screen readers only. */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

@@ -4,7 +4,8 @@
 // globalThis.lense_analyze, so it is fetched and run with an indirect eval.
 import type { FromWorker, Options, Result, ToWorker } from './protocol';
 
-type Analyze = (code: string, options: Options) => Result;
+// lense_analyze returns the diagrams as a JSON string.
+type Analyze = (code: string, options: Options) => { text: string; diagrams: string } | { error: string };
 
 let url = '';
 let loaded: Promise<Analyze> | null = null;
@@ -42,7 +43,9 @@ onmessage = async (e: MessageEvent<ToWorker>) => {
   try {
     const analyze = await load();
     const r = analyze(msg.code, msg.options);
-    result = 'text' in r ? { text: String(r.text) } : { error: String(r.error) };
+    result = 'text' in r
+      ? { text: String(r.text), diagrams: JSON.parse(String(r.diagrams ?? '[]')) }
+      : { error: String(r.error) };
   } catch (err) {
     result = { error: `lense stopped: ${err}` };
   }
