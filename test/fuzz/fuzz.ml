@@ -265,8 +265,9 @@ type state = {
   mutable modules : pack list;  (** First-class modules to check. *)
   mutable n : int;
   mutable vchecks : vcheck list;  (** Stage 4 values to check. *)
-  mutable classes : (string * sample list * (string * bool * sample) list) list;
-      (** class, parameters, vals *)
+  mutable classes :
+    (string * sample list * (string * bool * sample) list * string list) list;
+      (** class, parameters, vals, virtual methods *)
 }
 
 (* A Stage 4 value, found in the prediction by the line its definition starts on. *)
@@ -274,7 +275,7 @@ and vcheck =
   | Vclosure of { values : (string * int) list; again : string }
       (** Each function of one block: the value, its line. [again] makes the
           first value again, with a second call. *)
-  | Vlazy of { v : string; line : int; ident : string option }
+  | Vlazy of { v : string; line : int; ident : string option; forced : bool }
   | Vobj of { v : string; line : int }
 
 let line s =
@@ -1104,6 +1105,133 @@ let gen_closure s =
           }
         :: s.vchecks
 
+(* Closures in other places: nested in another closure, in a record or a
+   tuple, in a module, with labelled arguments, capturing a local ref or a
+   value of the unit. A partial application such as [f 1] is a block that
+   lense does not predict, so it is left out. *)
+let gen_closure_more s =
+  let m = if chance 0.3 then Some (fresh s "CM") else None in
+  Option.iter (fun m -> Printf.bprintf s.decls "module %s = struct\n" m) m;
+  let qual x = match m with Some m -> m ^ "." ^ x | None -> x in
+  (* A value of the unit or of the module: bytecode captures it, native code
+     reads it from the module block. *)
+  let glob = if chance 0.3 then Some (fresh s "gl", field_sample s) else None in
+  Option.iter
+    (fun (g, x) -> Printf.bprintf s.decls "let %s : %s = %s\n" g x.ty x.expr)
+    glob;
+  let f = fresh s "mk" in
+  let caps =
+    List.init (rand 3) (fun _ -> (fresh s "c", chance 0.3, field_sample s))
+  in
+  let refv =
+    if chance 0.35 then Some (fresh s "rf", field_sample s) else None
+  in
+  (* Each name as a closure uses it: a ref is read or written. *)
+  let names =
+    List.map (fun (c, _, _) -> c) caps
+    @ Option.to_list (Option.map fst glob)
+    @ Option.to_list
+        (Option.map
+           (fun (r, x) ->
+             if chance 0.5 then "!" ^ r else "(" ^ r ^ " := " ^ x.expr ^ ")")
+           refv)
+  in
+  let use extra =
+    let l = List.filter (fun _ -> chance 0.6) (names @ extra) in
+    if l = [] then ""
+    else "ignore (Sys.opaque_identity (" ^ String.concat ", " l ^ ")); "
+  in
+  let shape = rand 4 in
+  let ty = fresh s "rc" and fa = fresh s "rf" and fb = fresh s "rg" in
+  if shape = 1 then
+    Printf.bprintf s.decls "type %s = { %s : int; %s : int -> int }\n" ty fa fb;
+  Printf.bprintf s.decls "let %s %s =\n" f
+    (if caps = [] then "()"
+     else
+       String.concat " "
+         (List.map
+            (fun (c, lab, x) ->
+              Printf.sprintf "%s(%s : %s)" (if lab then "~" else "") c x.ty)
+            caps));
+  Option.iter
+    (fun (r, x) ->
+      Printf.bprintf s.decls
+        "  let %s : (%s) ref = ref (Sys.opaque_identity %s) in\n" r x.ty x.expr)
+    refv;
+  let args =
+    if caps = [] then "()"
+    else
+      String.concat " "
+        (List.map
+           (fun (c, lab, x) -> (if lab then "~" ^ c ^ ":" else "") ^ x.expr)
+           caps)
+  in
+  (* [again] makes the value again with a second call of the maker. *)
+  let one v l again =
+    s.vchecks <- Vclosure { values = [ (v, l) ]; again } :: s.vchecks
+  in
+  let call = "(" ^ qual f ^ " " ^ args ^ ")" in
+  let fin () = Option.iter (fun _ -> Buffer.add_string s.decls "end\n") m in
+  match shape with
+  | 0 ->
+      (* A closure that returns a closure, which captures both levels. *)
+      let j = if chance 0.5 then Some (fresh s "j", field_sample s) else None in
+      let l1 = line s in
+      Printf.bprintf s.decls "  fun (x0 : int) -> %s\n" (use []);
+      Option.iter
+        (fun (j, x) ->
+          Printf.bprintf s.decls "    let %s : %s = Sys.opaque_identity %s in\n"
+            j x.ty x.expr)
+        j;
+      let l2 = line s in
+      Printf.bprintf s.decls "    fun (y0 : int) -> %sy0 + x0\n"
+        (use (Option.to_list (Option.map fst j)));
+      fin ();
+      let v = fresh s "fv" and v2 = fresh s "fv" in
+      Printf.bprintf s.decls "let %s = %s %s\nlet %s = %s 1\n" v (qual f) args
+        v2 v;
+      one v l1 call;
+      one v2 l2 ("(" ^ v ^ " 1)")
+  | 1 ->
+      (* In a record field. *)
+      Printf.bprintf s.decls "  { %s = 1;\n" fa;
+      let l = line s in
+      Printf.bprintf s.decls "    %s = (fun (x0 : int) -> %sx0) }\n" fb (use []);
+      fin ();
+      let v = fresh s "fv" in
+      Printf.bprintf s.decls "let %s = (%s %s).%s\n" v (qual f) args (qual fb);
+      one v l (call ^ "." ^ qual fb)
+  | 2 ->
+      (* Two closures in a tuple: each has its own block. *)
+      let l1 = line s in
+      Printf.bprintf s.decls "  ((fun (x0 : int) -> %sx0),\n" (use []);
+      let l2 = line s in
+      Printf.bprintf s.decls "   (fun (x0 : string) -> %sx0))\n" (use []);
+      fin ();
+      let v = fresh s "fv" and v2 = fresh s "fv" in
+      Printf.bprintf s.decls "let (%s, %s) = %s %s\n" v v2 (qual f) args;
+      one v l1 ("fst " ^ call);
+      one v2 l2 ("snd " ^ call)
+  | _ ->
+      (* Labelled and optional arguments, without defaults. *)
+      let ps =
+        pick
+          [
+            ("~(x0 : int)", "x0");
+            ("?(o : int option)", "0");
+            ("~(x0 : int) ?(o : int option)", "x0");
+            ("?(o : int option) ~(x0 : int)", "x0");
+          ]
+      in
+      let l = line s in
+      Printf.bprintf s.decls "  fun %s (x1 : int) -> %s%s + x1\n" (fst ps)
+        (use (if contains (fst ps) "?" then [ "o" ] else []))
+        (snd ps);
+      fin ();
+      let v = fresh s "fv" in
+      Printf.bprintf s.decls "let %s = %s %s\n" v (qual f) args;
+      one v l call
+
 let gen_lazy s =
   let v = fresh s "lz" in
   let x = field_sample s in
@@ -1123,38 +1251,119 @@ let gen_lazy s =
         "`A";
         "[1]";
         "'c'";
+        (* A lazy of a lazy, of a float identifier, and of a lazy identifier. *)
+        "(lazy (Sys.opaque_identity 5))";
+        "(lazy 6)";
+        "fid";
+        "zid";
+        "(Sys.opaque_identity 2.5 +. 1.)";
       ]
   in
-  if e = id then Printf.bprintf s.decls "let %s : %s = %s\n" id x.ty x.expr;
+  let ident =
+    if e = id then (
+      Printf.bprintf s.decls "let %s : %s = %s\n" id x.ty x.expr;
+      Some id)
+    else if e = "fid" then (
+      let x = float_sample () in
+      Printf.bprintf s.decls "let %s : %s = Sys.opaque_identity %s\n" id x.ty
+        x.expr;
+      Some id)
+    else if e = "zid" then (
+      Printf.bprintf s.decls "let %s = lazy (%s)\n" id
+        (pick [ "Sys.opaque_identity 7"; "7"; "String.make 1 'q'" ]);
+      Some id)
+    else None
+  in
   let l = line s in
-  Printf.bprintf s.decls "let %s = lazy %s\n" v e;
-  s.vchecks <-
-    Vlazy { v; line = l; ident = (if e = id then Some id else None) }
-    :: s.vchecks
+  Printf.bprintf s.decls "let %s = lazy %s\n" v (if ident = None then e else id);
+  (* Forced before the check: lense predicts the block that forcing makes. *)
+  let forced = chance 0.3 in
+  if forced then Printf.bprintf s.decls "let () = ignore (Lazy.force %s)\n" v;
+  s.vchecks <- Vlazy { v; line = l; ident; forced } :: s.vchecks
 
+(* A class at the top, which may be virtual; an immediate object in a
+   function; or a class in a function, under [let module]. Its methods,
+   initializer and private methods use some of the parameters, class-level
+   lets and local variables, and may call each other through self. *)
 let gen_class s =
   let c = fresh s "cl" in
+  let form =
+    match rand 10 with 0 | 1 | 2 -> `Object | 3 | 4 -> `Local | _ -> `Top
+  in
+  let virt = form = `Top && chance 0.15 in
+  let typed ps =
+    String.concat " " (List.map (fun (p, x) -> "(" ^ p ^ " : " ^ x.ty ^ ")") ps)
+  in
   let params = List.init (rand 3) (fun _ -> (fresh s "p", field_sample s)) in
-  let used = List.filter (fun _ -> chance 0.6) params in
+  (* Class parameters of a class in a function. *)
+  let kparams =
+    if form = `Local then
+      List.init (rand 3) (fun _ -> (fresh s "p", field_sample s))
+    else []
+  in
+  let class_params = if form = `Top then params else kparams in
+  (* Class-level lets, perhaps of a parameter. *)
+  let lets =
+    if form <> `Object && chance 0.35 then
+      List.init
+        (1 + rand 2)
+        (fun _ ->
+          let k = fresh s "k" in
+          match class_params with
+          | (p, x) :: _ when chance 0.4 -> (k, x, "Sys.opaque_identity " ^ p)
+          | _ ->
+              let x = field_sample s in
+              (k, x, x.expr))
+    else []
+  in
+  (* Local variables of the function: a value and a ref. *)
+  let locals =
+    if form <> `Top && chance 0.4 then [ (fresh s "j", field_sample s) ] else []
+  in
+  let refv =
+    if form <> `Top && chance 0.25 then Some (fresh s "rf", field_sample s)
+    else None
+  in
+  let names =
+    List.map fst params @ List.map fst kparams
+    @ List.map (fun (k, _, _) -> k) lets
+    @ List.map fst locals
+    @ Option.to_list
+        (Option.map
+           (fun (r, x) ->
+             if chance 0.5 then "!" ^ r else "(" ^ r ^ " := " ^ x.expr ^ ")")
+           refv)
+  in
+  let some p = List.filter (fun _ -> chance p) names in
+  let opaque = function
+    | [] -> "0"
+    | l -> "Sys.opaque_identity (" ^ String.concat ", " l ^ ")"
+  in
   let vals = List.init (rand 4) (fun _ -> (fresh s "a", field_sample s)) in
+  let vals = List.map (fun (a, x) -> (a, chance 0.3, x)) vals in
   let parent =
     if s.classes <> [] && chance 0.6 then Some (pick s.classes) else None
   in
-  let vals = List.map (fun (a, x) -> (a, chance 0.3, x)) vals in
   let val_src (a, m, x) =
-    Printf.sprintf "val %s%s : %s = %s"
-      (if m then "mutable " else "")
-      a x.ty x.expr
+    (* A val may start from a class parameter of its type. *)
+    let e =
+      match List.find_opt (fun (_, y) -> y.ty = x.ty) class_params with
+      | Some (p, _) when chance 0.3 -> p
+      | _ -> x.expr
+    in
+    Printf.sprintf "val %s%s : %s = %s" (if m then "mutable " else "") a x.ty e
   in
   let fields = List.map val_src vals in
   let fields =
     match parent with
     | None -> fields
-    | Some (pc, pps, pvals) ->
+    | Some (pc, pps, pvals, pvirt) ->
         let inh =
           "inherit " ^ pc
           ^ String.concat "" (List.map (fun x -> " " ^ x.expr) pps)
         in
+        (* The same class twice: its slots are allocated again. *)
+        let inh = if chance 0.2 then [ inh; inh ] else [ inh ] in
         let extra =
           (* Redefine an inherited val: with !, or as a new val of the same name. *)
           match pvals with
@@ -1167,45 +1376,104 @@ let gen_class s =
               ]
           | _ -> []
         in
+        let defs = List.map (fun v -> "method " ^ v ^ " = 1") pvirt in
         let i = rand (List.length fields + 1) in
         List.filteri (fun j _ -> j < i) fields
-        @ [ inh ] @ extra
+        @ inh @ extra
         @ List.filteri (fun j _ -> j >= i) fields
+        @ defs
   in
+  let self_ = chance 0.4 in
   let meth =
-    if used = [] then "method m" ^ c ^ " = 0"
-    else
-      "method m" ^ c ^ " = Sys.opaque_identity ("
-      ^ String.concat ", " (List.map fst used)
-      ^ ")"
+    "method m" ^ c ^ " = "
+    ^
+    if chance 0.2 then "let z = 1 in " ^ opaque ("z" :: some 0.6)
+    else opaque (some 0.6)
+  in
+  let priv =
+    if chance 0.3 then
+      ("method private q" ^ c ^ " = " ^ opaque (some 0.4))
+      :: (if self_ then [ "method t" ^ c ^ " = self#q" ^ c ] else [])
+    else []
+  in
+  let selfm =
+    if self_ then [ "method s" ^ c ^ " = Sys.opaque_identity self#m" ^ c ]
+    else []
+  in
+  let init =
+    if chance 0.35 then
+      [
+        "initializer ignore ("
+        ^ opaque
+            ((if self_ && chance 0.5 then [ "self#m" ^ c ] else []) @ some 0.5)
+        ^ ")";
+      ]
+    else []
+  in
+  let virts = if virt then [ "v" ^ c ] else [] in
+  let body =
+    String.concat " "
+      (fields @ [ meth ] @ priv @ selfm @ init
+      @ List.map (fun v -> "method virtual " ^ v ^ " : int") virts)
+  in
+  let obj = if self_ then "object (self)" else "object" in
+  let lets_src ind =
+    String.concat ""
+      (List.map
+         (fun (k, x, e) ->
+           Printf.sprintf "%slet %s : %s = %s in\n" ind k x.ty e)
+         lets)
   in
   let o = fresh s "ob" in
-  let args = String.concat "" (List.map (fun (_, x) -> " " ^ x.expr) params) in
-  if chance 0.7 then (
-    let l = line s in
-    Printf.bprintf s.decls "class %s %s = object %s %s end\n" c
-      (String.concat " "
-         (List.map (fun (p, x) -> "(" ^ p ^ " : " ^ x.ty ^ ")") params))
-      (String.concat " " fields) meth;
-    Printf.bprintf s.decls "let %s = new %s%s\n" o c args;
-    s.classes <- (c, List.map snd params, vals) :: s.classes;
-    s.vchecks <- Vobj { v = o; line = l } :: s.vchecks)
-  else (
-    (* An immediate object in a function: its parameters are local variables. *)
-    Printf.bprintf s.decls "let %s %s =\n" c
-      (if params = [] then "()"
-       else
-         String.concat " "
-           (List.map (fun (p, x) -> "(" ^ p ^ " : " ^ x.ty ^ ")") params));
-    let l = line s in
-    Printf.bprintf s.decls "  object %s %s end\n" (String.concat " " fields)
-      meth;
-    Printf.bprintf s.decls "let %s = %s%s\n" o c
-      (if params = [] then " ()" else args);
-    s.vchecks <- Vobj { v = o; line = l } :: s.vchecks)
+  let args ps = String.concat "" (List.map (fun (_, x) -> " " ^ x.expr) ps) in
+  match form with
+  | `Top ->
+      let l = line s in
+      Printf.bprintf s.decls "class %s%s %s =\n%s  %s %s end\n"
+        (if virt then "virtual " else "")
+        c (typed params) (lets_src "  ") obj body;
+      s.classes <- (c, List.map snd params, vals, virts) :: s.classes;
+      if not virt then (
+        Printf.bprintf s.decls "let %s = new %s%s\n" o c (args params);
+        s.vchecks <- Vobj { v = o; line = l } :: s.vchecks)
+  | (`Object | `Local) as form ->
+      (* Its methods reach the function's variables through the environment slot. *)
+      Printf.bprintf s.decls "let %s %s =\n" c
+        (if params = [] then "()" else typed params);
+      List.iter
+        (fun (j, x) ->
+          Printf.bprintf s.decls "  let %s : %s = Sys.opaque_identity %s in\n" j
+            x.ty x.expr)
+        locals;
+      Option.iter
+        (fun (r, x) ->
+          Printf.bprintf s.decls
+            "  let %s : (%s) ref = ref (Sys.opaque_identity %s) in\n" r x.ty
+            x.expr)
+        refv;
+      let l =
+        if form = `Object then (
+          let l = line s in
+          Printf.bprintf s.decls "  %s %s end\n" obj body;
+          l)
+        else (
+          Printf.bprintf s.decls "  let module Q = struct\n";
+          let l = line s in
+          Printf.bprintf s.decls "    class k %s =\n%s    %s %s end\n"
+            (typed kparams) (lets_src "    ") obj body;
+          Printf.bprintf s.decls "  end in\n  new Q.k%s\n" (args kparams);
+          l)
+      in
+      Printf.bprintf s.decls "let %s = %s%s\n" o c
+        (if params = [] then " ()" else args params);
+      s.vchecks <- Vobj { v = o; line = l } :: s.vchecks
 
 let gen_values s =
-  match rand 3 with 0 -> gen_closure s | 1 -> gen_lazy s | _ -> gen_class s
+  match rand 4 with
+  | 0 -> gen_closure s
+  | 1 -> gen_closure_more s
+  | 2 -> gen_lazy s
+  | _ -> gen_class s
 
 let program () =
   let s =
@@ -1710,8 +1978,13 @@ external v128 : string -> int -> int64x2# = "%caml_string_getu128#"
                  %s    () end;\n"
                 (closure_checks ~native:true ~again values)
                 (closure_checks ~native:false ~again values)
-          | Vlazy { v; line; ident } -> (
+          | Vlazy { v; line; ident; forced } -> (
               let r = "(Obj.repr " ^ v ^ ")" in
+              let held = "(Obj.field " ^ r ^ " 0)" in
+              let word what r w =
+                let w = word_check what r w in
+                if w <> "" then Printf.bprintf b "  %s\n" w
+              in
               match
                 List.find_opt
                   (fun (z : M.lazy_value) -> z.zline = line)
@@ -1723,11 +1996,29 @@ external v128 : string -> int -> int64x2# = "%caml_string_getu128#"
                   match ident with
                   | Some id ->
                       Printf.bprintf b "  same %S %s (Obj.repr %s);\n" v r id
-                  | None ->
-                      let w = word_check v r zword in
-                      if w <> "" then Printf.bprintf b "  %s\n" w)
-              | Some { zkind = Forward; _ } ->
-                  Printf.bprintf b "  block %S %s %d 1;\n" v r M.forward_tag
+                  | None -> word v r zword)
+              | Some { zkind = Forward; zword; _ } ->
+                  Printf.bprintf b
+                    "  block %S %s %d 1;\n  if is_block %s %d 1 then begin\n" v
+                    r M.forward_tag r M.forward_tag;
+                  (match ident with
+                  | Some id ->
+                      Printf.bprintf b "  same %S %s (Obj.repr %s);\n"
+                        (v ^ " held") held id
+                  | None -> ());
+                  word (v ^ " held") held zword;
+                  Printf.bprintf b "  end;\n"
+              | Some { zkind = Suspended; zword; _ } when forced ->
+                  (* Forcing makes a Forward block, which the GC may then
+                     short-cut to the value itself. *)
+                  Printf.bprintf b
+                    "  (let x = Obj.repr (Lazy.force %s) in\n\
+                    \   if %s != x then begin\n\
+                    \     block %S %s %d 1;\n\
+                    \     if is_block %s %d 1 then same %S %s x end;\n"
+                    v r v r M.forward_tag r M.forward_tag (v ^ " held") held;
+                  word (v ^ " result") "x" zword;
+                  Printf.bprintf b "  );\n"
               | Some { zkind = Suspended; _ } ->
                   Printf.bprintf b "  block %S %s %d 1;\n" v r M.lazy_tag)
           | Vobj { v; line } -> (
