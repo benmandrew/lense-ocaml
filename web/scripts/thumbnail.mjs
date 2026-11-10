@@ -1,15 +1,15 @@
-// Renders public/og.png, the 1800x945 link-preview image, from the page itself.
+// Renders public/og.png, the README screenshot and link-preview image, from the
+// page itself.
 //
 //   npm run thumbnail
 //
 // Needs the js_of_ocaml build (see vite.config.ts) and Google Chrome; set
 // LENSE_CHROME to the path of another Chromium-based browser.
 //
-// A shrunk screenshot is unreadable, so the page is rendered in an 800x420
-// window at 2.25x. The report lines are wider than lense's byte map, so the
-// window is wider than lense's 600x315. The example is one type, so its card
-// and the diagrams of its blocks fit the height. The top bar, gutters and
-// colour key are hidden to leave the source next to the representations.
+// The page is rendered at 2.25x, then the window is cropped to the source and
+// the card: the source column is as wide as its longest line, and the window
+// as tall as the taller of the two. The top bar, gutters and colour key are
+// hidden to leave the source next to the representations.
 import { deflateRawSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
@@ -36,15 +36,13 @@ const css = `
   html, body { height: 100% !important; }
   body { display: flex !important; flex-direction: column !important; }
   .bar { display: none !important; }
-  main { flex: 1 !important; grid-template-columns: 280px minmax(0, 1fr) !important; }
+  main { flex: 1 !important; grid-template-columns: var(--src, 280px) max-content !important; }
   #editor { height: auto !important; border-bottom: none !important; border-right: 1px solid var(--border) !important; }
   .cm-editor .cm-gutters .cm-foldGutter, .cm-editor .cm-gutters .cm-gutter-lint { display: none !important; }
   .cm-editor .cm-lineNumbers .cm-gutterElement { padding: 0 8px 0 6px !important; }
   .cm-activeLine, .cm-activeLineGutter { background: transparent !important; }
-  #output { overflow: hidden !important; padding: 12px !important;
-            display: flex !important; flex-direction: column !important; justify-content: center !important;
-            gap: 12px !important; }
-  .card { margin: 0 !important; padding: 12px 14px !important; }
+  #output { overflow: hidden !important; padding: 12px !important; }
+  .card { margin: 0 !important; padding: 12px 14px !important; width: max-content !important; }
   .legend { display: none !important; }
 `;
 
@@ -54,7 +52,7 @@ const browser = await chromium.launch(
   process.env.LENSE_CHROME ? { executablePath: process.env.LENSE_CHROME } : { channel: 'chrome' });
 try {
   const page = await browser.newPage({
-    viewport: { width: 800, height: 420 }, deviceScaleFactor: 2.25, colorScheme: 'dark',
+    viewport: { width: 1600, height: 900 }, deviceScaleFactor: 2.25, colorScheme: 'dark',
   });
   page.on('pageerror', (e) => console.error(e.message));
   await page.goto(`${server.resolvedUrls.local[0]}#${hash}`);
@@ -62,6 +60,28 @@ try {
   await page.addStyleTag({ content: css });
   await page.evaluate(() => document.fonts.ready);
   // Let CodeMirror remeasure after the layout change.
+  await page.waitForTimeout(400);
+  // Narrow the source column to its longest line, then crop the window to it
+  // and the card.
+  await page.evaluate(() => {
+    const range = document.createRange();
+    let right = 0;
+    for (const line of document.querySelectorAll('.cm-line')) {
+      range.selectNodeContents(line);
+      right = Math.max(right, range.getBoundingClientRect().right);
+    }
+    document.documentElement.style.setProperty('--src', `${Math.ceil(right) + 16}px`);
+  });
+  await page.waitForTimeout(400);
+  const size = await page.evaluate(() => {
+    const card = document.querySelector('#output .card').getBoundingClientRect();
+    const lines = [...document.querySelectorAll('.cm-line')].at(-1).getBoundingClientRect();
+    return {
+      width: Math.ceil(card.right) + 12,
+      height: Math.ceil(Math.max(card.bottom, lines.bottom)) + 12,
+    };
+  });
+  await page.setViewportSize(size);
   await page.waitForTimeout(400);
   await page.screenshot({ path: out });
   console.log(out);
