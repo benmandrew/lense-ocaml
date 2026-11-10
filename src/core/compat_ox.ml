@@ -377,6 +377,11 @@ let reset_envaux () = Envaux.reset_cache ~preserve_persistent_env:false
 let cmt_modname (cmt : Cmt_format.cmt_infos) =
   Compilation_unit.name_as_string cmt.cmt_modname
 
+(* Forget the names the type printer has given out, which it keeps from
+   one unit to the next: a type of the same name in an earlier unit made
+   it print rr7 as rr7/2. *)
+let reset_printing () = Printtyp.reset ()
+
 (* The digest a .cmt records of its source: MD5 in OxCaml. *)
 let source_digest s = Digest.string s
 let read_cmi_signature file = (Cmi_format.read_cmi file).cmi_sign

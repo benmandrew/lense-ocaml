@@ -152,6 +152,10 @@ let type_structure env ast =
 let reset_envaux () = Envaux.reset_cache ()
 let cmt_modname (cmt : Cmt_format.cmt_infos) = cmt.cmt_modname
 
+(* Forget the names the type printer has given out, which it keeps from
+   one unit to the next. *)
+let reset_printing () = Out_type.reset ()
+
 (* The digest a .cmt records of its source: BLAKE128 from OCaml 5.3 on. *)
 let source_digest s = Digest.BLAKE128.string s
 

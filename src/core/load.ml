@@ -39,6 +39,7 @@ let unit_name_of file =
 
 (* Type-check source text. [intf] chooses .mli syntax. *)
 let typecheck ~include_dirs ~file ~intf src =
+  Compat.reset_printing ();
   Analyze.rebuild_env := Fun.id;
   Clflags.include_dirs := include_dirs @ Option.to_list !stdlib_dir;
   Clflags.no_std_include := !stdlib_dir <> None;
@@ -68,6 +69,7 @@ let typecheck ~include_dirs ~file ~intf src =
 (* A typed tree from a build. Its environments hold only summaries, so they
    are rebuilt from the .cmi files on the load path recorded with it. *)
 let read_cmt ~include_dirs file =
+  Compat.reset_printing ();
   let cmt = try Cmt_format.read_cmt file with exn -> raise (report exn) in
   (* The recorded build directory can be rewritten by BUILD_PATH_PREFIX_MAP,
      as dune does. Then look for it among the .cmt file's ancestors. *)

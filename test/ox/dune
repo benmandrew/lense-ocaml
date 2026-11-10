@@ -8,6 +8,10 @@
  (deps (package lense-ocaml) mixed.ml))
 
 (cram
+ (applies_to units)
+ (deps (package lense-ocaml)))
+
+(cram
  (applies_to mixed_oracle)
  (runtest_alias false)
  (alias runtest-ox)
