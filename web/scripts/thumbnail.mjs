@@ -7,9 +7,9 @@
 //
 // A shrunk screenshot is unreadable, so the page is rendered in an 800x420
 // window at 2.25x. The report lines are wider than lense's byte map, so the
-// window is wider than lense's 600x315, and the example has two types to fill
-// its height. The top bar, gutters and colour key are hidden to leave the
-// source next to the representations.
+// window is wider than lense's 600x315. The example is one type, so its card
+// and the diagrams of its blocks fit the height. The top bar, gutters and
+// colour key are hidden to leave the source next to the representations.
 import { deflateRawSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
@@ -18,19 +18,14 @@ import { createServer } from 'vite';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const out = fileURLToPath(new URL('../public/og.png', import.meta.url));
 
-const code = `type id =
-  | Id of int [@@unboxed]
-
-type shape =
+const code = `type shape =
   | Empty
   | Circle of float
-  | Rect of float * float
-  | Label of string * shape
-  | Point`;
+  | Rect of float * float`;
 
 // The page state, encoded as main.ts encodes shared links.
 const state = {
-  code, compiler: '5.5', intf: false, values: false, source: false, modules: false, labels: false,
+  code, compiler: '5.5', intf: false, values: false, labels: false,
 };
 const hash = deflateRawSync(JSON.stringify(state)).toString('base64url');
 
