@@ -238,8 +238,10 @@ pre.report {
    5.9:1 or more. Rows are 24px with 2px gaps, as there. */
 
 /* overflow-x: auto also clips vertically, so the padding leaves room for the
-   1.5px highlight ring on edge cells; the negative margin cancels it. */
-.card .diagram { margin: 8px -2px 10px; padding: 2px; overflow-x: auto; font: 11px var(--mono); }
+   1.5px highlight ring on edge cells; the negative margin cancels it.
+   Both kinds of diagram draw a word --word wide, after a 3em offset column
+   and an 8px gap, so a word has the same size in every diagram. */
+.card .diagram { --word: 30em; margin: 8px -2px 10px; padding: 2px; overflow-x: auto; font: 11px var(--mono); }
 .diagram .title { color: var(--muted); line-height: 18px; white-space: nowrap; }
 .diagram .off { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; line-height: 24px; }
 
@@ -252,6 +254,7 @@ pre.report {
   border-radius: 4px;
   color: var(--on-fill);
   line-height: 24px;
+  text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -270,20 +273,24 @@ pre.report {
 }
 
 /* A byte map: offsets on the left, a column per byte. */
-.bytemap { display: flex; flex-direction: column; gap: 2px; max-width: 560px; }
+.bytemap { display: flex; flex-direction: column; gap: 2px; width: calc(3em + 8px + var(--word)); max-width: 100%; }
 .bytemap .row { display: grid; grid-template-columns: 3em minmax(0, 1fr); column-gap: 8px; }
 .bytemap .marks, .bytemap .cells { display: grid; grid-template-columns: repeat(var(--bytes), minmax(0, 1fr)); column-gap: 2px; }
 .bytemap .marks span { padding-left: 3px; color: var(--muted); }
-.bytemap .cells .seg { text-align: center; }
 
-/* A block as a column of words, with arrows in and out. */
+/* A block as a column of words, with arrows in and out. A word grows past
+   --word only for a label that does not fit, and shrinks as the byte map
+   does in a narrow card; the title does not widen it. */
 .column {
-  display: inline-grid;
-  grid-template-columns: max-content 28px 2.5em minmax(12em, max-content) 28px max-content;
+  --fit: minmax(min(var(--word), 100% - 3em - 8px), max-content);
+  display: grid;
+  justify-content: start;
+  grid-template-columns: max-content 28px 3em var(--fit) 28px max-content;
   align-items: center;
-  gap: 2px 6px;
+  gap: 2px 8px;
 }
-.column.no-in { grid-template-columns: 2.5em minmax(12em, max-content) 28px max-content; }
+.column.no-in { grid-template-columns: 3em var(--fit) 28px max-content; }
+.column .title { width: 0; }
 .column .incoming, .column .target {
   padding: 0 8px;
   border: 1px solid var(--border);
