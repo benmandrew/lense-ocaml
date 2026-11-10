@@ -4,8 +4,9 @@ Prints how OCaml types are represented at runtime (immediates, block tags, unbox
 
 ## Build and test
 
+Build in the Nix dev shell (`.envrc` runs `use flake`), which supplies OCaml 5.5.1, dune, js_of_ocaml, ocamlformat and node. Never run `opam env` for the default switch: its compiler clashes with the dev shell's `OCAMLPATH` ("inconsistent assumptions over interface Stdlib"), and the dev shell's dune failed on a `_build` that opam's newer dune wrote. After a mix-up, `dune clean`.
+
 ```
-eval $(opam env --switch=default --set-switch)   # OCaml 5.5 with dune
 dune build
 dune test            # cram goldens (incl. test/ox/mixed.t), Stage 0 checks, 20 fuzz rounds
 dune promote         # accept golden changes, after reading the diff
