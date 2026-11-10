@@ -4,7 +4,9 @@
    [line, ranges] pairs: the source ranges of each line of text, counting
    lines from 0. diagrams is Diagram.json's string. The option "compiler" is "5.5" (the default) or "ox"; each has
    its stdlib .cmi files embedded under /static. The option "backend" is "native" (the default),
-   "bytecode" or "both": whose closures "values" shows. *)
+   "bytecode" or "both": whose closures "values" shows. Two options are for
+   scripts/jsdiff.sh: "file" names the input in place of example.ml, and
+   "json" adds json, the string lense-ocaml --json prints. *)
 
 open Js_of_ocaml
 module M = Lense_model.Model
@@ -45,7 +47,11 @@ let unit_ox ~file ~intf ~values src =
 let analyze code opts =
   let src = Js.to_string code in
   let intf = flag opts "intf" in
-  let file = if intf then "example.mli" else "example.ml" in
+  let file =
+    match str opts "file" with
+    | "" -> if intf then "example.mli" else "example.ml"
+    | f -> f
+  in
   let values = flag opts "values" in
   let only =
     match str opts "backend" with
@@ -57,18 +63,21 @@ let analyze code opts =
     try
       Result.map
         (fun u ->
+          let json =
+            if flag opts "json" then Lense_model.Json.render [ u ] else ""
+          in
           let topts : Lense_model.Text.options =
             { source = false; only = [] }
           in
           let text, links = Lense_model.Text.render_linked topts [ u ] in
-          (text, links, Lense_model.Diagram.(json (compunit topts u))))
+          (text, links, Lense_model.Diagram.(json (compunit topts u)), json))
         (Result.map only
            ((if str opts "compiler" = "ox" then unit_ox else unit_55)
               ~file ~intf ~values src))
     with exn -> Error ("lense stopped: " ^ Printexc.to_string exn)
   in
   match result with
-  | Ok (text, links, diagrams) ->
+  | Ok (text, links, diagrams, json) ->
       let links =
         let open Lense_model.Json in
         let b = Buffer.create 1024 in
@@ -85,6 +94,7 @@ let analyze code opts =
           ("text", Js.Unsafe.inject (Js.string text));
           ("links", Js.Unsafe.inject (Js.string links));
           ("diagrams", Js.Unsafe.inject (Js.string diagrams));
+          ("json", Js.Unsafe.inject (Js.string json));
         |]
   | Error msg -> Js.Unsafe.obj [| ("error", Js.Unsafe.inject (Js.string msg)) |]
 

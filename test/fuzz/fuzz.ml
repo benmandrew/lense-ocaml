@@ -4,7 +4,7 @@
    The ground truth is the running program, so no second compiler is needed.
    Each round also reads the program back from a .cmt (cmt_diff.ml).
 
-   fuzz.exe [-seed N] [-rounds N] [-keep DIR] [-no-cmt]
+   fuzz.exe [-seed N] [-rounds N] [-keep DIR] [-no-cmt] [-gen DIR]
    The compilers come from LENSE_OCAMLOPT and LENSE_OCAMLC, or PATH. *)
 
 module M = Lense_model.Model
@@ -2485,12 +2485,16 @@ let run_out cmd out =
 
 let () =
   let seed = ref (int_of_float (Unix.gettimeofday () *. 1000.) land 0xffffff) in
-  let rounds = ref 30 and keep = ref "" and cmt = ref true in
+  let rounds = ref 30 and keep = ref "" and cmt = ref true and gen = ref "" in
   Arg.parse
     [
       ("-seed", Arg.Set_int seed, "N First seed");
       ("-rounds", Arg.Set_int rounds, "N Programs to try");
       ("-keep", Arg.Set_string keep, "DIR Keep the programs here");
+      ( "-gen",
+        Arg.Set_string gen,
+        "DIR Only write each program to DIR, unchecked, for scripts/jsdiff.sh"
+      );
       ( "-no-cmt",
         Arg.Clear cmt,
         " Do not compare the model read from a .cmt with the source's" );
@@ -2499,7 +2503,7 @@ let () =
         "DIR The OxCaml stdlib .cmi files" );
     ]
     (fun _ -> ())
-    "fuzz.exe [-seed N] [-rounds N] [-keep DIR] [-no-cmt]";
+    "fuzz.exe [-seed N] [-rounds N] [-keep DIR] [-no-cmt] [-gen DIR]";
   let ocamlopt =
     Option.value
       (Sys.getenv_opt "LENSE_OCAMLOPT")
@@ -2510,6 +2514,16 @@ let () =
       (Sys.getenv_opt "LENSE_OCAMLC")
       ~default:"ocamlfind ocamlc -package unix"
   in
+  if !gen <> "" then (
+    ignore (Sys.command ("mkdir -p " ^ Filename.quote !gen));
+    for i = 0 to !rounds - 1 do
+      st := Random.State.make [| !seed + i |];
+      let src, _ = program () in
+      Out_channel.with_open_bin
+        (Filename.concat !gen (Printf.sprintf "prog%d.ml" (!seed + i)))
+        (fun oc -> output_string oc src)
+    done;
+    exit 0);
   let ocamlopt = if run "ocamlfind -version" then ocamlopt else "ocamlopt" in
   let ocamlc = if run "ocamlfind -version" then ocamlc else "ocamlc" in
   let dir =
