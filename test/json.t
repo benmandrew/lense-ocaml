@@ -1,4 +1,4 @@
-  $ for f in cases/*.ml; do echo "### $f"; lense-ocaml --json $f; done
+  $ for f in cases/*.ml cases/*.mli; do echo "### $f"; lense-ocaml --json $f; done
   ### cases/exceptions.ml
   {
     "word_size": 64,
@@ -228,113 +228,33 @@
             "range": {"line": 7, "column": 15, "end_line": 7, "end_column": 26}
           },
           {
-            "name": "X3",
+            "name": "Ask",
             "params": "",
             "keyword": "extension",
-            "line": 7,
-            "kind": "extension",
-            "case": {
-              "name": "X3",
-              "shape": {
-                "kind": "block",
-                "tag": 0,
-                "size": 2,
-                "fields": [
-                  {
-                    "kind": "slot",
-                    "constructor": "X3",
-                    "type": "extension slot",
-                    "mutable": false,
-                    "word": {
-                      "kind": "pointer",
-                      "tag": 248,
-                      "what": "extension slot"
-                    },
-                    "range": null
-                  },
-                  {
-                    "kind": "arg",
-                    "type": "float",
-                    "mutable": false,
-                    "word": {
-                      "kind": "pointer",
-                      "tag": 253,
-                      "what": "boxed float"
-                    },
-                    "range": {"line": 7, "column": 35, "end_line": 7, "end_column": 40}
-                  }
-                ]
-              },
-              "notes": [],
-              "range": {"line": 7, "column": 27, "end_line": 7, "end_column": 40}
-            },
-            "notes": [],
-            "range": {"line": 7, "column": 27, "end_line": 7, "end_column": 40}
-          },
-          {
-            "name": "X4",
-            "params": "",
-            "keyword": "extension",
-            "line": 8,
-            "kind": "extension",
-            "case": {
-              "name": "X4",
-              "shape": {
-                "kind": "block",
-                "tag": 0,
-                "size": 2,
-                "fields": [
-                  {
-                    "kind": "slot",
-                    "constructor": "X4",
-                    "type": "extension slot",
-                    "mutable": false,
-                    "word": {
-                      "kind": "pointer",
-                      "tag": 248,
-                      "what": "extension slot"
-                    },
-                    "range": null
-                  },
-                  {
-                    "kind": "label",
-                    "name": "r",
-                    "type": "float",
-                    "mutable": false,
-                    "word": {
-                      "kind": "pointer",
-                      "tag": 253,
-                      "what": "boxed float"
-                    },
-                    "range": {"line": 8, "column": 20, "end_line": 8, "end_column": 29}
-                  }
-                ]
-              },
-              "notes": [
-                "inline record: all fields are float, but inline records are never stored flat"
-              ],
-              "range": {"line": 8, "column": 12, "end_line": 8, "end_column": 31}
-            },
-            "notes": [],
-            "range": {"line": 8, "column": 12, "end_line": 8, "end_column": 31}
-          },
-          {
-            "name": "res",
-            "params": "'a",
-            "keyword": "type",
             "line": 10,
-            "kind": "open",
-            "notes": [],
-            "range": {"line": 10, "column": 0, "end_line": 10, "end_column": 16}
-          },
-          {
-            "name": "Ok_",
-            "params": "",
-            "keyword": "extension",
-            "line": 11,
             "kind": "extension",
             "case": {
-              "name": "Ok_",
+              "name": "Ask",
+              "shape": {
+                "kind": "block",
+                "tag": 248,
+                "size": 2,
+                "extension_slot": true
+              },
+              "notes": [],
+              "range": {"line": 10, "column": 19, "end_line": 10, "end_column": 37}
+            },
+            "notes": [],
+            "range": {"line": 10, "column": 19, "end_line": 10, "end_column": 37}
+          },
+          {
+            "name": "Tell",
+            "params": "",
+            "keyword": "extension",
+            "line": 10,
+            "kind": "extension",
+            "case": {
+              "name": "Tell",
               "shape": {
                 "kind": "block",
                 "tag": 0,
@@ -342,7 +262,7 @@
                 "fields": [
                   {
                     "kind": "slot",
-                    "constructor": "Ok_",
+                    "constructor": "Tell",
                     "type": "extension slot",
                     "mutable": false,
                     "word": {
@@ -354,21 +274,22 @@
                   },
                   {
                     "kind": "arg",
-                    "type": "'a",
+                    "type": "string",
                     "mutable": false,
                     "word": {
-                      "kind": "any",
-                      "why": "type variable 'a"
+                      "kind": "pointer",
+                      "tag": 252,
+                      "what": "string"
                     },
-                    "range": {"line": 11, "column": 22, "end_line": 11, "end_column": 24}
+                    "range": {"line": 10, "column": 47, "end_line": 10, "end_column": 53}
                   }
                 ]
               },
               "notes": [],
-              "range": {"line": 11, "column": 15, "end_line": 11, "end_column": 24}
+              "range": {"line": 10, "column": 38, "end_line": 10, "end_column": 70}
             },
             "notes": [],
-            "range": {"line": 11, "column": 15, "end_line": 11, "end_column": 24}
+            "range": {"line": 10, "column": 38, "end_line": 10, "end_column": 70}
           }
         ],
         "packages": [],
@@ -428,7 +349,7 @@
             "name": "Ints.Unordered",
             "params": "",
             "keyword": "exception",
-            "line": 13,
+            "line": 15,
             "kind": "extension",
             "case": {
               "name": "Unordered",
@@ -439,23 +360,23 @@
                 "extension_slot": true
               },
               "notes": [],
-              "range": {"line": 13, "column": 2, "end_line": 13, "end_column": 21}
+              "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 21}
             },
             "notes": [],
-            "range": {"line": 13, "column": 2, "end_line": 13, "end_column": 21}
+            "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 21}
           },
           {
             "name": "Ints.t",
             "params": "",
             "keyword": "type",
-            "line": 14,
+            "line": 16,
             "kind": "alias",
             "word": {
               "kind": "immediate",
               "why": "int"
             },
             "notes": [],
-            "range": {"line": 14, "column": 2, "end_line": 14, "end_column": 14}
+            "range": {"line": 16, "column": 2, "end_line": 16, "end_column": 14}
           }
         ],
         "packages": [
@@ -517,8 +438,8 @@
           },
           {
             "name": "Shapes.SHAPE",
-            "line": 32,
-            "size": 2,
+            "line": 35,
+            "size": 3,
             "fields": [
               {
                 "index": 0,
@@ -529,10 +450,21 @@
                   "tag": 253,
                   "what": "boxed float"
                 },
-                "range": {"line": 26, "column": 4, "end_line": 26, "end_column": 20}
+                "range": {"line": 28, "column": 4, "end_line": 28, "end_column": 20}
               },
               {
                 "index": 1,
+                "item": "class",
+                "name": "drawing",
+                "word": {
+                  "kind": "pointer",
+                  "tag": 0,
+                  "what": "class"
+                },
+                "range": {"line": 29, "column": 4, "end_line": 29, "end_column": 49}
+              },
+              {
+                "index": 2,
                 "item": "functor",
                 "name": "Scale",
                 "word": {
@@ -540,21 +472,21 @@
                   "tag": 247,
                   "what": "closure"
                 },
-                "range": {"line": 27, "column": 4, "end_line": 27, "end_column": 71}
+                "range": {"line": 30, "column": 4, "end_line": 30, "end_column": 71}
               }
             ],
             "no_field": [],
-            "range": {"line": 25, "column": 2, "end_line": 28, "end_column": 5}
+            "range": {"line": 27, "column": 2, "end_line": 31, "end_column": 5}
           },
           {
             "name": "EMPTY",
-            "line": 39,
+            "line": 43,
             "size": 0,
             "fields": [],
             "no_field": [
               "type t"
             ],
-            "range": {"line": 37, "column": 0, "end_line": 37, "end_column": 34}
+            "range": {"line": 41, "column": 0, "end_line": 41, "end_column": 34}
           }
         ],
         "labels": []
@@ -752,24 +684,74 @@
             "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 55}
           },
           {
-            "name": "sub",
-            "params": "'a",
+            "name": "nested",
+            "params": "",
             "keyword": "type",
             "line": 4,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 0,
+              "size": 2,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "c",
+                  "type": "colour",
+                  "mutable": false,
+                  "word": {
+                    "kind": "immediate",
+                    "why": "constant polymorphic variant"
+                  },
+                  "range": {"line": 4, "column": 16, "end_line": 4, "end_column": 27}
+                },
+                {
+                  "kind": "label",
+                  "name": "e",
+                  "type": "event",
+                  "mutable": false,
+                  "word": {
+                    "kind": "any",
+                    "why": "polymorphic variant"
+                  },
+                  "range": {"line": 4, "column": 28, "end_line": 4, "end_column": 37}
+                }
+              ]
+            },
+            "notes": [],
+            "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 39}
+          },
+          {
+            "name": "one",
+            "params": "",
+            "keyword": "type",
+            "line": 7,
             "kind": "polymorphic_variant",
             "closed": true,
             "cases": [
               {
-                "name": "`A",
+                "name": "`Eric_Cooper",
                 "shape": {
                   "kind": "immediate",
-                  "value": 65
+                  "value": -332323982
                 },
                 "notes": [],
-                "range": null
-              },
+                "range": {"line": 7, "column": 13, "end_line": 7, "end_column": 25}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 7, "column": 0, "end_line": 7, "end_column": 27}
+          },
+          {
+            "name": "other",
+            "params": "",
+            "keyword": "type",
+            "line": 8,
+            "kind": "polymorphic_variant",
+            "closed": true,
+            "cases": [
               {
-                "name": "`B",
+                "name": "`azdwbie",
                 "shape": {
                   "kind": "block",
                   "tag": 0,
@@ -777,7 +759,7 @@
                   "fields": [
                     {
                       "kind": "hash",
-                      "hash": 66,
+                      "hash": -332323982,
                       "type": "int",
                       "mutable": false,
                       "word": {
@@ -799,164 +781,11 @@
                   ]
                 },
                 "notes": [],
-                "range": null
+                "range": {"line": 8, "column": 15, "end_line": 8, "end_column": 30}
               }
             ],
             "notes": [],
-            "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 52}
-          },
-          {
-            "name": "both",
-            "params": "",
-            "keyword": "type",
-            "line": 5,
-            "kind": "polymorphic_variant",
-            "closed": true,
-            "cases": [
-              {
-                "name": "`Click",
-                "shape": {
-                  "kind": "block",
-                  "tag": 0,
-                  "size": 2,
-                  "fields": [
-                    {
-                      "kind": "hash",
-                      "hash": -611587032,
-                      "type": "int",
-                      "mutable": false,
-                      "word": {
-                        "kind": "immediate",
-                        "why": "label hash"
-                      },
-                      "range": null
-                    },
-                    {
-                      "kind": "arg",
-                      "type": "int * int",
-                      "mutable": false,
-                      "word": {
-                        "kind": "pointer",
-                        "tag": 0,
-                        "what": "tuple"
-                      },
-                      "range": null
-                    }
-                  ]
-                },
-                "notes": [],
-                "range": null
-              },
-              {
-                "name": "`Key",
-                "shape": {
-                  "kind": "block",
-                  "tag": 0,
-                  "size": 2,
-                  "fields": [
-                    {
-                      "kind": "hash",
-                      "hash": 3752319,
-                      "type": "int",
-                      "mutable": false,
-                      "word": {
-                        "kind": "immediate",
-                        "why": "label hash"
-                      },
-                      "range": null
-                    },
-                    {
-                      "kind": "arg",
-                      "type": "char",
-                      "mutable": false,
-                      "word": {
-                        "kind": "immediate",
-                        "why": "char"
-                      },
-                      "range": null
-                    }
-                  ]
-                },
-                "notes": [],
-                "range": null
-              },
-              {
-                "name": "`Red",
-                "shape": {
-                  "kind": "immediate",
-                  "value": 4100401
-                },
-                "notes": [],
-                "range": null
-              },
-              {
-                "name": "`Blue",
-                "shape": {
-                  "kind": "immediate",
-                  "value": 737308346
-                },
-                "notes": [],
-                "range": null
-              },
-              {
-                "name": "`Green",
-                "shape": {
-                  "kind": "immediate",
-                  "value": 756711075
-                },
-                "notes": [],
-                "range": null
-              },
-              {
-                "name": "`Quit",
-                "shape": {
-                  "kind": "immediate",
-                  "value": 904096751
-                },
-                "notes": [],
-                "range": null
-              }
-            ],
-            "notes": [],
-            "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 30}
-          },
-          {
-            "name": "nested",
-            "params": "",
-            "keyword": "type",
-            "line": 6,
-            "kind": "record",
-            "shape": {
-              "kind": "block",
-              "tag": 0,
-              "size": 2,
-              "fields": [
-                {
-                  "kind": "label",
-                  "name": "c",
-                  "type": "colour",
-                  "mutable": false,
-                  "word": {
-                    "kind": "immediate",
-                    "why": "constant polymorphic variant"
-                  },
-                  "range": {"line": 6, "column": 16, "end_line": 6, "end_column": 27}
-                },
-                {
-                  "kind": "label",
-                  "name": "e",
-                  "type": "event",
-                  "mutable": false,
-                  "word": {
-                    "kind": "any",
-                    "why": "polymorphic variant"
-                  },
-                  "range": {"line": 6, "column": 28, "end_line": 6, "end_column": 37}
-                }
-              ]
-            },
-            "notes": [],
-            "range": {"line": 6, "column": 0, "end_line": 6, "end_column": 39}
+            "range": {"line": 8, "column": 0, "end_line": 8, "end_column": 32}
           }
         ],
         "packages": [],
@@ -1010,33 +839,51 @@
             "line": 3
           },
           {
-            "label": "A",
-            "hash": 65,
+            "label": "Eric_Cooper",
+            "hash": -332323982,
             "file": "cases/polyvariants.ml",
-            "line": 4
+            "line": 7
           },
           {
-            "label": "B",
-            "hash": 66,
+            "label": "azdwbie",
+            "hash": -332323982,
             "file": "cases/polyvariants.ml",
-            "line": 4
+            "line": 8
           },
           {
             "label": "Foo",
             "hash": 3505894,
             "file": "cases/polyvariants.ml",
-            "line": 8
+            "line": 10
           },
           {
             "label": "Bar",
             "hash": 3303859,
             "file": "cases/polyvariants.ml",
-            "line": 8
+            "line": 10
           }
         ]
       }
     ],
-    "collisions": []
+    "collisions": [
+      {
+        "hash": -332323982,
+        "labels": [
+          {
+            "label": "Eric_Cooper",
+            "hash": -332323982,
+            "file": "cases/polyvariants.ml",
+            "line": 7
+          },
+          {
+            "label": "azdwbie",
+            "hash": -332323982,
+            "file": "cases/polyvariants.ml",
+            "line": 8
+          }
+        ]
+      }
+    ]
   }
   ### cases/records.ml
   {
@@ -1111,110 +958,46 @@
                   "kind": "label",
                   "name": "y",
                   "type": "float",
-                  "mutable": false,
+                  "mutable": true,
                   "word": {
                     "kind": "double"
                   },
-                  "range": {"line": 2, "column": 26, "end_line": 2, "end_column": 35}
+                  "range": {"line": 2, "column": 26, "end_line": 2, "end_column": 43}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 2, "column": 0, "end_line": 2, "end_column": 37}
+            "range": {"line": 2, "column": 0, "end_line": 2, "end_column": 45}
           },
           {
-            "name": "mpoint",
+            "name": "fbox",
             "params": "",
             "keyword": "type",
             "line": 3,
             "kind": "record",
             "shape": {
-              "kind": "block",
-              "tag": 254,
-              "size": 2,
-              "flat_float": true,
-              "fields": [
-                {
-                  "kind": "label",
-                  "name": "mx",
-                  "type": "float",
-                  "mutable": true,
-                  "word": {
-                    "kind": "double"
-                  },
-                  "range": {"line": 3, "column": 16, "end_line": 3, "end_column": 35}
-                },
-                {
-                  "kind": "label",
-                  "name": "my",
-                  "type": "float",
-                  "mutable": false,
-                  "word": {
-                    "kind": "double"
-                  },
-                  "range": {"line": 3, "column": 36, "end_line": 3, "end_column": 46}
-                }
-              ]
-            },
-            "notes": [],
-            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 48}
-          },
-          {
-            "name": "single_float",
-            "params": "",
-            "keyword": "type",
-            "line": 4,
-            "kind": "record",
-            "shape": {
-              "kind": "block",
-              "tag": 254,
-              "size": 1,
-              "flat_float": true,
-              "fields": [
-                {
-                  "kind": "label",
-                  "name": "f",
-                  "type": "float",
-                  "mutable": false,
-                  "word": {
-                    "kind": "double"
-                  },
-                  "range": {"line": 4, "column": 22, "end_line": 4, "end_column": 31}
-                }
-              ]
-            },
-            "notes": [],
-            "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 33}
-          },
-          {
-            "name": "wrapped",
-            "params": "",
-            "keyword": "type",
-            "line": 5,
-            "kind": "record",
-            "shape": {
               "kind": "unboxed",
               "field": {
                 "kind": "label",
-                "name": "u",
-                "type": "string",
+                "name": "f",
+                "type": "float",
                 "mutable": false,
                 "word": {
                   "kind": "pointer",
-                  "tag": 252,
-                  "what": "string"
+                  "tag": 253,
+                  "what": "boxed float"
                 },
-                "range": {"line": 5, "column": 17, "end_line": 5, "end_column": 27}
+                "range": {"line": 3, "column": 14, "end_line": 3, "end_column": 23}
               }
             },
             "notes": [],
-            "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 41}
+            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 37}
           },
           {
             "name": "id",
             "params": "",
             "keyword": "type",
-            "line": 6,
+            "line": 4,
             "kind": "variant",
             "cases": [
               {
@@ -1229,45 +1012,116 @@
                       "kind": "immediate",
                       "why": "int"
                     },
-                    "range": {"line": 6, "column": 16, "end_line": 6, "end_column": 19}
+                    "range": {"line": 4, "column": 16, "end_line": 4, "end_column": 19}
                   }
                 },
                 "notes": [],
-                "range": {"line": 6, "column": 10, "end_line": 6, "end_column": 19}
+                "range": {"line": 4, "column": 10, "end_line": 4, "end_column": 19}
               }
             ],
             "notes": [],
-            "range": {"line": 6, "column": 0, "end_line": 6, "end_column": 31}
+            "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 31}
           },
           {
-            "name": "fbox",
+            "name": "iu",
             "params": "",
             "keyword": "type",
-            "line": 7,
-            "kind": "record",
-            "shape": {
-              "kind": "unboxed",
-              "field": {
-                "kind": "label",
-                "name": "uf",
-                "type": "float",
-                "mutable": false,
-                "word": {
-                  "kind": "pointer",
-                  "tag": 253,
-                  "what": "boxed float"
+            "line": 5,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "IU",
+                "shape": {
+                  "kind": "unboxed",
+                  "field": {
+                    "kind": "label",
+                    "name": "iu",
+                    "type": "int",
+                    "mutable": false,
+                    "word": {
+                      "kind": "immediate",
+                      "why": "int"
+                    },
+                    "range": {"line": 5, "column": 18, "end_line": 5, "end_column": 26}
+                  }
                 },
-                "range": {"line": 7, "column": 14, "end_line": 7, "end_column": 24}
+                "notes": [],
+                "range": {"line": 5, "column": 10, "end_line": 5, "end_column": 28}
               }
+            ],
+            "notes": [],
+            "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 40}
+          },
+          {
+            "name": "metres",
+            "params": "",
+            "keyword": "type",
+            "line": 9,
+            "kind": "alias",
+            "word": {
+              "kind": "pointer",
+              "tag": 253,
+              "what": "boxed float"
             },
             "notes": [],
-            "range": {"line": 7, "column": 0, "end_line": 7, "end_column": 38}
+            "range": {"line": 9, "column": 0, "end_line": 9, "end_column": 19}
           },
           {
-            "name": "poly",
+            "name": "Opaque.t",
             "params": "",
             "keyword": "type",
-            "line": 8,
+            "line": 10,
+            "kind": "alias",
+            "word": {
+              "kind": "pointer",
+              "tag": 253,
+              "what": "boxed float"
+            },
+            "notes": [],
+            "range": {"line": 10, "column": 40, "end_line": 10, "end_column": 54}
+          },
+          {
+            "name": "seen",
+            "params": "",
+            "keyword": "type",
+            "line": 11,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 254,
+              "size": 2,
+              "flat_float": true,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "m",
+                  "type": "metres",
+                  "mutable": false,
+                  "word": {
+                    "kind": "double"
+                  },
+                  "range": {"line": 11, "column": 14, "end_line": 11, "end_column": 25}
+                },
+                {
+                  "kind": "label",
+                  "name": "fb",
+                  "type": "fbox",
+                  "mutable": false,
+                  "word": {
+                    "kind": "double"
+                  },
+                  "range": {"line": 11, "column": 26, "end_line": 11, "end_column": 35}
+                }
+              ]
+            },
+            "notes": [],
+            "range": {"line": 11, "column": 0, "end_line": 11, "end_column": 37}
+          },
+          {
+            "name": "hidden",
+            "params": "",
+            "keyword": "type",
+            "line": 12,
             "kind": "record",
             "shape": {
               "kind": "block",
@@ -1276,75 +1130,37 @@
               "fields": [
                 {
                   "kind": "label",
-                  "name": "apply",
-                  "type": "'a. 'a -> 'a",
+                  "name": "o",
+                  "type": "Opaque.t",
+                  "mutable": false,
+                  "word": {
+                    "kind": "any",
+                    "why": "abstract type Opaque.t"
+                  },
+                  "range": {"line": 12, "column": 16, "end_line": 12, "end_column": 29}
+                },
+                {
+                  "kind": "label",
+                  "name": "h",
+                  "type": "float",
                   "mutable": false,
                   "word": {
                     "kind": "pointer",
-                    "tag": 247,
-                    "what": "closure"
+                    "tag": 253,
+                    "what": "boxed float"
                   },
-                  "range": {"line": 8, "column": 14, "end_line": 8, "end_column": 35}
-                },
-                {
-                  "kind": "label",
-                  "name": "n",
-                  "type": "int",
-                  "mutable": false,
-                  "word": {
-                    "kind": "immediate",
-                    "why": "int"
-                  },
-                  "range": {"line": 8, "column": 36, "end_line": 8, "end_column": 43}
+                  "range": {"line": 12, "column": 30, "end_line": 12, "end_column": 39}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 8, "column": 0, "end_line": 8, "end_column": 45}
-          },
-          {
-            "name": "cell",
-            "params": "'a",
-            "keyword": "type",
-            "line": 9,
-            "kind": "record",
-            "shape": {
-              "kind": "block",
-              "tag": 0,
-              "size": 2,
-              "fields": [
-                {
-                  "kind": "label",
-                  "name": "contents",
-                  "type": "'a",
-                  "mutable": true,
-                  "word": {
-                    "kind": "any",
-                    "why": "type variable 'a"
-                  },
-                  "range": {"line": 9, "column": 17, "end_line": 9, "end_column": 49}
-                },
-                {
-                  "kind": "label",
-                  "name": "count",
-                  "type": "int",
-                  "mutable": false,
-                  "word": {
-                    "kind": "immediate",
-                    "why": "int"
-                  },
-                  "range": {"line": 9, "column": 50, "end_line": 9, "end_column": 61}
-                }
-              ]
-            },
-            "notes": [],
-            "range": {"line": 9, "column": 0, "end_line": 9, "end_column": 63}
+            "range": {"line": 12, "column": 0, "end_line": 12, "end_column": 41}
           },
           {
             "name": "inline",
             "params": "",
             "keyword": "type",
-            "line": 11,
+            "line": 14,
             "kind": "variant",
             "cases": [
               {
@@ -1354,7 +1170,7 @@
                   "value": 0
                 },
                 "notes": [],
-                "range": {"line": 12, "column": 2, "end_line": 12, "end_column": 6}
+                "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 6}
               },
               {
                 "name": "I1",
@@ -1371,12 +1187,12 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 13, "column": 10, "end_line": 13, "end_column": 13}
+                      "range": {"line": 16, "column": 10, "end_line": 16, "end_column": 13}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 13, "column": 2, "end_line": 13, "end_column": 13}
+                "range": {"line": 16, "column": 2, "end_line": 16, "end_column": 13}
               },
               {
                 "name": "I2",
@@ -1394,7 +1210,7 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 14, "column": 12, "end_line": 14, "end_column": 21}
+                      "range": {"line": 17, "column": 12, "end_line": 17, "end_column": 21}
                     },
                     {
                       "kind": "label",
@@ -1406,12 +1222,12 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 14, "column": 22, "end_line": 14, "end_column": 32}
+                      "range": {"line": 17, "column": 22, "end_line": 17, "end_column": 32}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 14, "column": 2, "end_line": 14, "end_column": 34}
+                "range": {"line": 17, "column": 2, "end_line": 17, "end_column": 34}
               },
               {
                 "name": "I3",
@@ -1430,7 +1246,7 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 15, "column": 12, "end_line": 15, "end_column": 23}
+                      "range": {"line": 18, "column": 12, "end_line": 18, "end_column": 23}
                     },
                     {
                       "kind": "label",
@@ -1442,59 +1258,29 @@
                         "tag": 253,
                         "what": "boxed float"
                       },
-                      "range": {"line": 15, "column": 24, "end_line": 15, "end_column": 34}
+                      "range": {"line": 18, "column": 24, "end_line": 18, "end_column": 34}
                     }
                   ]
                 },
                 "notes": [
                   "inline record: all fields are float, but inline records are never stored flat"
                 ],
-                "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 36}
+                "range": {"line": 18, "column": 2, "end_line": 18, "end_column": 36}
               }
             ],
             "notes": [],
-            "range": {"line": 11, "column": 0, "end_line": 15, "end_column": 36}
-          },
-          {
-            "name": "iu",
-            "params": "",
-            "keyword": "type",
-            "line": 17,
-            "kind": "variant",
-            "cases": [
-              {
-                "name": "IU",
-                "shape": {
-                  "kind": "unboxed",
-                  "field": {
-                    "kind": "label",
-                    "name": "iu",
-                    "type": "int",
-                    "mutable": false,
-                    "word": {
-                      "kind": "immediate",
-                      "why": "int"
-                    },
-                    "range": {"line": 17, "column": 18, "end_line": 17, "end_column": 26}
-                  }
-                },
-                "notes": [],
-                "range": {"line": 17, "column": 10, "end_line": 17, "end_column": 28}
-              }
-            ],
-            "notes": [],
-            "range": {"line": 17, "column": 0, "end_line": 17, "end_column": 40}
+            "range": {"line": 14, "column": 0, "end_line": 18, "end_column": 36}
           },
           {
             "name": "uses",
             "params": "",
             "keyword": "type",
-            "line": 19,
+            "line": 20,
             "kind": "record",
             "shape": {
               "kind": "block",
               "tag": 0,
-              "size": 8,
+              "size": 9,
               "fields": [
                 {
                   "kind": "label",
@@ -1505,7 +1291,7 @@
                     "kind": "any",
                     "why": "inline"
                   },
-                  "range": {"line": 20, "column": 2, "end_line": 20, "end_column": 13}
+                  "range": {"line": 21, "column": 2, "end_line": 21, "end_column": 13}
                 },
                 {
                   "kind": "label",
@@ -1516,7 +1302,7 @@
                     "kind": "any",
                     "why": "list"
                   },
-                  "range": {"line": 21, "column": 2, "end_line": 21, "end_column": 16}
+                  "range": {"line": 22, "column": 2, "end_line": 22, "end_column": 16}
                 },
                 {
                   "kind": "label",
@@ -1528,7 +1314,7 @@
                     "tag": null,
                     "what": "float array (Double_array_tag 254 unless empty)"
                   },
-                  "range": {"line": 22, "column": 2, "end_line": 22, "end_column": 20}
+                  "range": {"line": 23, "column": 2, "end_line": 23, "end_column": 20}
                 },
                 {
                   "kind": "label",
@@ -1540,7 +1326,7 @@
                     "tag": 0,
                     "what": "array"
                   },
-                  "range": {"line": 23, "column": 2, "end_line": 23, "end_column": 19}
+                  "range": {"line": 24, "column": 2, "end_line": 24, "end_column": 19}
                 },
                 {
                   "kind": "label",
@@ -1551,7 +1337,7 @@
                     "kind": "any",
                     "why": "option"
                   },
-                  "range": {"line": 24, "column": 2, "end_line": 24, "end_column": 19}
+                  "range": {"line": 25, "column": 2, "end_line": 25, "end_column": 19}
                 },
                 {
                   "kind": "label",
@@ -1563,7 +1349,7 @@
                     "tag": 255,
                     "what": "custom block"
                   },
-                  "range": {"line": 25, "column": 2, "end_line": 25, "end_column": 14}
+                  "range": {"line": 26, "column": 2, "end_line": 26, "end_column": 14}
                 },
                 {
                   "kind": "label",
@@ -1574,7 +1360,7 @@
                     "kind": "immediate",
                     "why": "char"
                   },
-                  "range": {"line": 26, "column": 2, "end_line": 26, "end_column": 12}
+                  "range": {"line": 27, "column": 2, "end_line": 27, "end_column": 12}
                 },
                 {
                   "kind": "label",
@@ -1585,12 +1371,289 @@
                     "kind": "any",
                     "why": "lazy value"
                   },
-                  "range": {"line": 27, "column": 2, "end_line": 27, "end_column": 18}
+                  "range": {"line": 28, "column": 2, "end_line": 28, "end_column": 18}
+                },
+                {
+                  "kind": "label",
+                  "name": "apply",
+                  "type": "'a. 'a -> 'a",
+                  "mutable": false,
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 247,
+                    "what": "closure"
+                  },
+                  "range": {"line": 29, "column": 2, "end_line": 29, "end_column": 23}
                 }
               ]
             },
             "notes": [],
-            "range": {"line": 19, "column": 0, "end_line": 28, "end_column": 1}
+            "range": {"line": 20, "column": 0, "end_line": 30, "end_column": 1}
+          }
+        ],
+        "packages": [],
+        "labels": []
+      }
+    ],
+    "collisions": []
+  }
+  ### cases/sample.ml
+  {
+    "word_size": 64,
+    "units": [
+      {
+        "file": "cases/sample.ml",
+        "unit": "Sample",
+        "types": [
+          {
+            "name": "shape",
+            "params": "",
+            "keyword": "type",
+            "line": 2,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "Point",
+                "shape": {
+                  "kind": "immediate",
+                  "value": 0
+                },
+                "notes": [],
+                "range": {"line": 3, "column": 2, "end_line": 3, "end_column": 9}
+              },
+              {
+                "name": "Circle",
+                "shape": {
+                  "kind": "block",
+                  "tag": 0,
+                  "size": 1,
+                  "fields": [
+                    {
+                      "kind": "arg",
+                      "type": "float",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": 253,
+                        "what": "boxed float"
+                      },
+                      "range": {"line": 4, "column": 14, "end_line": 4, "end_column": 19}
+                    }
+                  ]
+                },
+                "notes": [],
+                "range": {"line": 4, "column": 2, "end_line": 4, "end_column": 19}
+              },
+              {
+                "name": "Rect",
+                "shape": {
+                  "kind": "block",
+                  "tag": 1,
+                  "size": 2,
+                  "fields": [
+                    {
+                      "kind": "label",
+                      "name": "w",
+                      "type": "float",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": 253,
+                        "what": "boxed float"
+                      },
+                      "range": {"line": 5, "column": 14, "end_line": 5, "end_column": 24}
+                    },
+                    {
+                      "kind": "label",
+                      "name": "h",
+                      "type": "float",
+                      "mutable": false,
+                      "word": {
+                        "kind": "pointer",
+                        "tag": 253,
+                        "what": "boxed float"
+                      },
+                      "range": {"line": 5, "column": 25, "end_line": 5, "end_column": 34}
+                    }
+                  ]
+                },
+                "notes": [
+                  "inline record: all fields are float, but inline records are never stored flat"
+                ],
+                "range": {"line": 5, "column": 2, "end_line": 5, "end_column": 36}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 2, "column": 0, "end_line": 5, "end_column": 36}
+          },
+          {
+            "name": "colour",
+            "params": "",
+            "keyword": "type",
+            "line": 7,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "Red",
+                "shape": {
+                  "kind": "immediate",
+                  "value": 0
+                },
+                "notes": [],
+                "range": {"line": 7, "column": 14, "end_line": 7, "end_column": 17}
+              },
+              {
+                "name": "Green",
+                "shape": {
+                  "kind": "immediate",
+                  "value": 1
+                },
+                "notes": [],
+                "range": {"line": 7, "column": 18, "end_line": 7, "end_column": 25}
+              },
+              {
+                "name": "Blue",
+                "shape": {
+                  "kind": "immediate",
+                  "value": 2
+                },
+                "notes": [],
+                "range": {"line": 7, "column": 26, "end_line": 7, "end_column": 32}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 7, "column": 0, "end_line": 7, "end_column": 32}
+          },
+          {
+            "name": "vec",
+            "params": "",
+            "keyword": "type",
+            "line": 9,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 254,
+              "size": 3,
+              "flat_float": true,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "x",
+                  "type": "float",
+                  "mutable": false,
+                  "word": {
+                    "kind": "double"
+                  },
+                  "range": {"line": 9, "column": 13, "end_line": 9, "end_column": 23}
+                },
+                {
+                  "kind": "label",
+                  "name": "y",
+                  "type": "float",
+                  "mutable": false,
+                  "word": {
+                    "kind": "double"
+                  },
+                  "range": {"line": 9, "column": 24, "end_line": 9, "end_column": 34}
+                },
+                {
+                  "kind": "label",
+                  "name": "z",
+                  "type": "float",
+                  "mutable": false,
+                  "word": {
+                    "kind": "double"
+                  },
+                  "range": {"line": 9, "column": 35, "end_line": 9, "end_column": 44}
+                }
+              ]
+            },
+            "notes": [],
+            "range": {"line": 9, "column": 0, "end_line": 9, "end_column": 46}
+          },
+          {
+            "name": "id",
+            "params": "",
+            "keyword": "type",
+            "line": 11,
+            "kind": "variant",
+            "cases": [
+              {
+                "name": "Id",
+                "shape": {
+                  "kind": "unboxed",
+                  "field": {
+                    "kind": "arg",
+                    "type": "int",
+                    "mutable": false,
+                    "word": {
+                      "kind": "immediate",
+                      "why": "int"
+                    },
+                    "range": {"line": 11, "column": 16, "end_line": 11, "end_column": 19}
+                  }
+                },
+                "notes": [],
+                "range": {"line": 11, "column": 10, "end_line": 11, "end_column": 19}
+              }
+            ],
+            "notes": [],
+            "range": {"line": 11, "column": 0, "end_line": 11, "end_column": 31}
+          }
+        ],
+        "packages": [],
+        "labels": []
+      }
+    ],
+    "collisions": []
+  }
+  ### cases/values.ml
+  {
+    "word_size": 64,
+    "units": [
+      {
+        "file": "cases/values.ml",
+        "unit": "Values",
+        "types": [
+          {
+            "name": "counter",
+            "params": "",
+            "keyword": "type",
+            "line": 14,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 0,
+              "size": 2,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "next",
+                  "type": "unit -> int",
+                  "mutable": false,
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 247,
+                    "what": "closure"
+                  },
+                  "range": {"line": 14, "column": 17, "end_line": 14, "end_column": 36}
+                },
+                {
+                  "kind": "label",
+                  "name": "reset",
+                  "type": "unit -> unit",
+                  "mutable": false,
+                  "word": {
+                    "kind": "pointer",
+                    "tag": 247,
+                    "what": "closure"
+                  },
+                  "range": {"line": 14, "column": 37, "end_line": 14, "end_column": 57}
+                }
+              ]
+            },
+            "notes": [],
+            "range": {"line": 14, "column": 0, "end_line": 14, "end_column": 59}
           }
         ],
         "packages": [],
@@ -1682,87 +1745,10 @@
             "range": {"line": 1, "column": 0, "end_line": 1, "end_column": 39}
           },
           {
-            "name": "shape",
-            "params": "",
-            "keyword": "type",
-            "line": 3,
-            "kind": "variant",
-            "cases": [
-              {
-                "name": "Circle",
-                "shape": {
-                  "kind": "block",
-                  "tag": 0,
-                  "size": 1,
-                  "fields": [
-                    {
-                      "kind": "arg",
-                      "type": "float",
-                      "mutable": false,
-                      "word": {
-                        "kind": "pointer",
-                        "tag": 253,
-                        "what": "boxed float"
-                      },
-                      "range": {"line": 3, "column": 23, "end_line": 3, "end_column": 28}
-                    }
-                  ]
-                },
-                "notes": [],
-                "range": {"line": 3, "column": 13, "end_line": 3, "end_column": 28}
-              },
-              {
-                "name": "Rect",
-                "shape": {
-                  "kind": "block",
-                  "tag": 1,
-                  "size": 2,
-                  "fields": [
-                    {
-                      "kind": "arg",
-                      "type": "float",
-                      "mutable": false,
-                      "word": {
-                        "kind": "pointer",
-                        "tag": 253,
-                        "what": "boxed float"
-                      },
-                      "range": {"line": 3, "column": 39, "end_line": 3, "end_column": 44}
-                    },
-                    {
-                      "kind": "arg",
-                      "type": "float",
-                      "mutable": false,
-                      "word": {
-                        "kind": "pointer",
-                        "tag": 253,
-                        "what": "boxed float"
-                      },
-                      "range": {"line": 3, "column": 47, "end_line": 3, "end_column": 52}
-                    }
-                  ]
-                },
-                "notes": [],
-                "range": {"line": 3, "column": 29, "end_line": 3, "end_column": 52}
-              },
-              {
-                "name": "Point",
-                "shape": {
-                  "kind": "immediate",
-                  "value": 0
-                },
-                "notes": [],
-                "range": {"line": 3, "column": 53, "end_line": 3, "end_column": 60}
-              }
-            ],
-            "notes": [],
-            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 60}
-          },
-          {
             "name": "nested",
             "params": "",
             "keyword": "type",
-            "line": 5,
+            "line": 3,
             "kind": "variant",
             "cases": [
               {
@@ -1781,12 +1767,12 @@
                         "tag": 0,
                         "what": "tuple"
                       },
-                      "range": {"line": 5, "column": 20, "end_line": 5, "end_column": 29}
+                      "range": {"line": 3, "column": 20, "end_line": 3, "end_column": 29}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 5, "column": 14, "end_line": 5, "end_column": 30}
+                "range": {"line": 3, "column": 14, "end_line": 3, "end_column": 30}
               },
               {
                 "name": "T2",
@@ -1803,7 +1789,7 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 5, "column": 39, "end_line": 5, "end_column": 42}
+                      "range": {"line": 3, "column": 39, "end_line": 3, "end_column": 42}
                     },
                     {
                       "kind": "arg",
@@ -1813,22 +1799,22 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 5, "column": 45, "end_line": 5, "end_column": 48}
+                      "range": {"line": 3, "column": 45, "end_line": 3, "end_column": 48}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 5, "column": 31, "end_line": 5, "end_column": 48}
+                "range": {"line": 3, "column": 31, "end_line": 3, "end_column": 48}
               }
             ],
             "notes": [],
-            "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 48}
+            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 48}
           },
           {
             "name": "tree",
             "params": "'a",
             "keyword": "type",
-            "line": 7,
+            "line": 5,
             "kind": "variant",
             "cases": [
               {
@@ -1838,7 +1824,7 @@
                   "value": 0
                 },
                 "notes": [],
-                "range": {"line": 7, "column": 15, "end_line": 7, "end_column": 19}
+                "range": {"line": 5, "column": 15, "end_line": 5, "end_column": 19}
               },
               {
                 "name": "Node",
@@ -1855,7 +1841,7 @@
                         "kind": "any",
                         "why": "tree"
                       },
-                      "range": {"line": 7, "column": 30, "end_line": 7, "end_column": 37}
+                      "range": {"line": 5, "column": 30, "end_line": 5, "end_column": 37}
                     },
                     {
                       "kind": "arg",
@@ -1865,7 +1851,7 @@
                         "kind": "any",
                         "why": "type variable 'a"
                       },
-                      "range": {"line": 7, "column": 40, "end_line": 7, "end_column": 42}
+                      "range": {"line": 5, "column": 40, "end_line": 5, "end_column": 42}
                     },
                     {
                       "kind": "arg",
@@ -1875,32 +1861,32 @@
                         "kind": "any",
                         "why": "tree"
                       },
-                      "range": {"line": 7, "column": 45, "end_line": 7, "end_column": 52}
+                      "range": {"line": 5, "column": 45, "end_line": 5, "end_column": 52}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 7, "column": 20, "end_line": 7, "end_column": 52}
+                "range": {"line": 5, "column": 20, "end_line": 5, "end_column": 52}
               }
             ],
             "notes": [],
-            "range": {"line": 7, "column": 0, "end_line": 7, "end_column": 52}
+            "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 52}
           },
           {
             "name": "empty",
             "params": "",
             "keyword": "type",
-            "line": 9,
+            "line": 7,
             "kind": "variant",
             "cases": [],
             "notes": [],
-            "range": {"line": 9, "column": 0, "end_line": 9, "end_column": 14}
+            "range": {"line": 7, "column": 0, "end_line": 7, "end_column": 14}
           },
           {
             "name": "expr",
             "params": "_",
             "keyword": "type",
-            "line": 11,
+            "line": 9,
             "kind": "variant",
             "cases": [
               {
@@ -1918,12 +1904,12 @@
                         "kind": "immediate",
                         "why": "int"
                       },
-                      "range": {"line": 12, "column": 10, "end_line": 12, "end_column": 13}
+                      "range": {"line": 10, "column": 10, "end_line": 10, "end_column": 13}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 12, "column": 2, "end_line": 12, "end_column": 25}
+                "range": {"line": 10, "column": 2, "end_line": 10, "end_column": 25}
               },
               {
                 "name": "Bool",
@@ -1940,50 +1926,18 @@
                         "kind": "immediate",
                         "why": "bool"
                       },
-                      "range": {"line": 13, "column": 11, "end_line": 13, "end_column": 15}
+                      "range": {"line": 11, "column": 11, "end_line": 11, "end_column": 15}
                     }
                   ]
                 },
                 "notes": [],
-                "range": {"line": 13, "column": 2, "end_line": 13, "end_column": 28}
-              },
-              {
-                "name": "Pair",
-                "shape": {
-                  "kind": "block",
-                  "tag": 2,
-                  "size": 2,
-                  "fields": [
-                    {
-                      "kind": "arg",
-                      "type": "'a expr",
-                      "mutable": false,
-                      "word": {
-                        "kind": "any",
-                        "why": "expr"
-                      },
-                      "range": {"line": 14, "column": 11, "end_line": 14, "end_column": 18}
-                    },
-                    {
-                      "kind": "arg",
-                      "type": "'b expr",
-                      "mutable": false,
-                      "word": {
-                        "kind": "any",
-                        "why": "expr"
-                      },
-                      "range": {"line": 14, "column": 21, "end_line": 14, "end_column": 28}
-                    }
-                  ]
-                },
-                "notes": [],
-                "range": {"line": 14, "column": 2, "end_line": 14, "end_column": 46}
+                "range": {"line": 11, "column": 2, "end_line": 11, "end_column": 28}
               },
               {
                 "name": "Hide",
                 "shape": {
                   "kind": "block",
-                  "tag": 3,
+                  "tag": 2,
                   "size": 2,
                   "fields": [
                     {
@@ -1994,7 +1948,7 @@
                         "kind": "any",
                         "why": "type variable 'a"
                       },
-                      "range": {"line": 15, "column": 11, "end_line": 15, "end_column": 13}
+                      "range": {"line": 12, "column": 11, "end_line": 12, "end_column": 13}
                     },
                     {
                       "kind": "arg",
@@ -2005,14 +1959,14 @@
                         "tag": 247,
                         "what": "closure"
                       },
-                      "range": {"line": 15, "column": 17, "end_line": 15, "end_column": 29}
+                      "range": {"line": 12, "column": 17, "end_line": 12, "end_column": 29}
                     }
                   ]
                 },
                 "notes": [
                   "existential 'a: stored as uniform values"
                 ],
-                "range": {"line": 15, "column": 2, "end_line": 15, "end_column": 45}
+                "range": {"line": 12, "column": 2, "end_line": 12, "end_column": 45}
               },
               {
                 "name": "Unit",
@@ -2021,16 +1975,178 @@
                   "value": 0
                 },
                 "notes": [],
-                "range": {"line": 16, "column": 2, "end_line": 16, "end_column": 20}
+                "range": {"line": 13, "column": 2, "end_line": 13, "end_column": 20}
               }
             ],
             "notes": [
               "GADT: type indices are erased, so the constructors are numbered as in an ordinary variant"
             ],
-            "range": {"line": 11, "column": 0, "end_line": 16, "end_column": 20}
+            "range": {"line": 9, "column": 0, "end_line": 13, "end_column": 20}
           }
         ],
         "packages": [],
+        "labels": []
+      }
+    ],
+    "collisions": []
+  }
+  ### cases/interface.mli
+  {
+    "word_size": 64,
+    "units": [
+      {
+        "file": "cases/interface.mli",
+        "unit": "Interface",
+        "types": [
+          {
+            "name": "t",
+            "params": "",
+            "keyword": "type",
+            "line": 2,
+            "kind": "abstract",
+            "word": {
+              "kind": "any",
+              "why": "abstract type"
+            },
+            "notes": [],
+            "range": {"line": 2, "column": 0, "end_line": 2, "end_column": 6}
+          },
+          {
+            "name": "small",
+            "params": "",
+            "keyword": "type",
+            "line": 3,
+            "kind": "abstract",
+            "word": {
+              "kind": "immediate",
+              "why": "[@@immediate]"
+            },
+            "notes": [],
+            "range": {"line": 3, "column": 0, "end_line": 3, "end_column": 24}
+          },
+          {
+            "name": "id",
+            "params": "",
+            "keyword": "type",
+            "line": 4,
+            "kind": "alias",
+            "word": {
+              "kind": "immediate",
+              "why": "int"
+            },
+            "notes": [],
+            "range": {"line": 4, "column": 0, "end_line": 4, "end_column": 21}
+          },
+          {
+            "name": "pos",
+            "params": "",
+            "keyword": "type",
+            "line": 5,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 254,
+              "size": 2,
+              "flat_float": true,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "x",
+                  "type": "float",
+                  "mutable": false,
+                  "word": {
+                    "kind": "double"
+                  },
+                  "range": {"line": 5, "column": 21, "end_line": 5, "end_column": 31}
+                },
+                {
+                  "kind": "label",
+                  "name": "y",
+                  "type": "float",
+                  "mutable": false,
+                  "word": {
+                    "kind": "double"
+                  },
+                  "range": {"line": 5, "column": 32, "end_line": 5, "end_column": 41}
+                }
+              ]
+            },
+            "notes": [],
+            "range": {"line": 5, "column": 0, "end_line": 5, "end_column": 43}
+          },
+          {
+            "name": "pair",
+            "params": "",
+            "keyword": "type",
+            "line": 6,
+            "kind": "record",
+            "shape": {
+              "kind": "block",
+              "tag": 0,
+              "size": 2,
+              "fields": [
+                {
+                  "kind": "label",
+                  "name": "a",
+                  "type": "t",
+                  "mutable": false,
+                  "word": {
+                    "kind": "any",
+                    "why": "abstract type t"
+                  },
+                  "range": {"line": 6, "column": 14, "end_line": 6, "end_column": 20}
+                },
+                {
+                  "kind": "label",
+                  "name": "b",
+                  "type": "small",
+                  "mutable": false,
+                  "word": {
+                    "kind": "immediate",
+                    "why": "small [@@immediate]"
+                  },
+                  "range": {"line": 6, "column": 21, "end_line": 6, "end_column": 30}
+                }
+              ]
+            },
+            "notes": [],
+            "range": {"line": 6, "column": 0, "end_line": 6, "end_column": 32}
+          }
+        ],
+        "packages": [
+          {
+            "name": "CODEC",
+            "line": 14,
+            "size": 2,
+            "fields": [
+              {
+                "index": 0,
+                "item": "value",
+                "name": "encode",
+                "word": {
+                  "kind": "pointer",
+                  "tag": 247,
+                  "what": "closure"
+                },
+                "range": {"line": 10, "column": 2, "end_line": 10, "end_column": 26}
+              },
+              {
+                "index": 1,
+                "item": "value",
+                "name": "default",
+                "word": {
+                  "kind": "any",
+                  "why": "abstract type v"
+                },
+                "range": {"line": 11, "column": 2, "end_line": 11, "end_column": 17}
+              }
+            ],
+            "no_field": [
+              "type v"
+            ],
+            "range": {"line": 8, "column": 0, "end_line": 12, "end_column": 3}
+          }
+        ],
         "labels": []
       }
     ],

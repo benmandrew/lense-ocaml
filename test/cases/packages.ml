@@ -9,6 +9,8 @@ end
 
 type entry = { key : int; ops : (module ORDERED with type t = int) }
 
+(* Ints has more items than ORDERED, in another order. Packing it copies the
+   items of ORDERED into a new block, in the order of ORDERED. *)
 module Ints = struct
   exception Unordered
   type t = int
@@ -24,6 +26,7 @@ let entry = { key = 1; ops = (module Ints) }
 module Shapes = struct
   module type SHAPE = sig
     val area : float
+    class drawing : object method draw : unit end
     module Scale (_ : sig val k : float end) : sig val area : float end
   end
 end
@@ -31,6 +34,7 @@ end
 let unit_square =
   (module struct
     let area = 1.0
+    class drawing = object method draw = () end
     module Scale (X : sig val k : float end) = struct let area = X.k *. X.k end
   end : Shapes.SHAPE)
 

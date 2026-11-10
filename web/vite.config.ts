@@ -34,6 +34,11 @@ function lenseScript(): Plugin {
 // test directory elsewhere.
 const examplesDir = resolve(import.meta.dirname, process.env.LENSE_EXAMPLES_DIR ?? '../test');
 const exampleDirs = [{ dir: 'cases', ox: false }, { dir: 'ox', ox: true }];
+// Examples that need a checkbox on to show what they are about.
+const exampleOptions: Record<string, { values?: boolean; labels?: boolean }> = {
+  'values.ml': { values: true },
+  'polyvariants.ml': { labels: true },
+};
 
 function examples(): Plugin {
   const id = 'virtual:examples';
@@ -45,7 +50,8 @@ function examples(): Plugin {
       const list = exampleDirs.flatMap(({ dir, ox }) => readdirSync(resolve(examplesDir, dir)).filter((f) => /\.mli?$/.test(f)).sort().map((f) => {
         const path = resolve(examplesDir, dir, f);
         this.addWatchFile(path);
-        return { name: f, intf: f.endsWith('.mli'), ox, code: readFileSync(path, 'utf8') };
+        const { values = false, labels = false } = exampleOptions[f] ?? {};
+        return { name: f, intf: f.endsWith('.mli'), ox, values, labels, code: readFileSync(path, 'utf8') };
       }));
       return `export default ${JSON.stringify(list)};`;
     },

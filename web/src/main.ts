@@ -5,32 +5,9 @@ import { StateEffect, StateField, type Text as Doc } from '@codemirror/state';
 import { Decoration, type DecorationSet } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { basicSetup, EditorView } from 'codemirror';
-import EXAMPLES from 'virtual:examples';
+import examples from 'virtual:examples';
 import type { Compiler, Diagram, FromWorker, Kind, Options, Range, Shape, ToWorker } from './protocol';
 import './style.css';
-
-const SAMPLE = `(* Edit the code: the representations update as you type. *)
-type shape =
-  | Point
-  | Circle of float
-  | Rect of { w : float; h : float }
-
-type colour = Red | Green | Blue
-
-type vec = { x : float; y : float; z : float }
-
-type id = Id of int [@@unboxed]
-
-module Counter = struct
-  let count = ref 0
-  let next () = incr count; !count
-end
-
-let area = function
-  | Point -> 0.
-  | Circle r -> 3.14159 *. r *. r
-  | Rect { w; h } -> w *. h
-`;
 
 interface Saved {
   code: string;
@@ -521,7 +498,7 @@ function send(msg?: ToWorker) {
   queued = null;
 }
 
-const examples = [{ name: 'sample', intf: false, ox: false, code: SAMPLE }, ...EXAMPLES];
+const sample = examples.find((e) => e.name === 'sample.ml')!;
 
 /** Selects the example the editor holds, or "edited" if it holds none. */
 function syncExample(code: string) {
@@ -581,7 +558,7 @@ function setCode(code: string) {
 
 async function start() {
   const saved = (location.hash.length > 1 && (await unpack(location.hash.slice(1)))) || null;
-  const s: Saved = { code: SAMPLE, compiler: '5.5', intf: false, values: false, labels: false, ...saved };
+  const s: Saved = { code: sample.code, compiler: '5.5', intf: false, values: false, labels: false, ...saved };
   setCode(s.code);
   kindBox.value = s.intf ? 'mli' : 'ml';
   compilerBox.value = s.compiler;
@@ -597,6 +574,8 @@ async function start() {
     if (!e) return;
     kindBox.value = e.intf ? 'mli' : 'ml';
     compilerBox.value = e.ox ? 'ox' : '5.5';
+    valuesBox.checked = e.values;
+    labelsBox.checked = e.labels;
     setCode(e.code);
     analyze();
   };
