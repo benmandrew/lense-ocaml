@@ -15,7 +15,6 @@ interface Saved {
   intf: boolean;
   values: boolean;
   backend: Backend;
-  labels: boolean;
 }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -24,7 +23,6 @@ const kindBox = $<HTMLSelectElement>('kind');
 const compilerBox = $<HTMLSelectElement>('compiler');
 const valuesBox = $<HTMLInputElement>('values');
 const backendBox = $<HTMLSelectElement>('backend');
-const labelsBox = $<HTMLInputElement>('labels');
 const statusBox = $<HTMLSpanElement>('status');
 const output = $<HTMLElement>('output');
 
@@ -68,12 +66,11 @@ function current(): Saved {
     intf: kindBox.value === 'mli',
     values: valuesBox.checked,
     backend: backendBox.value === 'bytecode' ? 'bytecode' : 'native',
-    labels: labelsBox.checked,
   };
 }
 
 const options = (s: Saved): Options => ({
-  compiler: s.compiler, intf: s.intf, values: s.values, backend: s.backend, labels: s.labels,
+  compiler: s.compiler, intf: s.intf, values: s.values, backend: s.backend,
 });
 
 // --- Diagnostics ----------------------------------------------------------
@@ -562,13 +559,12 @@ function setCode(code: string) {
 
 async function start() {
   const saved = (location.hash.length > 1 && (await unpack(location.hash.slice(1)))) || null;
-  const s: Saved = { code: sample.code, compiler: '5.5', intf: false, values: false, backend: 'native', labels: false, ...saved };
+  const s: Saved = { code: sample.code, compiler: '5.5', intf: false, values: false, backend: 'native', ...saved };
   setCode(s.code);
   kindBox.value = s.intf ? 'mli' : 'ml';
   compilerBox.value = s.compiler;
   valuesBox.checked = s.values;
   backendBox.value = s.backend;
-  labelsBox.checked = s.labels;
 
   const edited = new Option('edited', '');
   edited.hidden = true;
@@ -580,11 +576,10 @@ async function start() {
     kindBox.value = e.intf ? 'mli' : 'ml';
     compilerBox.value = e.ox ? 'ox' : '5.5';
     valuesBox.checked = e.values;
-    labelsBox.checked = e.labels;
     setCode(e.code);
     analyze();
   };
-  for (const box of [kindBox, compilerBox, valuesBox, backendBox, labelsBox]) box.onchange = analyze;
+  for (const box of [kindBox, compilerBox, valuesBox, backendBox]) box.onchange = analyze;
 
   status('Loading compiler-libs');
   worker.postMessage({ type: 'init', url: new URL('lense/lense_web.js', document.baseURI).href } satisfies ToWorker);

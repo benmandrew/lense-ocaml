@@ -10,7 +10,6 @@ export interface Options {
   intf: boolean;
   values: boolean;
   backend: Backend;
-  labels: boolean;
 }
 
 /** Where something is written in the source. Lines count from 1, columns

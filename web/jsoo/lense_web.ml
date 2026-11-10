@@ -54,17 +54,11 @@ let analyze code opts =
     try
       Result.map
         (fun u ->
-          if flag opts "labels" then (
-            let b = Buffer.create 1024 in
-            Lense_model.Text.labels b [ u ];
-            Lense_model.Text.collisions b [ u ];
-            (Buffer.contents b, [], "[]"))
-          else
-            let topts : Lense_model.Text.options =
-              { source = false; only = [] }
-            in
-            let text, links = Lense_model.Text.render_linked topts [ u ] in
-            (text, links, Lense_model.Diagram.(json (compunit topts u))))
+          let topts : Lense_model.Text.options =
+            { source = false; only = [] }
+          in
+          let text, links = Lense_model.Text.render_linked topts [ u ] in
+          (text, links, Lense_model.Diagram.(json (compunit topts u))))
         (Result.map (M.only_backend backend)
            ((if str opts "compiler" = "ox" then unit_ox else unit_55)
               ~file ~intf ~values src))

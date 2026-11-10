@@ -25,7 +25,7 @@ const code = `type shape =
 
 // The page state, encoded as main.ts encodes shared links.
 const state = {
-  code, compiler: '5.5', intf: false, values: false, backend: 'native', labels: false,
+  code, compiler: '5.5', intf: false, values: false, backend: 'native',
 };
 const hash = deflateRawSync(JSON.stringify(state)).toString('base64url');
 
