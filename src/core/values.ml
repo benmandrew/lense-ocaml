@@ -139,12 +139,24 @@ let lazies ctx (str : T.structure) =
   let expr sub (e : T.expression) =
     (match e.exp_desc with
     | Texp_lazy a ->
-        let zkind : M.lazy_kind =
-          match Typeopt.classify_lazy_argument a with
-          | `Constant_or_function | `Identifier `Other -> Itself
-          | `Float_that_cannot_be_shortcut | `Identifier `Forward_value ->
-              Forward
-          | `Other -> Suspended
+        let zword = Word.word a.exp_env a.exp_type in
+        (* [Typeopt] counts an [[@@immediate64]] type as immediate only when
+           [Clflags.native_code] is set and the host has 64-bit words. Under
+           js_of_ocaml the host has 32, but the target is a 64-bit ocamlopt,
+           where the word says immediate. *)
+        let kind native : M.lazy_kind =
+          Misc.protect_refs
+            [ Misc.R (Clflags.native_code, native) ]
+            (fun () ->
+              match Typeopt.classify_lazy_argument a with
+              | `Constant_or_function | `Identifier `Other -> M.Itself
+              | `Identifier `Forward_value -> (
+                  match zword with
+                  | Immediate _ when native && Sys.word_size < M.word_size ->
+                      Itself
+                  | _ -> Forward)
+              | `Float_that_cannot_be_shortcut -> Forward
+              | `Other -> Suspended)
         in
         let zsource =
           match Analyze.slice ctx e.exp_loc with
@@ -155,8 +167,8 @@ let lazies ctx (str : T.structure) =
           {
             M.zline = Analyze.line e.exp_loc;
             zsource;
-            zkind;
-            zword = Word.word a.exp_env a.exp_type;
+            zkinds = [ ("native code", kind true); ("bytecode", kind false) ];
+            zword;
             zrange = Analyze.range ctx e.exp_loc;
           }
           :: !acc

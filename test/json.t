@@ -3567,7 +3567,12 @@
             {
               "line": 44,
               "source": "lazy 3",
-              "kind": "itself",
+              "kinds": [
+                {
+                  "backend": "native code",
+                  "kind": "itself"
+                }
+              ],
               "word": {
                 "kind": "immediate",
                 "why": "int"
@@ -3577,7 +3582,12 @@
             {
               "line": 44,
               "source": "lazy 2.5",
-              "kind": "forward",
+              "kinds": [
+                {
+                  "backend": "native code",
+                  "kind": "forward"
+                }
+              ],
               "word": {
                 "kind": "pointer",
                 "tag": 253,
@@ -3588,7 +3598,12 @@
             {
               "line": 44,
               "source": "lazy i",
-              "kind": "itself",
+              "kinds": [
+                {
+                  "backend": "native code",
+                  "kind": "itself"
+                }
+              ],
               "word": {
                 "kind": "immediate",
                 "why": "int"
@@ -3598,7 +3613,12 @@
             {
               "line": 44,
               "source": "lazy v",
-              "kind": "forward",
+              "kinds": [
+                {
+                  "backend": "native code",
+                  "kind": "forward"
+                }
+              ],
               "word": {
                 "kind": "any",
                 "why": "type variable"
@@ -3608,7 +3628,12 @@
             {
               "line": 44,
               "source": "lazy (i + 1)",
-              "kind": "lazy",
+              "kinds": [
+                {
+                  "backend": "native code",
+                  "kind": "lazy"
+                }
+              ],
               "word": {
                 "kind": "immediate",
                 "why": "int"
@@ -3618,7 +3643,12 @@
             {
               "line": 44,
               "source": "lazy (fun x -> x)",
-              "kind": "itself",
+              "kinds": [
+                {
+                  "backend": "native code",
+                  "kind": "itself"
+                }
+              ],
               "word": {
                 "kind": "pointer",
                 "tag": null,

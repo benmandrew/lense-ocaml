@@ -2407,9 +2407,43 @@ external v128 : string -> int -> int64x2# = "%caml_string_getu128#"
           | Vlazy { v; line; ident; forced } -> (
               let r = "(Obj.repr " ^ v ^ ")" in
               let held = "(Obj.field " ^ r ^ " 0)" in
-              let word what r w =
-                let w = word_check what r w in
-                if w <> "" then Printf.bprintf b "  %s\n" w
+              let checks (zkind : M.lazy_kind) zword =
+                let b = Buffer.create 256 in
+                let word what r w =
+                  let w = word_check what r w in
+                  if w <> "" then Printf.bprintf b "  %s\n" w
+                in
+                (match zkind with
+                | Itself -> (
+                    match ident with
+                    | Some id ->
+                        Printf.bprintf b "  same %S %s (Obj.repr %s);\n" v r id
+                    | None -> word v r zword)
+                | Forward ->
+                    Printf.bprintf b
+                      "  block %S %s %d 1;\n  if is_block %s %d 1 then begin\n"
+                      v r M.forward_tag r M.forward_tag;
+                    (match ident with
+                    | Some id ->
+                        Printf.bprintf b "  same %S %s (Obj.repr %s);\n"
+                          (v ^ " held") held id
+                    | None -> ());
+                    word (v ^ " held") held zword;
+                    Printf.bprintf b "  end;\n"
+                | Suspended when forced ->
+                    (* Forcing makes a Forward block, which the GC may then
+                       short-cut to the value itself. *)
+                    Printf.bprintf b
+                      "  (let x = Obj.repr (Lazy.force %s) in\n\
+                      \   if %s != x then begin\n\
+                      \     block %S %s %d 1;\n\
+                      \     if is_block %s %d 1 then same %S %s x end;\n"
+                      v r v r M.forward_tag r M.forward_tag (v ^ " held") held;
+                    word (v ^ " result") "x" zword;
+                    Printf.bprintf b "  );\n"
+                | Suspended ->
+                    Printf.bprintf b "  block %S %s %d 1;\n" v r M.lazy_tag);
+                Buffer.contents b
               in
               match
                 List.find_opt
@@ -2418,35 +2452,23 @@ external v128 : string -> int -> int64x2# = "%caml_string_getu128#"
               with
               | None ->
                   Printf.bprintf b "  fail %S \"no lazy value predicted\";\n" v
-              | Some { zkind = Itself; zword; _ } -> (
-                  match ident with
-                  | Some id ->
-                      Printf.bprintf b "  same %S %s (Obj.repr %s);\n" v r id
-                  | None -> word v r zword)
-              | Some { zkind = Forward; zword; _ } ->
-                  Printf.bprintf b
-                    "  block %S %s %d 1;\n  if is_block %s %d 1 then begin\n" v
-                    r M.forward_tag r M.forward_tag;
-                  (match ident with
-                  | Some id ->
-                      Printf.bprintf b "  same %S %s (Obj.repr %s);\n"
-                        (v ^ " held") held id
-                  | None -> ());
-                  word (v ^ " held") held zword;
-                  Printf.bprintf b "  end;\n"
-              | Some { zkind = Suspended; zword; _ } when forced ->
-                  (* Forcing makes a Forward block, which the GC may then
-                     short-cut to the value itself. *)
-                  Printf.bprintf b
-                    "  (let x = Obj.repr (Lazy.force %s) in\n\
-                    \   if %s != x then begin\n\
-                    \     block %S %s %d 1;\n\
-                    \     if is_block %s %d 1 then same %S %s x end;\n"
-                    v r v r M.forward_tag r M.forward_tag (v ^ " held") held;
-                  word (v ^ " result") "x" zword;
-                  Printf.bprintf b "  );\n"
-              | Some { zkind = Suspended; _ } ->
-                  Printf.bprintf b "  block %S %s %d 1;\n" v r M.lazy_tag)
+              | Some { zkinds; zword; _ } -> (
+                  match
+                    ( List.assoc_opt "native code" zkinds,
+                      List.assoc_opt "bytecode" zkinds )
+                  with
+                  | Some n, Some c when n = c ->
+                      Buffer.add_string b (checks n zword)
+                  | Some n, Some c ->
+                      Printf.bprintf b
+                        "  if native then begin\n\
+                         %s    () end else begin\n\
+                         %s    () end;\n"
+                        (checks n zword) (checks c zword)
+                  | _ ->
+                      Printf.bprintf b
+                        "  fail %S \"no lazy value predicted for a backend\";\n"
+                        v))
           | Vobj { v; line } -> (
               let r = "(Obj.repr " ^ v ^ ")" in
               match

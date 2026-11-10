@@ -329,7 +329,10 @@ type lazy_kind =
 type lazy_value = {
   zline : int;
   zsource : string;
-  zkind : lazy_kind;
+  zkinds : (string * lazy_kind) list;
+      (** Each backend's kind, as in [backend_closures.backend]. They differ
+          when the kind depends on the word size: an [[@@immediate64]] type is
+          immediate only on native code. *)
   zword : word;
   zrange : range option;
 }
@@ -424,7 +427,15 @@ let closure_sites (v : values) =
 (* The unit with the closures of one backend only, "native code" or "bytecode". *)
 let only_backend name (u : compunit) =
   let keep (v : values) =
-    { v with backends = List.filter (fun bc -> bc.backend = name) v.backends }
+    {
+      v with
+      backends = List.filter (fun bc -> bc.backend = name) v.backends;
+      lazies =
+        List.map
+          (fun z ->
+            { z with zkinds = List.filter (fun (b, _) -> b = name) z.zkinds })
+          v.lazies;
+    }
   in
   { u with values = Option.map keep u.values }
 

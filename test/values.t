@@ -320,3 +320,19 @@ out differently, it shows each layout under the backend's name.
       1  reset : unit -> unit  pointer to closure, Closure_tag 247 or Infix_tag 249
       cost: 3 words per value, with headers
       not counted: next (closure), reset (closure)
+
+A lazy value of an [@@immediate64] type is the value itself in native code,
+where the type is immediate. Bytecode does not know the word size when it
+compiles, so it keeps the value in a Forward block.
+
+  $ cat > imm64.ml <<'SRC'
+  > type t [@@immediate64]
+  > let x : t = Obj.magic 92
+  > let z = lazy x
+  > SRC
+  $ lense-ocaml --backend both imm64.ml | grep -A2 '^lazy'
+  lazy x  line 3
+      native code: no block: the value itself, immediate (t [@@immediate64])
+      bytecode: Forward_tag 250 block, size 1, holding the value: immediate (t [@@immediate64])
+  $ lense-ocaml imm64.ml | grep '^lazy'
+  lazy x  line 3  no block: the value itself, immediate (t [@@immediate64])

@@ -547,8 +547,7 @@ let closure_config b (v : values) =
   else false
 
 let lazy_value b (z : lazy_value) =
-  let what =
-    match z.zkind with
+  let what = function
     | Itself -> "no block: the value itself, " ^ word z.zword
     | Forward ->
         Printf.sprintf "%s block, size 1, holding the value: %s"
@@ -560,7 +559,15 @@ let lazy_value b (z : lazy_value) =
           (tag_name lazy_tag) (tag_name forward_tag)
   in
   link b [ z.zrange ];
-  Printf.bprintf b "%s  line %d  %s\n" (shorten z.zsource) z.zline what
+  let head = Printf.sprintf "%s  line %d" (shorten z.zsource) z.zline in
+  match List.sort_uniq compare (List.map snd z.zkinds) with
+  | [ k ] -> Printf.bprintf b "%s  %s\n" head (what k)
+  | _ ->
+      (* The backends shown disagree: one line for each. *)
+      Printf.bprintf b "%s\n" head;
+      List.iter
+        (fun (backend, k) -> Printf.bprintf b "    %s: %s\n" backend (what k))
+        z.zkinds
 
 let obj b (o : obj) =
   let first = if o.env_slot then 3 else 2 in

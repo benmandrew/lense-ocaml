@@ -324,17 +324,23 @@ let backend (bc : backend_closures) =
     ]
 
 let lazy_value (z : lazy_value) =
-  let kind =
-    match z.zkind with
-    | Itself -> "itself"
-    | Forward -> "forward"
-    | Suspended -> "lazy"
+  let kind (backend, k) =
+    Obj
+      [
+        ("backend", Str backend);
+        ( "kind",
+          Str
+            (match k with
+            | Itself -> "itself"
+            | Forward -> "forward"
+            | Suspended -> "lazy") );
+      ]
   in
   Obj
     [
       ("line", Int z.zline);
       ("source", Str z.zsource);
-      ("kind", Str kind);
+      ("kinds", List (List.map kind z.zkinds));
       ("word", word z.zword);
       ("range", range z.zrange);
     ]

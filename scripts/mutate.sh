@@ -115,8 +115,8 @@ mutant both src/core/values.ml "objects never get an environment slot" \
   'let env_slot =
       false && (not top)'
 mutant both src/core/values.ml "a constant lazy value is suspended" \
-  '| `Constant_or_function | `Identifier `Other -> Itself' \
-  '| `Constant_or_function | `Identifier `Other -> Suspended'
+  '| `Constant_or_function | `Identifier `Other -> M.Itself' \
+  '| `Constant_or_function | `Identifier `Other -> M.Suspended'
 
 echo "$survived survived, $stale stale, from $rounds rounds at seed $seed; logs in $work"
 [ $survived = 0 ] && [ $stale = 0 ]
