@@ -135,6 +135,15 @@ type ftree =
   | Prod of ftree list
   | Rec of string * (string * ftree) list
 
+(* A first-class module to check: the expression, the package type whose
+   prediction it must meet, and for each submodule slot whose signature is
+   a named module type, that type, so the inner block is checked too. *)
+type pack = {
+  pexpr : string;
+  ptype : string;
+  psubs : (string * string) list;  (** slot name -> module type *)
+}
+
 let flat_leaves =
   [
     {
@@ -253,8 +262,7 @@ type state = {
       (** OxCaml: (type, case) -> fields *)
   mutable pool : sample list;
   values : (string * string, value) Hashtbl.t;  (** (type, case) -> value *)
-  mutable modules : (string * string) list;
-      (** module, a package type it is packed into *)
+  mutable modules : pack list;  (** First-class modules to check. *)
   mutable n : int;
   mutable vchecks : vcheck list;  (** Stage 4 values to check. *)
   mutable classes : (string * sample list * (string * bool * sample) list) list;
@@ -853,53 +861,174 @@ let gen_recursive s =
          else { (value mk_b [ y.expr; deeper ]) with vsubs = [ (1, deeper) ] });
       pool a gv
 
-(* A module of random items, and a package type of a random subset of
-   them in a random order, which the module is packed into. *)
-let gen_module s =
-  let m = fresh s "M" in
-  let items =
-    List.init
-      (1 + rand 6)
-      (fun _ ->
-        match rand 6 with
-        | 0 -> `Ext (fresh s "e")
-        | 1 -> `Exn (fresh s "X")
-        | 2 -> `Type (fresh s "ty")
-        | 3 -> `Sub (fresh s "S")
-        | _ -> `Val (fresh s "v", pick base))
-  in
-  let item_src = function
-    | `Val (v, x) -> Printf.sprintf "let %s : %s = %s" v x.ty x.expr
-    | `Ext e -> Printf.sprintf "external %s : 'a -> 'a = \"%%identity\"" e
-    | `Exn x -> "exception " ^ x
-    | `Type t -> "type " ^ t ^ " = int"
-    | `Sub sm -> "module " ^ sm ^ " = struct let z = 1 let w = \"w\" end"
-  in
-  Printf.bprintf s.decls "module %s = struct %s end\n" m
-    (String.concat " " (List.map item_src items));
-  let sig_item = function
-    | `Val (v, x) -> Some (Printf.sprintf "val %s : %s" v x.ty)
+(* Random module items. A submodule holds items of its own, up to two
+   levels down. *)
+let rec gen_items s depth =
+  List.init
+    (1 + rand 6)
+    (fun _ ->
+      match rand 12 with
+      | 0 -> `Ext (fresh s "e")
+      | 1 -> `Exn (fresh s "X")
+      | 2 -> `Type (fresh s "ty")
+      | 3 when depth < 2 -> `Sub (fresh s "S", gen_items s (depth + 1))
+      | 4 -> `Functor (fresh s "F")
+      | 5 -> `Class (fresh s "cl")
+      | 6 -> `Extn (fresh s "Xe", chance 0.5)
+      | 7 -> `Fun (fresh s "f", rand 3)
+      | 8 -> `Rec (fresh s "f", fresh s "g")
+      | _ -> `Val (fresh s "v", pick base))
+
+let rec item_src = function
+  | `Val (v, x) -> Printf.sprintf "let %s : %s = %s" v x.ty x.expr
+  | `Ext e -> Printf.sprintf "external %s : 'a -> 'a = \"%%identity\"" e
+  | `Exn x -> "exception " ^ x
+  | `Type t -> "type " ^ t ^ " = int"
+  | `Sub (sm, items) ->
+      "module " ^ sm ^ " = struct "
+      ^ String.concat " " (List.map item_src items)
+      ^ " end"
+  | `Functor f ->
+      Printf.sprintf
+        "module %s (X : sig end) = struct let a = 1 let b = \"b\" end" f
+  | `Class c -> Printf.sprintf "class %s = object method m = 0 end" c
+  | `Extn (x, arg) ->
+      Printf.sprintf "type ext += %s%s" x (if arg then " of int" else "")
+  | `Fun (f, 0) -> Printf.sprintf "let %s (x : int) = x + 1" f
+  | `Fun (f, 1) -> Printf.sprintf "let %s = ( + ) 1" f
+  | `Fun (f, _) -> Printf.sprintf "let %s ?(o = 1) (x : int) = o + x" f
+  | `Rec (f, g) ->
+      Printf.sprintf
+        "let rec %s (x : int) = if x = 0 then 0 else %s (x - 1) and %s (x : \
+         int) = %s x"
+        f g g f
+
+(* The signature items of a package type for [items]: all of them in order
+   when [exact], otherwise a random subset in a random order. A submodule
+   gets a named module type, declared here, or an inline signature. Returns
+   the items, the abstract types and the slot name -> module type pairs. *)
+let rec sig_of s ~exact items =
+  let subs = ref [] and abstract = ref [] in
+  let keep () = exact || chance 0.7 in
+  let item = function
+    | `Val (v, x) -> [ Printf.sprintf "val %s : %s" v x.ty ]
     | `Ext e ->
-        if chance 0.5 then Some (Printf.sprintf "val %s : 'a -> 'a" e) else None
-    | `Exn x -> Some ("exception " ^ x)
-    | `Type _ -> None
-    | `Sub sm ->
-        Some
-          (if chance 0.5 then "module " ^ sm ^ " : sig val w : string end"
-           else "module " ^ sm ^ " : sig val z : int val w : string end")
+        if exact || chance 0.3 then
+          [ Printf.sprintf "external %s : 'a -> 'a = \"%%identity\"" e ]
+        else if chance 0.5 then [ Printf.sprintf "val %s : 'a -> 'a" e ]
+        else []
+    | `Exn x -> [ "exception " ^ x ]
+    | `Type t ->
+        if exact || chance 0.3 then [ "type " ^ t ^ " = int" ]
+        else if chance 0.6 then (
+          abstract := t :: !abstract;
+          [ "type " ^ t ])
+        else []
+    | `Sub (sm, items) ->
+        let inner, _, isubs = sig_of s ~exact:(exact || chance 0.2) items in
+        let body = "sig " ^ String.concat " " inner ^ " end" in
+        if chance 0.3 then [ "module " ^ sm ^ " : " ^ body ]
+        else
+          let ms = fresh s "MS" in
+          Printf.bprintf s.decls
+            "module type %s = %s\ntype pk_%s = (module %s)\n" ms body ms ms;
+          subs := ((sm, ms) :: isubs) @ !subs;
+          [ "module " ^ sm ^ " : " ^ ms ]
+    | `Functor f ->
+        [
+          (if exact then
+             Printf.sprintf
+               "module %s : functor (X : sig end) -> sig val a : int val b : \
+                string end"
+               f
+           else
+             pick
+               [
+                 Printf.sprintf "module %s (X : sig end) : sig val a : int end"
+                   f;
+                 Printf.sprintf
+                   "module %s : functor (X : sig end) -> sig val b : string \
+                    val a : int end"
+                   f;
+                 Printf.sprintf "module %s : functor (_ : sig end) -> sig end" f;
+               ]);
+        ]
+    | `Class c -> [ Printf.sprintf "class %s : object method m : int end" c ]
+    | `Extn (x, arg) ->
+        [ Printf.sprintf "type ext += %s%s" x (if arg then " of int" else "") ]
+    | `Fun (f, k) ->
+        [
+          Printf.sprintf "val %s : %s" f
+            (if k < 2 then "int -> int" else "?o:int -> int -> int");
+        ]
+    | `Rec (f, g) ->
+        List.filter
+          (fun _ -> keep ())
+          [
+            Printf.sprintf "val %s : int -> int" f;
+            Printf.sprintf "val %s : int -> int" g;
+          ]
   in
   let chosen =
-    List.filter_map (fun it -> if chance 0.7 then sig_item it else None) items
+    List.concat_map (fun it -> if keep () then item it else []) items
   in
-  let shuffled =
-    List.map snd (List.sort compare (List.map (fun x -> (rand 1000, x)) chosen))
+  let chosen =
+    if exact then chosen
+    else
+      List.map snd
+        (List.sort compare (List.map (fun x -> (rand 1000, x)) chosen))
   in
+  (chosen, !abstract, !subs)
+
+(* A module of random items, and a package type of a random subset of
+   them in a random order, which the module is packed into. Sometimes the
+   package type has every item in the module's order, so that packing
+   copies nothing, and sometimes the package is unpacked and packed again. *)
+let gen_module s =
+  let m = fresh s "M" in
+  let items = gen_items s 0 in
+  Printf.bprintf s.decls "module %s = struct %s end\n" m
+    (String.concat " " (List.map item_src items));
+  let chosen, abstract, psubs = sig_of s ~exact:(chance 0.2) items in
   let p = m ^ "_P" in
+  let withs =
+    match List.filter (fun _ -> chance 0.6) abstract with
+    | [] -> ""
+    | ts ->
+        " with "
+        ^ String.concat " and " (List.map (fun t -> "type " ^ t ^ " = int") ts)
+  in
   Printf.bprintf s.decls
-    "module type %s = sig %s end\ntype pk_%s = (module %s)\n" p
-    (String.concat " " shuffled)
-    m p;
-  s.modules <- (m, p) :: s.modules
+    "module type %s = sig %s end\ntype pk_%s = (module %s%s)\n" p
+    (String.concat " " chosen) m p withs;
+  let pexpr = Printf.sprintf "(module %s : %s%s)" m p withs in
+  s.modules <- { pexpr; ptype = p; psubs } :: s.modules;
+  (* Unpack and pack again: into the same package type, or into one with
+     fewer of its items in another order, which copies the block again. *)
+  if chance 0.4 then
+    let q =
+      if chance 0.4 then p ^ withs
+      else
+        let q = m ^ "_Q" in
+        let is_type t =
+          String.starts_with ~prefix:"type " t && not (contains t "+=")
+        in
+        let rest =
+          List.filter (fun t -> (not (is_type t)) && chance 0.7) chosen
+        in
+        let rest =
+          List.map snd
+            (List.sort compare (List.map (fun x -> (rand 1000, x)) rest))
+        in
+        Printf.bprintf s.decls
+          "module type %s = sig %s end\ntype pk_%s = (module %s)\n" q
+          (String.concat " " rest) q q;
+        q
+    in
+    let ptype = List.hd (String.split_on_char ' ' q) in
+    s.modules <-
+      { pexpr = Printf.sprintf "(module (val %s) : %s)" pexpr q; ptype; psubs }
+      :: s.modules
 
 (* Stage 4: closures, lazy values and objects. Each definition the
    prediction is matched by starts its own line. *)
@@ -1442,28 +1571,46 @@ external v128 : string -> int -> int64x2# = "%caml_string_getu128#"
       if not (Hashtbl.mem checked (ty, case)) then
         missing (if case = "" then ty else ty ^ "." ^ case))
     s.values;
-  (* First-class modules: pack each module into a package type that has
-     fewer of its items, in another order. *)
+  (* First-class modules: each block against the prediction for its package
+     type, and each submodule slot whose signature is a named module type
+     against the prediction for that type, in turn. *)
+  let rec package_checks ~psubs ~what ~depth r name =
+    match List.find_opt (fun (p : M.package) -> p.pname = name) u.packages with
+    | None -> missing what
+    | Some p ->
+        let n = List.length p.slots in
+        let rv = Printf.sprintf "r%d" depth in
+        Printf.bprintf b
+          "  (let %s = %s in\n\
+          \  block %S %s 0 %d;\n\
+          \  if is_block %s 0 %d then begin\n"
+          rv r what rv n rv n;
+        List.iter
+          (fun (sl : M.slot) ->
+            let fr = Printf.sprintf "(Obj.field %s %d)" rv sl.index in
+            let w = what ^ "." ^ sl.name in
+            let c = word_check w fr sl.word in
+            if c <> "" then Printf.bprintf b "  %s\n" c;
+            match sl.item with
+            | Class ->
+                (* CamlinternalOO's class table: OxCaml adds a field. *)
+                Printf.bprintf b "  block %S %s 0 %d;\n" w fr
+                  (if ox then 4 else 3)
+            | Module -> (
+                match List.assoc_opt sl.name psubs with
+                | Some inner ->
+                    package_checks ~psubs ~what:w ~depth:(depth + 1) fr inner
+                | None -> ())
+            | _ -> ())
+          p.slots;
+        Printf.bprintf b "  end);\n"
+  in
   List.iter
-    (fun (m, mt) ->
-      match List.find_opt (fun (p : M.package) -> p.pname = mt) u.packages with
-      | Some p ->
-          let r = Printf.sprintf "(Obj.repr (module %s : %s))" m mt in
-          Printf.bprintf b "  block %S %s 0 %d;\n"
-            ("(module " ^ mt ^ ")")
-            r (List.length p.slots);
-          List.iter
-            (fun (sl : M.slot) ->
-              let c =
-                word_check
-                  (Printf.sprintf "(module %s).%s" mt sl.name)
-                  (Printf.sprintf "(Obj.field %s %d)" r sl.index)
-                  sl.word
-              in
-              if c <> "" then Printf.bprintf b "  %s\n" c)
-            p.slots
-      | None -> missing ("(module " ^ mt ^ ")"))
-    s.modules;
+    (fun pk ->
+      package_checks ~psubs:pk.psubs ~what:pk.pexpr ~depth:0
+        ("(Obj.repr " ^ pk.pexpr ^ ")")
+        pk.ptype)
+    (List.rev s.modules);
   (* Stage 4: closures, lazy values and objects. *)
   (match u.values with
   | None -> if s.vchecks <> [] then missing "values"
