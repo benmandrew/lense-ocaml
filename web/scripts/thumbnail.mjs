@@ -8,8 +8,8 @@
 // A shrunk screenshot is unreadable, so the page is rendered in an 800x420
 // window at 2.25x. The report lines are wider than lense's byte map, so the
 // window is wider than lense's 600x315, and the example has two types to fill
-// its height. The top bar and gutters are hidden to leave the source next to
-// the representations.
+// its height. The top bar, gutters and colour key are hidden to leave the
+// source next to the representations.
 import { deflateRawSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
@@ -50,6 +50,7 @@ const css = `
             display: flex !important; flex-direction: column !important; justify-content: center !important;
             gap: 12px !important; }
   .card { margin: 0 !important; padding: 12px 14px !important; }
+  .legend { display: none !important; }
 `;
 
 const server = await createServer({ root, logLevel: 'warn', server: { port: 0 } });

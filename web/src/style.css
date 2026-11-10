@@ -226,7 +226,7 @@ pre.report {
 
 /* The key to those colours, above the cards. */
 .legend { margin: 0 0 12px; font: 12.5px var(--mono); color: var(--muted); }
-.legend span { margin-right: 1.4em; }
+.legend span { display: inline-block; margin-right: 1.4em; white-space: nowrap; }
 .legend .k-imm { color: var(--c-base); }
 .legend .k-ptr { color: var(--c-ptr); }
 .legend .k-flat { color: var(--c-field); }
