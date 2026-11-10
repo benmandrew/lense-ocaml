@@ -10,11 +10,14 @@ dune build
 dune test            # cram goldens (incl. test/ox/mixed.t), Stage 0 checks, 20 fuzz rounds
 dune promote         # accept golden changes, after reading the diff
 dune fmt             # ocamlformat 0.29.0; skips vendor/ and test/ox/mixed.ml
-dune exec test/fuzz/fuzz.exe -- -rounds 500 [-seed N] [-keep DIR]
+dune exec test/fuzz/fuzz.exe -- -rounds 500 [-seed N] [-keep DIR] [-no-cmt]   # -no-cmt skips the .cmt check
+dune build @test/fuzz/fuzz                       # 100 fuzz programs, new seed each run
+scripts/mutate.sh [-rounds N] [-seed N] [-ox]    # planted bugs must be caught; about 11 min with -ox
 
 dune build web/jsoo/lense_web.bc.js              # lense_core for the browser (js_of_ocaml master)
 cd web && npm install && npm run dev             # the page; npm run build writes web/dist
 nix build [.#web]                                # tool and tests, or the static site
+scripts/jsdiff.sh [ROUNDS [SEED]]                # js_of_ocaml build against the native CLI; needs node
 
 dune build @test/ox/runtest-ox                   # OxCaml runtime oracle; needs the 5.2.0+ox switch or $OXCAML_BIN
 PATH=$(opam var --switch=5.2.0+ox bin):$PATH ./_build/default/test/fuzz/fuzz.exe -rounds 200 -ox-stdlib _build/default/vendor/oxcaml/stdlib/cmi
