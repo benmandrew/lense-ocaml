@@ -142,6 +142,16 @@ let values_of ~values ~unit_name ~src (input : Analyze.input) =
       with exn -> raise (report exn))
   | _ -> None
 
+(* The Lambda translation looks names up in the typed tree's environments,
+   which a .cmt holds only as summaries. Rebuild every one of them first. *)
+let with_envs (input : Analyze.input) =
+  match input with
+  | Impl str ->
+      let env _ e = !Analyze.rebuild_env e in
+      let m = { Tast_mapper.default with env } in
+      Analyze.Impl (m.structure m str)
+  | Intf _ -> input
+
 let compunit ?(values = false) ~include_dirs file : M.compunit =
   let ext = Filename.extension file in
   if ext = ".cmi" then
@@ -153,7 +163,10 @@ let compunit ?(values = false) ~include_dirs file : M.compunit =
             file));
   if ext = ".cmt" || ext = ".cmti" then
     let unit_name, input, src = read_cmt ~include_dirs file in
-    let vals = values_of ~values ~unit_name ~src input in
+    let vals =
+      values_of ~values ~unit_name ~src
+        (if values then with_envs input else input)
+    in
     { (Analyze.analyze ~file ~unit_name ~src input) with values = vals }
   else
     let src = if file = "-" then read_stdin () else read_file file in

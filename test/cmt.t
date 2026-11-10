@@ -44,3 +44,27 @@ the source, and resolves types from other units through their .cmi files.
     W  no block: [@@unboxed], the value is its field
          A.pair  pointer to float record A.pair, Double_array_tag 254
          cost: 3 words per value, with headers
+
+The closures and lazy values come from the saved typed tree
+too. The Lambda translation looks names up in its environments, so they are
+rebuilt from their summaries first.
+
+  $ cat > c.ml <<'SRC'
+  > type sw = { s : [ `On | `Off ] }
+  > let adder a = fun b -> a + b
+  > let l = lazy (String.make 1 'z')
+  > SRC
+  $ ocamlc -bin-annot -c c.ml
+  $ lense-ocaml c.cmt
+  closures in native code: Closure, without flambda
+  
+  type sw  block, tag 0, size 1
+      0  s : [ `Off | `On ]  immediate (constant polymorphic variant)
+      cost: 2 words per value, with headers
+  
+  fun adder.(fun)  line 2  Closure_tag 247, size 3
+      0  code pointer
+      1  closinfo: arity 1, environment from field 2
+      2  a : int  immediate (int)
+  
+  lazy  line 3  Lazy_tag 246 block, size 1, holding a closure; forcing it makes it a Forward_tag 250 block holding the result
