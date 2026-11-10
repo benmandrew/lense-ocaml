@@ -80,3 +80,18 @@ let local (k : string) =
       end
   end in
   new X.c
+
+(* An initializer reads a local variable from the environment slot, as a
+   method does. Self is bound inside the object and needs no slot. *)
+let init (k : string) =
+  object (self)
+    val mutable a = 0
+    initializer a <- String.length k + self#b
+    method b = 1
+  end
+
+let selfish () =
+  object (self)
+    method a = self#b + 1
+    method b = 2
+  end

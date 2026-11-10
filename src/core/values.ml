@@ -194,9 +194,21 @@ let class_idents (ce : T.class_expr) =
   it.class_expr it ce;
   (!bound, !used)
 
-(* The variables the methods of a class expression refer to directly. *)
+(* The variables from outside a class expression that its methods and
+   initializers refer to directly. Translclass compiles both with the same
+   substitution, which reads such variables from the environment slot. A
+   variable bound inside the class, such as self, is not one of them. *)
 let method_idents (ce : T.class_expr) =
-  let used = ref Ident.Set.empty and depth = ref 0 in
+  let used = ref Ident.Set.empty
+  and bound = ref Ident.Set.empty
+  and depth = ref 0 in
+  let pat : 'k. Tast_iterator.iterator -> 'k T.general_pattern -> unit =
+   fun sub p ->
+    List.iter
+      (fun (id, _) -> bound := Ident.Set.add id !bound)
+      (Compat.bound_idents p);
+    Tast_iterator.default_iterator.pat sub p
+  in
   let expr sub (e : T.expression) =
     (match Compat.expr_ident e with
     | Some id when !depth > 0 -> used := Ident.Set.add id !used
@@ -205,15 +217,15 @@ let method_idents (ce : T.class_expr) =
   in
   let class_field sub (f : T.class_field) =
     match f.cf_desc with
-    | Tcf_method _ ->
+    | Tcf_method _ | Tcf_initializer _ ->
         incr depth;
         Tast_iterator.default_iterator.class_field sub f;
         decr depth
     | _ -> Tast_iterator.default_iterator.class_field sub f
   in
-  let it = { Tast_iterator.default_iterator with expr; class_field } in
+  let it = { Tast_iterator.default_iterator with pat; expr; class_field } in
   it.class_expr it ce;
-  !used
+  Ident.Set.diff !used !bound
 
 let ivar ?(param = false) ~where ~from name mutable_ ty env : M.ivar =
   {
@@ -302,7 +314,8 @@ and parent_name (ce : T.class_expr) =
 (* A class at the top of the unit is built once, outside any function. A
    class or object inside an expression is built under Translobj.oo_wrap:
    it takes an extra slot, allocated by Translclass as [env2], when its
-   methods use variables bound in the enclosing top-level item. *)
+   methods or initializers use variables bound in the enclosing top-level
+   item. *)
 let objects ctx (str : T.structure) : M.obj list =
   let classes = Hashtbl.create 8 in
   let acc = ref [] in

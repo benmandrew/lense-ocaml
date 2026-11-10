@@ -3833,6 +3833,35 @@
               ],
               "unknown": [],
               "range": {"line": 75, "column": 4, "end_line": 80, "end_column": 9}
+            },
+            {
+              "name": "object",
+              "line": 87,
+              "env_slot": true,
+              "vars": [
+                {
+                  "name": "a",
+                  "type": "int",
+                  "mutable": true,
+                  "parameter": false,
+                  "from": "object",
+                  "word": {
+                    "kind": "immediate",
+                    "why": "int"
+                  },
+                  "range": {"line": 88, "column": 4, "end_line": 88, "end_column": 21}
+                }
+              ],
+              "unknown": [],
+              "range": {"line": 87, "column": 2, "end_line": 91, "end_column": 5}
+            },
+            {
+              "name": "object",
+              "line": 94,
+              "env_slot": false,
+              "vars": [],
+              "unknown": [],
+              "range": {"line": 94, "column": 2, "end_line": 97, "end_column": 5}
             }
           ]
         }

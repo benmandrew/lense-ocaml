@@ -428,6 +428,16 @@ Every case file, as text with its source.
       3  a : int        immediate (int)
       4  x : int        immediate (int)  (from point)
       5  name : string  pointer to string, String_tag 252  (from point)
+  
+  object  line 87  Object_tag 248, size 4
+      0  method table     pointer to the class's method table
+      1  object id        immediate (int)
+      2  environment      pointer to a block of the local variables the class uses, tag 0
+      3  mutable a : int  immediate (int)
+  
+  object  line 94  Object_tag 248, size 2
+      0  method table  pointer to the class's method table
+      1  object id     immediate (int)
   ### cases/variants.ml
   type t = A | B of int | C | D of string
   type t  variant
